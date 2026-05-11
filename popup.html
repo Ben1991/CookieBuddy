@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>CookieBuddy</title>
+    <link rel="stylesheet" href="src/styles.css">
+  </head>
+  <body>
+    <main class="shell" aria-live="polite">
+      <header class="hero">
+        <img class="logo-mark" src="assets/logo.svg" alt="" aria-hidden="true">
+        <div>
+          <p class="eyebrow">CookieBuddy</p>
+          <h1 data-i18n="popupTitle">Consent delta check</h1>
+          <p class="disclaimer" data-i18n="legalDisclaimer">
+            this is not legal advice. please still review the content. the creator takes no liability for the results.
+          </p>
+        </div>
+        <div class="hero-actions">
+          <label class="language-toggle">
+            <span data-i18n="languageLabel">Language</span>
+            <select id="languageSelect" aria-label="Language">
+              <option value="en">English</option>
+              <option value="de">Deutsch</option>
+            </select>
+          </label>
+          <span id="statusPill" class="pill" data-i18n="statusReady">Ready</span>
+        </div>
+      </header>
+
+      <section class="card">
+        <div class="section-title">
+          <h2 data-i18n="bannerHeading">Banner</h2>
+          <button id="refreshButton" class="ghost-button" type="button" data-i18n="refreshButton">Refresh</button>
+        </div>
+        <div id="bannerResult" class="result-grid skeleton">
+          <span data-i18n="scanningCurrentTab">Scanning current tab...</span>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="section-title">
+          <h2 data-i18n="servicesByCategoryHeading">Services by category</h2>
+          <a id="detailsLink" class="text-link" href="details.html" target="_blank" rel="noreferrer" data-i18n="detailsLink">Details</a>
+        </div>
+        <div id="categoryResult" class="category-grid"></div>
+      </section>
+
+      <section class="card">
+        <div class="section-title">
+          <h2 data-i18n="cookiesTrafficHeading">Cookies and traffic</h2>
+          <span id="cookieCount" class="muted">0 cookies</span>
+        </div>
+        <div id="cookieResult" class="compact-list"></div>
+      </section>
+
+      <section class="card accent">
+        <h2 data-i18n="deltaHeading">Delta check</h2>
+        <p class="muted" data-i18n="deltaIntro">
+          Compares the current state with a best-effort “deny all” state. CookieBuddy flags cookies and third-party requests that remain after opt-out.
+        </p>
+        <button id="deltaButton" class="primary-button" type="button" data-i18n="runDeltaButton">Run delta check</button>
+        <div id="deltaResult" class="delta-box"></div>
+      </section>
+
+      <section class="card">
+        <div class="section-title">
+          <h2 data-i18n="contactHeading">Contact</h2>
+          <span class="muted" data-i18n="contactSubheading">DPO / authority</span>
+        </div>
+        <div id="contactResult" class="contact-box"></div>
+      </section>
+
+      <section class="card">
+        <div class="section-title">
+          <h2 data-i18n="helpHeading">Help</h2>
+          <button id="helpButton" class="ghost-button" type="button" aria-expanded="false" aria-controls="helpPanel" data-i18n="helpButton">How it works</button>
+        </div>
+        <div id="helpPanel" class="help-panel" hidden>
+          <p data-i18n="helpIntro">
+            CookieBuddy looks at the current page and checks whether cookies or third-party requests still happen after you choose “deny all”.
+          </p>
+          <ul>
+            <li data-i18n="helpStepBanner">It tries to recognize the cookie banner provider.</li>
+            <li data-i18n="helpStepCookies">It lists visible cookies and likely services.</li>
+            <li data-i18n="helpStepDelta">It compares what happens before and after opt-out.</li>
+            <li data-i18n="helpStepReview">If something remains, treat it as a review signal, not as a final legal finding.</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="card privacy-card">
+        <h2 data-i18n="privacyHeading">Privacy</h2>
+        <p class="muted" data-i18n="privacyIntro">
+          CookieBuddy does not track you and does not send scan results to the creator or to any analytics service.
+        </p>
+        <ul class="privacy-list">
+          <li data-i18n="privacyLocalOnly">Scans run locally in your browser.</li>
+          <li data-i18n="privacyStorage">The last scan is stored only in Chrome local extension storage on your device.</li>
+          <li data-i18n="privacyNoAnalytics">There is no analytics, tracking pixel, remote logging, or account system.</li>
+          <li data-i18n="privacyExternalLinks">External links and drafted emails only open when you click them; those external services have their own privacy rules.</li>
+        </ul>
+      </section>
+
+      <section class="card open-source-card">
+        <h2 data-i18n="openSourceHeading">Open source</h2>
+        <p class="muted" data-i18n="openSourceIntro">
+          CookieBuddy is intended to be open source. Contributions, bug reports, and banner-detection improvements are welcome.
+        </p>
+        <a class="ghost-button small" href="https://github.com/thenext1991/cookiebuddy" target="_blank" rel="noreferrer" data-i18n="githubLink">
+          View GitHub repository
+        </a>
+      </section>
+
+      <footer class="support-footer">
+        <a class="donate-button" href="https://buymeacoffee.com/thenext1991" target="_blank" rel="noreferrer">
+          <span data-i18n="donateButton">Support me and donate</span>
+        </a>
+      </footer>
+    </main>
+
+    <script src="src/popup.js" type="module"></script>
+  </body>
+</html>
