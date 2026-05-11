@@ -1,0 +1,245 @@
+{
+  "extensionName": {
+    "message": "CookieBuddy"
+  },
+  "extensionDescription": {
+    "message": "Inspect cookie banners, consent categories, cookies, and traffic deltas after opt-out."
+  },
+  "popupTitle": {
+    "message": "Consent delta check"
+  },
+  "legalDisclaimer": {
+    "message": "this is not legal advice. please still review the content. the creator takes no liability for the results."
+  },
+  "languageLabel": {
+    "message": "Language"
+  },
+  "statusReady": {
+    "message": "Ready"
+  },
+  "statusScanning": {
+    "message": "Scanning"
+  },
+  "statusNeedsAccess": {
+    "message": "Needs access"
+  },
+  "statusChecking": {
+    "message": "Checking"
+  },
+  "statusDeltaFound": {
+    "message": "Delta found"
+  },
+  "statusChecked": {
+    "message": "Checked"
+  },
+  "statusCheckFailed": {
+    "message": "Check failed"
+  },
+  "bannerHeading": {
+    "message": "Banner"
+  },
+  "refreshButton": {
+    "message": "Refresh"
+  },
+  "scanningCurrentTab": {
+    "message": "Scanning current tab..."
+  },
+  "servicesByCategoryHeading": {
+    "message": "Services by category"
+  },
+  "detailsLink": {
+    "message": "Details"
+  },
+  "cookiesTrafficHeading": {
+    "message": "Cookies and traffic"
+  },
+  "deltaHeading": {
+    "message": "Delta check"
+  },
+  "deltaIntro": {
+    "message": "Compares the current state with a best-effort \"deny all\" state. CookieBuddy flags cookies and third-party requests that remain after opt-out."
+  },
+  "runDeltaButton": {
+    "message": "Run delta check"
+  },
+  "contactHeading": {
+    "message": "Contact"
+  },
+  "contactSubheading": {
+    "message": "DPO / authority"
+  },
+  "donateButton": {
+    "message": "Support me and donate"
+  },
+  "helpHeading": {
+    "message": "Help"
+  },
+  "helpButton": {
+    "message": "How it works"
+  },
+  "helpIntro": {
+    "message": "CookieBuddy looks at the current page and checks whether cookies or third-party requests still happen after you choose “deny all”."
+  },
+  "helpStepBanner": {
+    "message": "It tries to recognize the cookie banner provider."
+  },
+  "helpStepCookies": {
+    "message": "It lists visible cookies and likely services."
+  },
+  "helpStepDelta": {
+    "message": "It compares what happens before and after opt-out."
+  },
+  "helpStepReview": {
+    "message": "If something remains, treat it as a review signal, not as a final legal finding."
+  },
+  "privacyHeading": {
+    "message": "Privacy"
+  },
+  "privacyIntro": {
+    "message": "CookieBuddy does not track you and does not send scan results to the creator or to any analytics service."
+  },
+  "privacyLocalOnly": {
+    "message": "Scans run locally in your browser."
+  },
+  "privacyStorage": {
+    "message": "The last scan is stored only in Chrome local extension storage on your device."
+  },
+  "privacyNoAnalytics": {
+    "message": "There is no analytics, tracking pixel, remote logging, or account system."
+  },
+  "privacyExternalLinks": {
+    "message": "External links and drafted emails only open when you click them; those external services have their own privacy rules."
+  },
+  "openSourceHeading": {
+    "message": "Open source"
+  },
+  "openSourceIntro": {
+    "message": "CookieBuddy is intended to be open source. Contributions, bug reports, and banner-detection improvements are welcome."
+  },
+  "githubLink": {
+    "message": "View GitHub repository"
+  },
+  "detectedLabel": {
+    "message": "Detected"
+  },
+  "confidenceLabel": {
+    "message": "Confidence"
+  },
+  "sourceEvidenceLabel": {
+    "message": "Source evidence"
+  },
+  "noSourceDetected": {
+    "message": "No consent source detected"
+  },
+  "categoryEssential": {
+    "message": "Essential"
+  },
+  "categoryMarketing": {
+    "message": "Marketing"
+  },
+  "categoryAnalytics": {
+    "message": "Analytics"
+  },
+  "categoryFunctional": {
+    "message": "Functional"
+  },
+  "categorySocial": {
+    "message": "Social"
+  },
+  "cookieCount": {
+    "message": "$1 cookies"
+  },
+  "noCookiesVisible": {
+    "message": "No cookies visible to the extension for this tab."
+  },
+  "deltaCheckingDescription": {
+    "message": "Trying a deny-all action, then comparing cookies and third-party traffic. This is best-effort because banners use different controls."
+  },
+  "snapshotCurrentState": {
+    "message": "Current state"
+  },
+  "snapshotAfterDenyAll": {
+    "message": "After deny all"
+  },
+  "deltaFoundSummary": {
+    "message": "CookieBuddy found cookies or third-party traffic after opt-out. This may mean data still flows without valid consent and should be reviewed."
+  },
+  "noDeltaSummary": {
+    "message": "No obvious post-opt-out delta was found in this browser session."
+  },
+  "mailSubject": {
+    "message": "Cookie consent question for $1"
+  },
+  "mailBody": {
+    "message": "Hello,\n\nI reviewed the consent behavior on $1 and would like to ask about cookies or third-party traffic after opt-out.\n\nKind regards"
+  },
+  "dpoLabel": {
+    "message": "Data protection officer"
+  },
+  "noDpoEmailFound": {
+    "message": "No DPO email found automatically"
+  },
+  "draftEmailButton": {
+    "message": "Draft email"
+  },
+  "authorityLabel": {
+    "message": "Authority"
+  },
+  "openAuthorityDetails": {
+    "message": "Open authority details"
+  },
+  "deltaFoundTitle": {
+    "message": "Delta found"
+  },
+  "noObviousDeltaTitle": {
+    "message": "No obvious delta"
+  },
+  "cookiesMetric": {
+    "message": "Cookies: $1 -> $2"
+  },
+  "thirdPartyHostsMetric": {
+    "message": "Third-party hosts: $1 -> $2"
+  },
+  "clickedDenyControl": {
+    "message": "Clicked deny control: $1"
+  },
+  "detectedButton": {
+    "message": "detected button"
+  },
+  "noDenyButtonClicked": {
+    "message": "No deny-all button could be clicked automatically."
+  },
+  "cookiesStillPresent": {
+    "message": "Cookies still present"
+  },
+  "thirdPartyTrafficAfterOptOut": {
+    "message": "Third-party traffic after opt-out"
+  },
+  "unknownService": {
+    "message": "Unknown service"
+  },
+  "detailsTitle": {
+    "message": "Scan details"
+  },
+  "detailsIntro": {
+    "message": "This page shows the last analysis stored locally by the extension."
+  },
+  "summaryHeading": {
+    "message": "Summary"
+  },
+  "loading": {
+    "message": "Loading..."
+  },
+  "germanAuthorityName": {
+    "message": "German data protection authorities"
+  },
+  "germanAuthorityNote": {
+    "message": "Germany has state-level authorities. The exact authority depends on the company seat shown in the imprint."
+  },
+  "localAuthorityName": {
+    "message": "Local data protection authority"
+  },
+  "localAuthorityNote": {
+    "message": "CookieBuddy could not infer a specific authority from the domain. Check the company imprint or privacy notice for jurisdiction."
+  }
+}

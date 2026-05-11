@@ -1,0 +1,245 @@
+{
+  "extensionName": {
+    "message": "CookieBuddy"
+  },
+  "extensionDescription": {
+    "message": "Prüft Cookie-Banner, Einwilligungskategorien, Cookies und Abweichungen nach dem Opt-out."
+  },
+  "popupTitle": {
+    "message": "Consent-Delta prüfen"
+  },
+  "legalDisclaimer": {
+    "message": "Dies ist keine Rechtsberatung. Bitte prüfe die Inhalte weiterhin selbst. Der Ersteller übernimmt keine Haftung für die Ergebnisse."
+  },
+  "languageLabel": {
+    "message": "Sprache"
+  },
+  "statusReady": {
+    "message": "Bereit"
+  },
+  "statusScanning": {
+    "message": "Scan läuft"
+  },
+  "statusNeedsAccess": {
+    "message": "Zugriff nötig"
+  },
+  "statusChecking": {
+    "message": "Prüfung läuft"
+  },
+  "statusDeltaFound": {
+    "message": "Delta gefunden"
+  },
+  "statusChecked": {
+    "message": "Geprüft"
+  },
+  "statusCheckFailed": {
+    "message": "Prüfung fehlgeschlagen"
+  },
+  "bannerHeading": {
+    "message": "Banner"
+  },
+  "refreshButton": {
+    "message": "Aktualisieren"
+  },
+  "scanningCurrentTab": {
+    "message": "Aktueller Tab wird geprüft..."
+  },
+  "servicesByCategoryHeading": {
+    "message": "Dienste nach Kategorie"
+  },
+  "detailsLink": {
+    "message": "Details"
+  },
+  "cookiesTrafficHeading": {
+    "message": "Cookies und Traffic"
+  },
+  "deltaHeading": {
+    "message": "Delta-Prüfung"
+  },
+  "deltaIntro": {
+    "message": "Vergleicht den aktuellen Zustand mit einem bestmöglichen \"Alle ablehnen\"-Zustand. CookieBuddy markiert Cookies und Drittanbieter-Anfragen, die nach dem Opt-out bestehen bleiben."
+  },
+  "runDeltaButton": {
+    "message": "Delta-Prüfung starten"
+  },
+  "contactHeading": {
+    "message": "Kontakt"
+  },
+  "contactSubheading": {
+    "message": "DSB / Behörde"
+  },
+  "donateButton": {
+    "message": "Unterstützen und spenden"
+  },
+  "helpHeading": {
+    "message": "Hilfe"
+  },
+  "helpButton": {
+    "message": "So funktioniert es"
+  },
+  "helpIntro": {
+    "message": "CookieBuddy schaut sich die aktuelle Seite an und prüft, ob nach „Alle ablehnen“ weiterhin Cookies oder Drittanbieter-Anfragen passieren."
+  },
+  "helpStepBanner": {
+    "message": "Es versucht, den Cookie-Banner-Anbieter zu erkennen."
+  },
+  "helpStepCookies": {
+    "message": "Es listet sichtbare Cookies und wahrscheinliche Dienste auf."
+  },
+  "helpStepDelta": {
+    "message": "Es vergleicht, was vor und nach dem Opt-out passiert."
+  },
+  "helpStepReview": {
+    "message": "Wenn etwas übrig bleibt, ist das ein Prüfsignal, aber keine finale rechtliche Bewertung."
+  },
+  "privacyHeading": {
+    "message": "Datenschutz"
+  },
+  "privacyIntro": {
+    "message": "CookieBuddy trackt dich nicht und sendet Scan-Ergebnisse nicht an den Ersteller oder an einen Analyse-Dienst."
+  },
+  "privacyLocalOnly": {
+    "message": "Scans laufen lokal in deinem Browser."
+  },
+  "privacyStorage": {
+    "message": "Der letzte Scan wird nur im lokalen Chrome-Erweiterungsspeicher auf deinem Gerät gespeichert."
+  },
+  "privacyNoAnalytics": {
+    "message": "Es gibt keine Analytics, Tracking-Pixel, Remote-Logs oder Accounts."
+  },
+  "privacyExternalLinks": {
+    "message": "Externe Links und E-Mail-Entwürfe öffnen sich nur, wenn du sie anklickst; diese externen Dienste haben eigene Datenschutzregeln."
+  },
+  "openSourceHeading": {
+    "message": "Open Source"
+  },
+  "openSourceIntro": {
+    "message": "CookieBuddy soll Open Source sein. Beiträge, Fehlermeldungen und Verbesserungen der Banner-Erkennung sind willkommen."
+  },
+  "githubLink": {
+    "message": "GitHub-Repository öffnen"
+  },
+  "detectedLabel": {
+    "message": "Erkannt"
+  },
+  "confidenceLabel": {
+    "message": "Sicherheit"
+  },
+  "sourceEvidenceLabel": {
+    "message": "Quellenhinweis"
+  },
+  "noSourceDetected": {
+    "message": "Keine Consent-Quelle erkannt"
+  },
+  "categoryEssential": {
+    "message": "Essentiell"
+  },
+  "categoryMarketing": {
+    "message": "Marketing"
+  },
+  "categoryAnalytics": {
+    "message": "Analyse"
+  },
+  "categoryFunctional": {
+    "message": "Funktional"
+  },
+  "categorySocial": {
+    "message": "Social"
+  },
+  "cookieCount": {
+    "message": "$1 Cookies"
+  },
+  "noCookiesVisible": {
+    "message": "Für diesen Tab sind für die Erweiterung keine Cookies sichtbar."
+  },
+  "deltaCheckingDescription": {
+    "message": "CookieBuddy versucht eine Alle-ablehnen-Aktion und vergleicht danach Cookies und Drittanbieter-Traffic. Das ist bestmöglich, weil Banner unterschiedliche Bedienelemente verwenden."
+  },
+  "snapshotCurrentState": {
+    "message": "Aktueller Zustand"
+  },
+  "snapshotAfterDenyAll": {
+    "message": "Nach Alle ablehnen"
+  },
+  "deltaFoundSummary": {
+    "message": "CookieBuddy hat Cookies oder Drittanbieter-Traffic nach dem Opt-out gefunden. Das kann bedeuten, dass Daten ohne gültige Einwilligung weiterfließen und geprüft werden sollten."
+  },
+  "noDeltaSummary": {
+    "message": "In dieser Browser-Sitzung wurde kein offensichtliches Post-Opt-out-Delta gefunden."
+  },
+  "mailSubject": {
+    "message": "Frage zur Cookie-Einwilligung für $1"
+  },
+  "mailBody": {
+    "message": "Hallo,\n\nich habe das Einwilligungsverhalten auf $1 geprüft und möchte nach Cookies oder Drittanbieter-Traffic nach dem Opt-out fragen.\n\nViele Grüße"
+  },
+  "dpoLabel": {
+    "message": "Datenschutzbeauftragte/r"
+  },
+  "noDpoEmailFound": {
+    "message": "Keine DSB-E-Mail automatisch gefunden"
+  },
+  "draftEmailButton": {
+    "message": "E-Mail entwerfen"
+  },
+  "authorityLabel": {
+    "message": "Behörde"
+  },
+  "openAuthorityDetails": {
+    "message": "Behörden-Details öffnen"
+  },
+  "deltaFoundTitle": {
+    "message": "Delta gefunden"
+  },
+  "noObviousDeltaTitle": {
+    "message": "Kein offensichtliches Delta"
+  },
+  "cookiesMetric": {
+    "message": "Cookies: $1 -> $2"
+  },
+  "thirdPartyHostsMetric": {
+    "message": "Drittanbieter-Hosts: $1 -> $2"
+  },
+  "clickedDenyControl": {
+    "message": "Angeklicktes Ablehnen-Element: $1"
+  },
+  "detectedButton": {
+    "message": "erkannter Button"
+  },
+  "noDenyButtonClicked": {
+    "message": "Es konnte kein Alle-ablehnen-Button automatisch geklickt werden."
+  },
+  "cookiesStillPresent": {
+    "message": "Cookies weiterhin vorhanden"
+  },
+  "thirdPartyTrafficAfterOptOut": {
+    "message": "Drittanbieter-Traffic nach Opt-out"
+  },
+  "unknownService": {
+    "message": "Unbekannter Dienst"
+  },
+  "detailsTitle": {
+    "message": "Scan-Details"
+  },
+  "detailsIntro": {
+    "message": "Diese Seite zeigt die letzte lokal gespeicherte Analyse der Erweiterung."
+  },
+  "summaryHeading": {
+    "message": "Zusammenfassung"
+  },
+  "loading": {
+    "message": "Lädt..."
+  },
+  "germanAuthorityName": {
+    "message": "Deutsche Datenschutzaufsichtsbehörden"
+  },
+  "germanAuthorityNote": {
+    "message": "Deutschland hat Aufsichtsbehörden auf Landesebene. Die genaue Behörde hängt vom Unternehmenssitz im Impressum ab."
+  },
+  "localAuthorityName": {
+    "message": "Lokale Datenschutzaufsichtsbehörde"
+  },
+  "localAuthorityNote": {
+    "message": "CookieBuddy konnte aus der Domain keine konkrete Behörde ableiten. Prüfe Impressum oder Datenschutzerklärung für die Zuständigkeit."
+  }
+}
