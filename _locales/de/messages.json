@@ -53,6 +53,24 @@
   "cookiesTrafficHeading": {
     "message": "Cookies und Traffic"
   },
+  "visibleCookiesHeading": {
+    "message": "Sichtbare Cookies"
+  },
+  "localStorageHeading": {
+    "message": "Lokal gespeicherte Daten"
+  },
+  "storageCount": {
+    "message": "LocalStorage: $1, SessionStorage: $2"
+  },
+  "storageOverview": {
+    "message": "Gefundene lokale Daten: LocalStorage $1, SessionStorage $2, IndexedDB $3."
+  },
+  "noLocalStorageVisible": {
+    "message": "Für diesen Tab wurden keine lokal gespeicherten Daten gefunden."
+  },
+  "inBannerMarker": {
+    "message": "im Banner gefunden"
+  },
   "deltaHeading": {
     "message": "Delta-Prüfung"
   },
@@ -155,6 +173,12 @@
   "deltaCheckingDescription": {
     "message": "CookieBuddy versucht eine Alle-ablehnen-Aktion und vergleicht danach Cookies und Drittanbieter-Traffic. Das ist bestmöglich, weil Banner unterschiedliche Bedienelemente verwenden."
   },
+  "deltaNeedsPageAccess": {
+    "message": "Für diese Seite fehlt der Zugriff für die Delta-Prüfung. Öffne eine normale Webseite und starte den Test dort erneut."
+  },
+  "deltaCheckFailed": {
+    "message": "Die Delta-Prüfung konnte nicht abgeschlossen werden."
+  },
   "snapshotCurrentState": {
     "message": "Aktueller Zustand"
   },
@@ -187,6 +211,12 @@
   },
   "openAuthorityDetails": {
     "message": "Behörden-Details öffnen"
+  },
+  "bfdiName": {
+    "message": "Bundesbeauftragte für den Datenschutz und die Informationsfreiheit"
+  },
+  "bfdiNote": {
+    "message": "Fallback: Graurheindorfer Straße 153, 53117 Bonn, Telefon +49 (0)228-997799-0, E-Mail poststelle@bfdi.bund.de."
   },
   "deltaFoundTitle": {
     "message": "Delta gefunden"

@@ -13,9 +13,6 @@
         <div>
           <p class="eyebrow">CookieBuddy</p>
           <h1 data-i18n="popupTitle">Consent delta check</h1>
-          <p class="disclaimer" data-i18n="legalDisclaimer">
-            this is not legal advice. please still review the content. the creator takes no liability for the results.
-          </p>
         </div>
         <div class="hero-actions">
           <label class="language-toggle">
@@ -28,6 +25,24 @@
           <span id="statusPill" class="pill" data-i18n="statusReady">Ready</span>
         </div>
       </header>
+
+      <section class="card">
+        <div class="section-title">
+          <h2 data-i18n="helpHeading">Help</h2>
+          <button id="helpButton" class="ghost-button" type="button" aria-expanded="false" aria-controls="helpPanel" data-i18n="helpButton">How it works</button>
+        </div>
+        <div id="helpPanel" class="help-panel" hidden>
+          <p data-i18n="helpIntro">
+            CookieBuddy looks at the current page and checks whether cookies or third-party requests still happen after you choose "deny all".
+          </p>
+          <ul>
+            <li data-i18n="helpStepBanner">It tries to recognize the cookie banner provider.</li>
+            <li data-i18n="helpStepCookies">It lists visible cookies and likely services.</li>
+            <li data-i18n="helpStepDelta">It compares what happens before and after opt-out.</li>
+            <li data-i18n="helpStepReview">If something remains, treat it as a review signal, not as a final legal finding.</li>
+          </ul>
+        </div>
+      </section>
 
       <section class="card">
         <div class="section-title">
@@ -58,7 +73,7 @@
       <section class="card accent">
         <h2 data-i18n="deltaHeading">Delta check</h2>
         <p class="muted" data-i18n="deltaIntro">
-          Compares the current state with a best-effort “deny all” state. CookieBuddy flags cookies and third-party requests that remain after opt-out.
+          Compares the current state with a best-effort "deny all" state. CookieBuddy flags cookies and third-party requests that remain after opt-out.
         </p>
         <button id="deltaButton" class="primary-button" type="button" data-i18n="runDeltaButton">Run delta check</button>
         <div id="deltaResult" class="delta-box"></div>
@@ -70,24 +85,6 @@
           <span class="muted" data-i18n="contactSubheading">DPO / authority</span>
         </div>
         <div id="contactResult" class="contact-box"></div>
-      </section>
-
-      <section class="card">
-        <div class="section-title">
-          <h2 data-i18n="helpHeading">Help</h2>
-          <button id="helpButton" class="ghost-button" type="button" aria-expanded="false" aria-controls="helpPanel" data-i18n="helpButton">How it works</button>
-        </div>
-        <div id="helpPanel" class="help-panel" hidden>
-          <p data-i18n="helpIntro">
-            CookieBuddy looks at the current page and checks whether cookies or third-party requests still happen after you choose “deny all”.
-          </p>
-          <ul>
-            <li data-i18n="helpStepBanner">It tries to recognize the cookie banner provider.</li>
-            <li data-i18n="helpStepCookies">It lists visible cookies and likely services.</li>
-            <li data-i18n="helpStepDelta">It compares what happens before and after opt-out.</li>
-            <li data-i18n="helpStepReview">If something remains, treat it as a review signal, not as a final legal finding.</li>
-          </ul>
-        </div>
       </section>
 
       <section class="card privacy-card">
@@ -118,6 +115,12 @@
           <span data-i18n="donateButton">Support me and donate</span>
         </a>
       </footer>
+
+      <section class="card">
+        <p class="disclaimer" data-i18n="legalDisclaimer">
+          Dies ist keine Rechtsberatung. Bitte prüfe die Inhalte weiterhin selbst. Der Ersteller übernimmt keine Haftung für die Ergebnisse.
+        </p>
+      </section>
     </main>
 
     <script src="src/popup.js" type="module"></script>

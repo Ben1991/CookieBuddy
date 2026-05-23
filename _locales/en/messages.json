@@ -53,6 +53,24 @@
   "cookiesTrafficHeading": {
     "message": "Cookies and traffic"
   },
+  "visibleCookiesHeading": {
+    "message": "Visible cookies"
+  },
+  "localStorageHeading": {
+    "message": "Locally stored data"
+  },
+  "storageCount": {
+    "message": "LocalStorage: $1, SessionStorage: $2"
+  },
+  "storageOverview": {
+    "message": "Found local data: LocalStorage $1, SessionStorage $2, IndexedDB $3."
+  },
+  "noLocalStorageVisible": {
+    "message": "No locally stored data was found for this tab."
+  },
+  "inBannerMarker": {
+    "message": "found in banner"
+  },
   "deltaHeading": {
     "message": "Delta check"
   },
@@ -155,6 +173,12 @@
   "deltaCheckingDescription": {
     "message": "Trying a deny-all action, then comparing cookies and third-party traffic. This is best-effort because banners use different controls."
   },
+  "deltaNeedsPageAccess": {
+    "message": "This page does not allow the delta check. Open a normal website and run the test there."
+  },
+  "deltaCheckFailed": {
+    "message": "The delta check could not be completed."
+  },
   "snapshotCurrentState": {
     "message": "Current state"
   },
@@ -187,6 +211,12 @@
   },
   "openAuthorityDetails": {
     "message": "Open authority details"
+  },
+  "bfdiName": {
+    "message": "Federal Commissioner for Data Protection and Freedom of Information"
+  },
+  "bfdiNote": {
+    "message": "Fallback: Graurheindorfer Straße 153, 53117 Bonn, phone +49 (0)228-997799-0, email poststelle@bfdi.bund.de."
   },
   "deltaFoundTitle": {
     "message": "Delta found"

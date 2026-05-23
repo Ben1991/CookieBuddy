@@ -1,4 +1,5 @@
 import { applyI18n, getLanguage, initI18n, setLanguage, t } from "./i18n.js";
+import { buildDelta, capitalize, getBaseDomain, normalizeTraffic, serviceForCookie } from "./core.js";
 
 const state = {
   tab: null,
@@ -72,7 +73,11 @@ async function scanCurrentTab() {
 }
 
 async function runDeltaCheck() {
-  if (!state.tab) return;
+  if (!state.tab || !state.analysis) {
+    elements.deltaResult.innerHTML = `<p class="error">${escapeHtml(t("deltaNeedsPageAccess"))}</p>`;
+    setStatus("statusNeedsAccess", "warn");
+    return;
+  }
 
   setStatus("statusChecking", "busy");
   elements.deltaButton.disabled = true;
@@ -84,13 +89,25 @@ async function runDeltaCheck() {
     const denyResult = await sendToTab(state.tab.id, { target: "cookiebuddy-content", type: "TRY_DENY_ALL" });
     await wait(1800);
     const afterDeny = await snapshot(t("snapshotAfterDenyAll"));
-    const delta = buildDelta(before, afterDeny, denyResult);
+    const delta = buildDelta({
+      beforeCookies: before.cookies,
+      afterCookies: afterDeny.cookies,
+      beforeTraffic: before.thirdPartyTraffic,
+      afterTraffic: afterDeny.thirdPartyTraffic,
+      denyClicked: denyResult.clicked,
+      denyLabel: denyResult.label,
+      labels: {
+        deltaFoundSummary: t("deltaFoundSummary"),
+        noDeltaSummary: t("noDeltaSummary")
+      },
+      tabUrl: state.tab.url
+    });
 
     await chrome.storage.local.set({ cookiebuddyLastDelta: delta });
     renderDelta(delta);
     setStatus(delta.riskLevel === "high" ? "statusDeltaFound" : "statusChecked", delta.riskLevel === "high" ? "warn" : "ok");
   } catch (error) {
-    elements.deltaResult.innerHTML = `<p class="error">${escapeHtml(error.message)}</p>`;
+    elements.deltaResult.innerHTML = `<p class="error">${escapeHtml(error.message || t("deltaCheckFailed"))}</p>`;
     setStatus("statusCheckFailed", "warn");
   } finally {
     elements.deltaButton.disabled = false;
@@ -109,37 +126,6 @@ async function snapshot(label) {
     analysis,
     cookies,
     thirdPartyTraffic: normalizeTraffic(trafficResponse?.traffic || [], analysis.host)
-  };
-}
-
-function buildDelta(before, afterDeny, denyResult) {
-  const beforeCookieKeys = new Set(before.cookies.map(cookieKey));
-  const remainingCookies = afterDeny.cookies.filter((cookie) => beforeCookieKeys.has(cookieKey(cookie)) || !isEssentialCookie(cookie));
-  const newCookies = afterDeny.cookies.filter((cookie) => !beforeCookieKeys.has(cookieKey(cookie)));
-  const thirdPartyHosts = Array.from(new Set(afterDeny.thirdPartyTraffic.map((item) => item.host))).sort();
-  const suspiciousCookies = remainingCookies.filter((cookie) => !isEssentialCookie(cookie));
-
-  const hasDelta = suspiciousCookies.length > 0 || newCookies.length > 0 || thirdPartyHosts.length > 0 || !denyResult.clicked;
-
-  return {
-    checkedAt: new Date().toISOString(),
-    url: state.tab.url,
-    denyAction: denyResult,
-    riskLevel: hasDelta ? "high" : "low",
-    summary: hasDelta
-      ? t("deltaFoundSummary")
-      : t("noDeltaSummary"),
-    remainingCookies: suspiciousCookies.map(formatCookie),
-    newCookies: newCookies.map(formatCookie),
-    thirdPartyHosts,
-    beforeCounts: {
-      cookies: before.cookies.length,
-      thirdPartyHosts: Array.from(new Set(before.thirdPartyTraffic.map((item) => item.host))).length
-    },
-    afterDenyCounts: {
-      cookies: afterDeny.cookies.length,
-      thirdPartyHosts: thirdPartyHosts.length
-    }
   };
 }
 
@@ -183,19 +169,52 @@ function renderCategories() {
 }
 
 function renderCookies() {
-  elements.cookieCount.textContent = t("cookieCount", state.cookies.length);
+  const storageItems = state.analysis.storage?.items || [];
+  const totalCookies = state.cookies.length;
+  const totalLocalItems = storageItems.length;
+  elements.cookieCount.textContent = `${t("cookieCount", totalCookies)} · ${totalLocalItems} ${t("localStorageHeading").toLowerCase()}`;
+
   const cookies = state.cookies.slice(0, 8);
-  elements.cookieResult.innerHTML = cookies.length
-    ? cookies.map((cookie) => `
-        <div class="list-row">
-          <div>
-            <strong>${escapeHtml(cookie.name)}</strong>
-            <span>${escapeHtml(cookie.domain)}</span>
-          </div>
-          <span>${escapeHtml(serviceForCookie(cookie))}</span>
-        </div>
-      `).join("")
-    : `<p class="muted">${escapeHtml(t("noCookiesVisible"))}</p>`;
+  const storage = storageItems.slice(0, 8);
+  elements.cookieResult.innerHTML = `
+    <div class="storage-summary">
+      <div class="metric-row">
+        <span>${escapeHtml(t("cookieCount", totalCookies))}</span>
+        <span>${escapeHtml(t("storageCount", [state.analysis.storage?.localStorageKeys?.length || 0, state.analysis.storage?.sessionStorageKeys?.length || 0]))}</span>
+      </div>
+      <p class="muted">${escapeHtml(t("storageOverview", [state.analysis.storage?.localStorageKeys?.length || 0, state.analysis.storage?.sessionStorageKeys?.length || 0, state.analysis.storage?.indexedDbNames?.length || 0]))}</p>
+    </div>
+    <div class="storage-columns">
+      <div>
+        <h3>${escapeHtml(t("visibleCookiesHeading"))}</h3>
+        ${cookies.length
+          ? cookies.map((cookie) => `
+              <div class="list-row">
+                <div>
+                  <strong>${escapeHtml(cookie.name)}</strong>
+                  <span>${escapeHtml(cookie.domain)}</span>
+                </div>
+                <span>${escapeHtml(serviceForCookie(cookie))}</span>
+              </div>
+            `).join("")
+          : `<p class="muted">${escapeHtml(t("noCookiesVisible"))}</p>`}
+      </div>
+      <div>
+        <h3>${escapeHtml(t("localStorageHeading"))}</h3>
+        ${storage.length
+          ? storage.map((item) => `
+              <div class="list-row">
+                <div>
+                  <strong>${escapeHtml(item.key)}</strong>
+                  <span>${escapeHtml(item.scope)}${item.inBanner ? ` · ${escapeHtml(t("inBannerMarker"))}` : ""}</span>
+                </div>
+                <span>${escapeHtml(item.valuePreview)}</span>
+              </div>
+            `).join("")
+          : `<p class="muted">${escapeHtml(t("noLocalStorageVisible"))}</p>`}
+      </div>
+    </div>
+  `;
 }
 
 function renderContacts() {
@@ -206,8 +225,8 @@ function renderContacts() {
   const body = encodeURIComponent(t("mailBody", state.analysis.url));
   const dpoMail = dpo?.email ? `mailto:${encodeURIComponent(dpo.email)}?subject=${subject}&body=${body}` : "";
   const authorityMail = authority.url;
-  const authorityName = authority.key === "german" ? t("germanAuthorityName") : authority.key === "local" ? t("localAuthorityName") : authority.name;
-  const authorityNote = authority.key === "german" ? t("germanAuthorityNote") : authority.key === "local" ? t("localAuthorityNote") : authority.note;
+  const authorityName = authority.key === "german" ? t("germanAuthorityName") : authority.key === "fallback" ? t("bfdiName") : authority.name;
+  const authorityNote = authority.key === "german" ? t("germanAuthorityNote") : authority.key === "fallback" ? t("bfdiNote") : authority.note;
 
   elements.contactResult.innerHTML = `
     <div class="contact-item">
@@ -272,26 +291,6 @@ async function persistLastScan() {
   });
 }
 
-function normalizeTraffic(traffic, firstPartyHost) {
-  const firstPartyBase = getBaseDomain(firstPartyHost);
-  return traffic
-    .map((item) => {
-      try {
-        const url = new URL(item.url);
-        return {
-          host: url.hostname,
-          url: url.href,
-          type: item.type,
-          thirdParty: getBaseDomain(url.hostname) !== firstPartyBase
-        };
-      } catch {
-        return null;
-      }
-    })
-    .filter(Boolean)
-    .filter((item) => item.thirdParty);
-}
-
 function sendToTab(tabId, message) {
   return chrome.tabs.sendMessage(tabId, message);
 }
@@ -303,22 +302,6 @@ function setStatus(key, mode) {
   elements.statusPill.dataset.mode = mode;
 }
 
-function serviceForCookie(cookie) {
-  const value = `${cookie.name} ${cookie.domain}`.toLowerCase();
-  const match = [
-    ["Google Analytics", ["_ga", "_gid"]],
-    ["Google Ads", ["_gcl", "doubleclick"]],
-    ["Meta Pixel", ["_fbp", "facebook"]],
-    ["Hotjar", ["_hj"]],
-    ["HubSpot", ["hubspot", "__hstc"]]
-  ].find(([, patterns]) => patterns.some((pattern) => value.includes(pattern)));
-  return match?.[0] || t("unknownService");
-}
-
-function isEssentialCookie(cookie) {
-  return /session|csrf|xsrf|auth|consent|cookie|privacy|necessary/i.test(cookie.name);
-}
-
 function formatCookie(cookie) {
   return {
     name: cookie.name,
@@ -328,15 +311,6 @@ function formatCookie(cookie) {
     sameSite: cookie.sameSite,
     service: serviceForCookie(cookie)
   };
-}
-
-function cookieKey(cookie) {
-  return `${cookie.domain}|${cookie.path}|${cookie.name}`;
-}
-
-function getBaseDomain(hostname) {
-  const parts = hostname.split(".").filter(Boolean);
-  return parts.slice(-2).join(".");
 }
 
 function escapeHtml(value) {

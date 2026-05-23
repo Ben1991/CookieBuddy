@@ -140,4 +140,3 @@ For contributors: do not add analytics, telemetry, remote logging, fingerprintin
 If CookieBuddy helps you, you can support the project here:
 
 https://buymeacoffee.com/thenext1991
-
