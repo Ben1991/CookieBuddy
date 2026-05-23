@@ -8,11 +8,11 @@
   "popupTitle": {
     "message": "Consent delta check"
   },
-  "skipToBanner": {
-    "message": "Skip to banner"
-  },
   "legalDisclaimer": {
     "message": "this is not legal advice. please still review the content. the creator takes no liability for the results."
+  },
+  "popupIntro": {
+    "message": "Get a quick read on what the page really does before and after consent."
   },
   "languageLabel": {
     "message": "Language"
@@ -41,15 +41,6 @@
   "bannerHeading": {
     "message": "Banner"
   },
-  "bannerInstructions": {
-    "message": "The banner area can be enlarged with the button above or with the resize handle at the bottom of the card."
-  },
-  "enlargeBannerButton": {
-    "message": "Make banner larger"
-  },
-  "shrinkBannerButton": {
-    "message": "Make banner smaller"
-  },
   "legendHeading": {
     "message": "Legend"
   },
@@ -71,6 +62,12 @@
   "legendRedBody": {
     "message": "A non-essential tracker appears to run without consent."
   },
+  "legendCurrent": {
+    "message": "current"
+  },
+  "legendBadgeNote": {
+    "message": "This status matches the badge in the extension bar."
+  },
   "refreshButton": {
     "message": "Refresh"
   },
@@ -88,6 +85,9 @@
   },
   "cookiesTrafficHeading": {
     "message": "Cookies and traffic"
+  },
+  "cookiesTrafficIntro": {
+    "message": "This overview groups visible cookies and locally stored browser data. The list updates after each scan."
   },
   "visibleCookiesHeading": {
     "message": "Visible cookies"
@@ -224,6 +224,12 @@
   "deltaCheckingDescription": {
     "message": "Trying a deny-all action, then comparing cookies and third-party traffic. This is best-effort because banners use different controls."
   },
+  "deltaConsentPrompt": {
+    "message": "Please decline all cookies on the page first. When you are ready, confirm to start the delta check."
+  },
+  "deltaConsentCancelled": {
+    "message": "Delta check cancelled. No changes were made."
+  },
   "deltaNeedsPageAccess": {
     "message": "This page does not allow the delta check. Open a normal website and run the test there."
   },
@@ -259,6 +265,48 @@
   },
   "draftEmailButton": {
     "message": "Draft email"
+  },
+  "contactDraftHint": {
+    "message": "These buttons open a mail draft addressed to the company DPO. Please adjust the text before sending."
+  },
+  "contactEditReminder": {
+    "message": "The sample texts are templates and should be adapted to the specific case before sending."
+  },
+  "bfdiSourceLink": {
+    "message": "Source: BfDI sample texts"
+  },
+  "accessRequestButton": {
+    "message": "Request access by email"
+  },
+  "correctionRequestButton": {
+    "message": "Request correction of personal data"
+  },
+  "deletionRequestButton": {
+    "message": "Request data deletion"
+  },
+  "mailGreeting": {
+    "message": "Dear Sir or Madam,"
+  },
+  "mailClosing": {
+    "message": "Kind regards"
+  },
+  "mailPersonalizeHint": {
+    "message": "Please review and fill in the marked details, the concrete context, and the personal data before sending."
+  },
+  "accessMailBody": {
+    "message": "I hereby request information about the processing of my personal data by $1. In particular, please tell me which data is processed, for what purposes, on which legal basis, and to whom the data may be disclosed."
+  },
+  "correctionMailSubject": {
+    "message": "Request to correct personal data at $1"
+  },
+  "correctionMailBody": {
+    "message": "I hereby request correction of my personal data at $1. Please review and correct the following details or the data stored by you: [please add the details]."
+  },
+  "deletionMailSubject": {
+    "message": "Request to delete personal data at $1"
+  },
+  "deletionMailBody": {
+    "message": "I hereby request deletion of my personal data at $1. Unless overriding retention obligations apply, please delete the following data or tell me which data is still stored: [please add the details]."
   },
   "authorityLabel": {
     "message": "Authority"

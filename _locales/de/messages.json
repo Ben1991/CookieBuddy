@@ -8,11 +8,11 @@
   "popupTitle": {
     "message": "Consent-Delta prüfen"
   },
-  "skipToBanner": {
-    "message": "Zum Banner springen"
-  },
   "legalDisclaimer": {
     "message": "Dies ist keine Rechtsberatung. Bitte prüfe die Inhalte weiterhin selbst. Der Ersteller übernimmt keine Haftung für die Ergebnisse."
+  },
+  "popupIntro": {
+    "message": "Finde auf einen Blick heraus, was die Seite vor und nach der Einwilligung wirklich macht."
   },
   "languageLabel": {
     "message": "Sprache"
@@ -41,15 +41,6 @@
   "bannerHeading": {
     "message": "Banner"
   },
-  "bannerInstructions": {
-    "message": "Der Bannerbereich kann mit dem Button oben oder mit dem Ziehgriff am unteren Rand der Karte vergrößert werden."
-  },
-  "enlargeBannerButton": {
-    "message": "Banner größer anzeigen"
-  },
-  "shrinkBannerButton": {
-    "message": "Banner kleiner anzeigen"
-  },
   "legendHeading": {
     "message": "Legende"
   },
@@ -71,6 +62,12 @@
   "legendRedBody": {
     "message": "Ein nicht-essenzieller Tracker läuft offenbar ohne Consent."
   },
+  "legendCurrent": {
+    "message": "aktuell"
+  },
+  "legendBadgeNote": {
+    "message": "Dieser Status entspricht dem Badge in der Erweiterungsleiste."
+  },
   "refreshButton": {
     "message": "Aktualisieren"
   },
@@ -88,6 +85,9 @@
   },
   "cookiesTrafficHeading": {
     "message": "Cookies und Traffic"
+  },
+  "cookiesTrafficIntro": {
+    "message": "Die Übersicht bündelt sichtbare Cookies und lokal gespeicherte Browserdaten. Die Liste aktualisiert sich nach jedem Scan."
   },
   "visibleCookiesHeading": {
     "message": "Sichtbare Cookies"
@@ -224,6 +224,12 @@
   "deltaCheckingDescription": {
     "message": "CookieBuddy versucht eine Alle-ablehnen-Aktion und vergleicht danach Cookies und Drittanbieter-Traffic. Das ist bestmöglich, weil Banner unterschiedliche Bedienelemente verwenden."
   },
+  "deltaConsentPrompt": {
+    "message": "Bitte lehne zuerst alle Cookies auf der Seite ab. Wenn du bereit bist, bestätige den Start der Delta-Prüfung."
+  },
+  "deltaConsentCancelled": {
+    "message": "Delta-Prüfung abgebrochen. Es wurden keine Änderungen vorgenommen."
+  },
   "deltaNeedsPageAccess": {
     "message": "Für diese Seite fehlt der Zugriff für die Delta-Prüfung. Öffne eine normale Webseite und starte den Test dort erneut."
   },
@@ -259,6 +265,48 @@
   },
   "draftEmailButton": {
     "message": "E-Mail entwerfen"
+  },
+  "contactDraftHint": {
+    "message": "Die Schaltflächen öffnen einen Mail-Entwurf an den Datenschutzbeauftragten des Unternehmens. Bitte den Text vor dem Absenden noch anpassen."
+  },
+  "contactEditReminder": {
+    "message": "Die Mustertexte dienen als Vorlage und sollten vor dem Versand auf den konkreten Fall angepasst werden."
+  },
+  "bfdiSourceLink": {
+    "message": "Quelle: BfDI-Mustertexte"
+  },
+  "accessRequestButton": {
+    "message": "Auskunft per Mail anfragen"
+  },
+  "correctionRequestButton": {
+    "message": "Berichtigung personenbezogener Daten anfragen"
+  },
+  "deletionRequestButton": {
+    "message": "Datenlöschung anfragen"
+  },
+  "mailGreeting": {
+    "message": "Sehr geehrte Damen und Herren,"
+  },
+  "mailClosing": {
+    "message": "Mit freundlichen Grüßen"
+  },
+  "mailPersonalizeHint": {
+    "message": "Bitte die markierten Angaben, den konkreten Bezug und die personenbezogenen Daten vor dem Versand prüfen und ergänzen."
+  },
+  "accessMailBody": {
+    "message": "hiermit bitte ich um Auskunft über die Verarbeitung meiner personenbezogenen Daten durch $1. Bitte teilen Sie mir insbesondere mit, welche Daten verarbeitet werden, zu welchen Zwecken dies geschieht, auf welcher Rechtsgrundlage dies beruht und an wen die Daten gegebenenfalls weitergegeben werden."
+  },
+  "correctionMailSubject": {
+    "message": "Bitte um Berichtigung personenbezogener Daten bei $1"
+  },
+  "correctionMailBody": {
+    "message": "hiermit bitte ich um Berichtigung meiner personenbezogenen Daten bei $1. Bitte prüfen und korrigieren Sie die nachfolgenden Angaben beziehungsweise die bei Ihnen gespeicherten Daten: [bitte Daten ergänzen]."
+  },
+  "deletionMailSubject": {
+    "message": "Bitte um Löschung personenbezogener Daten bei $1"
+  },
+  "deletionMailBody": {
+    "message": "hiermit bitte ich um Löschung meiner personenbezogenen Daten bei $1. Soweit keine vorrangigen Aufbewahrungspflichten entgegenstehen, bitte ich um Löschung der nachfolgenden Daten beziehungsweise um Mitteilung, welche Daten noch gespeichert werden: [bitte Daten ergänzen]."
   },
   "authorityLabel": {
     "message": "Behörde"

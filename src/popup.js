@@ -13,8 +13,6 @@ const state = {
 const elements = {
   statusPill: document.querySelector("#statusPill"),
   bannerResult: document.querySelector("#bannerResult"),
-  bannerSection: document.querySelector("#bannerSection"),
-  bannerSizeButton: document.querySelector("#bannerSizeButton"),
   categoryResult: document.querySelector("#categoryResult"),
   cookieResult: document.querySelector("#cookieResult"),
   cookieCount: document.querySelector("#cookieCount"),
@@ -35,7 +33,6 @@ const deltaGuide = "1) Reloads the page without cache so the banner can appear f
 elements.refreshButton.addEventListener("click", () => scanCurrentTab());
 elements.deltaButton.addEventListener("click", () => runDeltaCheck());
 elements.bannerOverviewButton?.addEventListener("click", () => openBannerOverview());
-elements.bannerSizeButton?.addEventListener("click", () => toggleBannerSize());
 elements.helpButton.addEventListener("click", () => {
   const isOpen = !elements.helpPanel.hidden;
   elements.helpPanel.hidden = isOpen;
@@ -88,22 +85,19 @@ async function runDeltaCheck() {
     return;
   }
 
+  const confirmed = window.confirm(t("deltaConsentPrompt"));
+  if (!confirmed) {
+    elements.deltaResult.innerHTML = `<p class="muted">${escapeHtml(t("deltaConsentCancelled"))}</p>`;
+    setStatus("statusChecked", "ok");
+    return;
+  }
+
   setStatus("statusChecking", "busy");
   elements.deltaButton.disabled = true;
   elements.deltaButton.title = deltaGuide;
   elements.deltaResult.innerHTML = `<p class="muted">${escapeHtml(t("deltaCheckingDescription"))}</p>`;
 
   try {
-    await chrome.tabs.reload(state.tab.id, { bypassCache: true });
-    await wait(1200);
-    await ensureContentScript(state.tab.id);
-    const freshAnalysis = await sendToTab(state.tab.id, { target: "cookiebuddy-content", type: "ANALYZE_PAGE" });
-    state.analysis = freshAnalysis;
-
-    if (!freshAnalysis.banner || freshAnalysis.banner.confidence === "none") {
-      throw new Error(t("deltaNeedsManualConsent"));
-    }
-
     await chrome.runtime.sendMessage({ target: "cookiebuddy-background", type: "CLEAR_TRAFFIC", tabId: state.tab.id });
     const before = await snapshot(t("snapshotCurrentState"));
     const denyResult = await sendToTab(state.tab.id, { target: "cookiebuddy-content", type: "TRY_DENY_ALL" });
@@ -156,6 +150,7 @@ async function snapshot(label) {
 
 function render() {
   renderBanner();
+  renderLegend();
   renderCategories();
   renderCookies();
   renderContacts();
@@ -165,7 +160,6 @@ function renderBanner() {
   const banner = state.analysis.banner;
   const sourceLabel = banner.source?.host || banner.source?.value || banner.evidence?.[0]?.value || t("noSourceDetected");
   elements.bannerResult.classList.remove("skeleton");
-  elements.bannerSection.dataset.expanded = String(elements.bannerSizeButton?.getAttribute("aria-pressed") === "true");
   elements.bannerResult.innerHTML = `
     <div>
       <span class="label">${escapeHtml(t("detectedLabel"))}</span>
@@ -182,6 +176,49 @@ function renderBanner() {
       </div>
     </details>
   `;
+}
+
+function renderLegend() {
+  const badgeStatus = determineIconStatus();
+  const legendMeta = {
+    green: {
+      title: t("legendGreenTitle"),
+      body: t("legendGreenBody")
+    },
+    yellow: {
+      title: t("legendYellowTitle"),
+      body: t("legendYellowBody")
+    },
+    red: {
+      title: t("legendRedTitle"),
+      body: t("legendRedBody")
+    }
+  };
+
+  const legendMap = [
+    ["green", "legendGreen"],
+    ["yellow", "legendYellow"],
+    ["red", "legendRed"]
+  ];
+
+  const legendGrid = document.querySelector("#legendGrid");
+  if (!legendGrid) return;
+
+  const items = legendMap.map(([status, key]) => {
+    const meta = legendMeta[status];
+    const active = status === badgeStatus;
+    return `
+      <div class="legend-item" data-status="${status}" ${active ? 'data-current="true" aria-current="true"' : ""}>
+        <span class="legend-dot ${status}" aria-hidden="true"></span>
+        <div>
+          <strong>${escapeHtml(meta.title)}${active ? ` <span class="legend-current">${escapeHtml(t("legendCurrent"))}</span>` : ""}</strong>
+          <p class="muted">${escapeHtml(meta.body)}${status === "green" ? ` ${escapeHtml(t("legendBadgeNote"))}` : ""}</p>
+        </div>
+      </div>
+    `;
+  });
+
+  legendGrid.innerHTML = items.join("");
 }
 
 function renderCategories() {
@@ -250,25 +287,76 @@ function renderContacts() {
   const dpo = contacts.dpo;
   const authority = contacts.authority;
   const subject = encodeURIComponent(t("mailSubject", state.analysis.host));
-  const body = encodeURIComponent(t("mailBody", state.analysis.url));
-  const dpoMail = dpo?.email ? `mailto:${encodeURIComponent(dpo.email)}?subject=${subject}&body=${body}` : "";
+  const dpoEmail = dpo?.email || "";
+  const dpoMail = dpoEmail ? `mailto:${encodeURIComponent(dpoEmail)}?subject=${subject}&body=${encodeURIComponent(buildMailBody("access"))}` : "";
+  const correctionMail = dpoEmail ? `mailto:${encodeURIComponent(dpoEmail)}?subject=${encodeURIComponent(t("correctionMailSubject", state.analysis.host))}&body=${encodeURIComponent(buildMailBody("correction"))}` : "";
+  const deletionMail = dpoEmail ? `mailto:${encodeURIComponent(dpoEmail)}?subject=${encodeURIComponent(t("deletionMailSubject", state.analysis.host))}&body=${encodeURIComponent(buildMailBody("deletion"))}` : "";
   const authorityMail = authority.url;
   const authorityName = authority.key === "german" ? t("germanAuthorityName") : authority.key === "fallback" ? t("bfdiName") : authority.name;
   const authorityNote = authority.key === "german" ? t("germanAuthorityNote") : authority.key === "fallback" ? t("bfdiNote") : authority.note;
+  const dpoName = dpo?.name || t("dpoLabel");
+  const accessAria = dpoEmail ? `${t("accessRequestButton")} – ${dpoName}` : t("accessRequestButton");
+  const correctionAria = dpoEmail ? `${t("correctionRequestButton")} – ${dpoName}` : t("correctionRequestButton");
+  const deletionAria = dpoEmail ? `${t("deletionRequestButton")} – ${dpoName}` : t("deletionRequestButton");
 
   elements.contactResult.innerHTML = `
-    <div class="contact-item">
+    <div class="contact-item" aria-labelledby="contactDpoLabel" aria-describedby="contactDraftHint contactEditReminder contactSourceHint">
       <span class="label">${escapeHtml(t("dpoLabel"))}</span>
-      <strong>${escapeHtml(dpo?.email || t("noDpoEmailFound"))}</strong>
-      ${dpoMail ? `<a class="primary-button small" href="${dpoMail}">${escapeHtml(t("draftEmailButton"))}</a>` : ""}
+      <strong id="contactDpoLabel">${escapeHtml(dpoEmail || t("noDpoEmailFound"))}</strong>
+      <p class="muted" id="contactDraftHint">${escapeHtml(t("contactDraftHint"))}</p>
+      <div class="contact-actions">
+        ${dpoMail ? `<a class="primary-button small" href="${dpoMail}" aria-label="${escapeHtml(accessAria)}" title="${escapeHtml(accessAria)}">${escapeHtml(t("accessRequestButton"))}</a>` : ""}
+        ${correctionMail ? `<a class="ghost-button small" href="${correctionMail}" aria-label="${escapeHtml(correctionAria)}" title="${escapeHtml(correctionAria)}">${escapeHtml(t("correctionRequestButton"))}</a>` : ""}
+        ${deletionMail ? `<a class="ghost-button small" href="${deletionMail}" aria-label="${escapeHtml(deletionAria)}" title="${escapeHtml(deletionAria)}">${escapeHtml(t("deletionRequestButton"))}</a>` : ""}
+      </div>
+      <p class="muted" id="contactEditReminder">${escapeHtml(t("contactEditReminder"))}</p>
+      <a class="text-link" id="contactSourceHint" href="https://www.bfdi.bund.de/DE/Buerger/Mustertexte/Zwischenordner-f%C3%BCr-Mustertexte/Mustertexte_Allgemein.html?nn=340980" target="_blank" rel="noreferrer" aria-label="${escapeHtml(`${t("bfdiSourceLink")} – BfDI`) }" title="${escapeHtml(t("bfdiSourceLink"))}">${escapeHtml(t("bfdiSourceLink"))}</a>
     </div>
-    <div class="contact-item">
+    <div class="contact-item" aria-labelledby="contactAuthorityLabel" aria-describedby="contactAuthorityNote">
       <span class="label">${escapeHtml(t("authorityLabel"))}</span>
-      <strong>${escapeHtml(authorityName)}</strong>
-      <p class="muted">${escapeHtml(authorityNote)}</p>
-      <a class="ghost-button small" href="${escapeHtml(authorityMail)}" target="_blank" rel="noreferrer">${escapeHtml(t("openAuthorityDetails"))}</a>
+      <strong id="contactAuthorityLabel">${escapeHtml(authorityName)}</strong>
+      <p class="muted" id="contactAuthorityNote">${escapeHtml(authorityNote)}</p>
+      <a class="ghost-button small" href="${escapeHtml(authorityMail)}" target="_blank" rel="noreferrer" aria-label="${escapeHtml(`${t("openAuthorityDetails")} – ${authorityName}`)}" title="${escapeHtml(t("openAuthorityDetails"))}">${escapeHtml(t("openAuthorityDetails"))}</a>
     </div>
   `;
+}
+
+function buildMailBody(kind) {
+  const intro = t("mailGreeting");
+  const company = state.analysis.host || state.tab?.url || "";
+  const closing = t("mailClosing");
+
+  const templates = {
+    access: [
+      intro,
+      "",
+      t("accessMailBody", company),
+      "",
+      t("mailPersonalizeHint"),
+      "",
+      closing
+    ],
+    correction: [
+      intro,
+      "",
+      t("correctionMailBody", company),
+      "",
+      t("mailPersonalizeHint"),
+      "",
+      closing
+    ],
+    deletion: [
+      intro,
+      "",
+      t("deletionMailBody", company),
+      "",
+      t("mailPersonalizeHint"),
+      "",
+      closing
+    ]
+  };
+
+  return templates[kind].filter(Boolean).join("\n");
 }
 
 function renderDelta(delta) {
@@ -376,14 +464,6 @@ function determineIconStatus(delta = null) {
   if (!banner || banner.confidence === "none") return "yellow";
   if (hasThirdPartyTraffic || suspiciousCookies.length > 0) return "yellow";
   return "green";
-}
-
-function toggleBannerSize() {
-  const expanded = elements.bannerSizeButton.getAttribute("aria-pressed") === "true";
-  elements.bannerSizeButton.setAttribute("aria-pressed", String(!expanded));
-  elements.bannerSizeButton.textContent = expanded ? t("enlargeBannerButton") : t("shrinkBannerButton");
-  elements.bannerSection.dataset.expanded = String(!expanded);
-  elements.bannerResult.scrollTop = 0;
 }
 
 async function getCookiesForTab(tab) {
