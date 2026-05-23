@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="src/styles.css">
   </head>
   <body>
+    <a class="skip-link" href="#bannerSection" data-i18n="skipToBanner">Skip to banner</a>
     <main class="shell" aria-live="polite">
       <header class="hero">
         <img class="logo-mark" src="assets/logo.svg" alt="" aria-hidden="true">
@@ -44,19 +45,23 @@
         </div>
       </section>
 
-      <section class="card banner-card">
+      <section class="card banner-card" id="bannerSection" aria-labelledby="bannerHeading">
         <div class="section-title">
-          <h2 data-i18n="bannerHeading">Banner</h2>
-          <button id="refreshButton" class="ghost-button" type="button" data-i18n="refreshButton">Refresh</button>
+          <h2 id="bannerHeading" data-i18n="bannerHeading">Banner</h2>
+          <div class="section-actions">
+            <button id="bannerSizeButton" class="ghost-button small" type="button" aria-pressed="false" data-i18n="enlargeBannerButton">Make banner larger</button>
+            <button id="refreshButton" class="ghost-button" type="button" data-i18n="refreshButton">Refresh</button>
+          </div>
         </div>
-        <div id="bannerResult" class="result-grid skeleton">
+        <p class="sr-only" id="bannerInstructions" data-i18n="bannerInstructions">The banner area can be enlarged with the button above or with the resize handle at the bottom of the card.</p>
+        <div id="bannerResult" class="result-grid skeleton" role="region" aria-live="polite" aria-describedby="bannerInstructions">
           <span data-i18n="scanningCurrentTab">Scanning current tab...</span>
         </div>
       </section>
 
-      <section class="card legend-card">
+      <section class="card legend-card" aria-labelledby="legendHeading">
         <div class="section-title">
-          <h2 data-i18n="legendHeading">Legend</h2>
+          <h2 id="legendHeading" data-i18n="legendHeading">Legend</h2>
         </div>
         <div class="legend-grid">
           <div class="legend-item">
@@ -83,9 +88,9 @@
         </div>
       </section>
 
-      <section class="card">
+      <section class="card" aria-labelledby="servicesByCategoryHeading">
         <div class="section-title">
-          <h2 data-i18n="servicesByCategoryHeading">Services by category</h2>
+          <h2 id="servicesByCategoryHeading" data-i18n="servicesByCategoryHeading">Services by category</h2>
           <div class="section-actions">
             <button id="bannerOverviewButton" class="ghost-button small" type="button" data-i18n="bannerOverviewButton" title="Show the banner preferences or second level of the cookie banner">Übersicht aus dem Cookie Banner zeigen</button>
             <span id="bannerOverviewStatus" class="muted status-inline" aria-live="polite"></span>
