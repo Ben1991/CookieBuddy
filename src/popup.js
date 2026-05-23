@@ -18,6 +18,8 @@ const elements = {
   cookieCount: document.querySelector("#cookieCount"),
   deltaResult: document.querySelector("#deltaResult"),
   contactResult: document.querySelector("#contactResult"),
+  bannerOverviewButton: document.querySelector("#bannerOverviewButton"),
+  bannerOverviewStatus: document.querySelector("#bannerOverviewStatus"),
   detailsLink: document.querySelector("#detailsLink"),
   refreshButton: document.querySelector("#refreshButton"),
   deltaButton: document.querySelector("#deltaButton"),
@@ -30,6 +32,7 @@ const deltaGuide = "1) Reloads the page without cache so the banner can appear f
 
 elements.refreshButton.addEventListener("click", () => scanCurrentTab());
 elements.deltaButton.addEventListener("click", () => runDeltaCheck());
+elements.bannerOverviewButton?.addEventListener("click", () => openBannerOverview());
 elements.helpButton.addEventListener("click", () => {
   const isOpen = !elements.helpPanel.hidden;
   elements.helpPanel.hidden = isOpen;
@@ -66,6 +69,7 @@ async function scanCurrentTab() {
     state.cookies = cookies;
     state.traffic = trafficResponse?.traffic || [];
     await persistLastScan();
+    await updateIconStatus();
     render();
     setStatus("statusReady", "ok");
   } catch (error) {
@@ -122,6 +126,7 @@ async function runDeltaCheck() {
     await chrome.storage.local.set({ cookiebuddyLastDelta: delta });
     renderDelta(delta);
     await openDeltaTab(delta);
+    await updateIconStatus(delta);
     setStatus(delta.riskLevel === "high" ? "statusDeltaFound" : "statusChecked", delta.riskLevel === "high" ? "warn" : "ok");
   } catch (error) {
     elements.deltaResult.innerHTML = `<p class="error">${escapeHtml(error.message || t("deltaCheckFailed"))}</p>`;
@@ -166,10 +171,12 @@ function renderBanner() {
       <span class="label">${escapeHtml(t("confidenceLabel"))}</span>
       <strong>${escapeHtml(banner.confidence)}</strong>
     </div>
-    <div class="full-width">
-      <span class="label">${escapeHtml(t("sourceEvidenceLabel"))}</span>
-      <strong>${escapeHtml(sourceLabel)}</strong>
-    </div>
+    <details class="full-width banner-source">
+      <summary class="label">${escapeHtml(t("sourceEvidenceLabel"))}</summary>
+      <div class="banner-source-content">
+        <strong>${escapeHtml(sourceLabel)}</strong>
+      </div>
+    </details>
   `;
 }
 
@@ -298,6 +305,73 @@ async function openDeltaTab(delta) {
   await chrome.tabs.create({
     url: chrome.runtime.getURL("details.html?view=delta")
   });
+}
+
+async function openBannerOverview() {
+  if (!state.tab) return;
+
+  setStatus("statusChecking", "busy");
+  elements.bannerOverviewButton.disabled = true;
+  elements.bannerOverviewStatus.textContent = t("bannerOverviewSearching");
+  elements.bannerOverviewStatus.dataset.state = "busy";
+
+  try {
+    await ensureContentScript(state.tab.id);
+    const response = await sendToTab(state.tab.id, { target: "cookiebuddy-content", type: "OPEN_BANNER_OVERVIEW" });
+    if (!response?.found) {
+      elements.bannerOverviewStatus.textContent = t("bannerOverviewNotFound");
+      elements.bannerOverviewStatus.dataset.state = "warn";
+      throw new Error(t("bannerOverviewFailed"));
+    }
+    if (response.clicked) {
+      elements.bannerOverviewStatus.textContent = t("bannerOverviewOpened", response.label || t("detectedButton"));
+      elements.bannerOverviewStatus.dataset.state = "ok";
+      setStatus("statusChecked", "ok");
+    } else {
+      elements.bannerOverviewStatus.textContent = t("bannerOverviewFoundButNotOpened", response.label || t("detectedButton"));
+      elements.bannerOverviewStatus.dataset.state = "warn";
+      throw new Error(t("bannerOverviewFailed"));
+    }
+  } catch (error) {
+    setStatus("statusCheckFailed", "warn");
+    elements.bannerResult.innerHTML = `<p class="error">${escapeHtml(error.message || t("bannerOverviewFailed"))}</p>`;
+    if (!elements.bannerOverviewStatus.textContent) {
+      elements.bannerOverviewStatus.textContent = t("bannerOverviewFailed");
+      elements.bannerOverviewStatus.dataset.state = "warn";
+    }
+  } finally {
+    elements.bannerOverviewButton.disabled = false;
+  }
+}
+
+async function updateIconStatus(delta = null) {
+  const status = determineIconStatus(delta);
+  await chrome.runtime.sendMessage({
+    target: "cookiebuddy-background",
+    type: "SET_ICON_STATUS",
+    tabId: state.tab?.id,
+    status
+  });
+}
+
+function determineIconStatus(delta = null) {
+  if (delta) {
+    if (delta.riskLevel === "high") return "red";
+    if (delta.denyAction?.clicked && delta.thirdPartyHosts.length === 0 && delta.newCookies.length === 0 && delta.remainingCookies.length === 0) {
+      return "green";
+    }
+    return "yellow";
+  }
+
+  const banner = state.analysis?.banner;
+  const traffic = normalizeTraffic(state.traffic || [], state.analysis?.host || "");
+  const visibleCookies = state.cookies || [];
+  const suspiciousCookies = visibleCookies.filter((cookie) => !/session|csrf|xsrf|auth|consent|cookie|privacy|necessary/i.test(cookie.name));
+  const hasThirdPartyTraffic = traffic.length > 0;
+
+  if (!banner || banner.confidence === "none") return "yellow";
+  if (hasThirdPartyTraffic || suspiciousCookies.length > 0) return "yellow";
+  return "green";
 }
 
 async function getCookiesForTab(tab) {

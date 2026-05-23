@@ -38,6 +38,27 @@
   "bannerHeading": {
     "message": "Banner"
   },
+  "legendHeading": {
+    "message": "Legend"
+  },
+  "legendGreenTitle": {
+    "message": "Green"
+  },
+  "legendGreenBody": {
+    "message": "All cookies appear covered by consent."
+  },
+  "legendYellowTitle": {
+    "message": "Yellow"
+  },
+  "legendYellowBody": {
+    "message": "The situation is unclear or mixed."
+  },
+  "legendRedTitle": {
+    "message": "Red"
+  },
+  "legendRedBody": {
+    "message": "A non-essential tracker appears to run without consent."
+  },
   "refreshButton": {
     "message": "Refresh"
   },
@@ -46,6 +67,9 @@
   },
   "servicesByCategoryHeading": {
     "message": "Services by category"
+  },
+  "bannerOverviewButton": {
+    "message": "Show banner overview"
   },
   "detailsLink": {
     "message": "Details"
@@ -145,6 +169,21 @@
   },
   "sourceEvidenceLabel": {
     "message": "Source evidence"
+  },
+  "bannerOverviewSearching": {
+    "message": "Looking for banner settings..."
+  },
+  "bannerOverviewOpened": {
+    "message": "Opened: $1"
+  },
+  "bannerOverviewFoundButNotOpened": {
+    "message": "Found, but could not open: $1"
+  },
+  "bannerOverviewNotFound": {
+    "message": "No banner settings button was found."
+  },
+  "bannerOverviewFailed": {
+    "message": "Could not open the banner overview on this page."
   },
   "noSourceDetected": {
     "message": "No consent source detected"

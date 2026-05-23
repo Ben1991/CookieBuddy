@@ -12,14 +12,17 @@ This is not legal advice. Please still review the content. The creator takes no 
 
 * Detects consent banners dynamically from loaded scripts, resource hosts, browser-visible CMP APIs, DOM markers, and visible consent wording.
 * Shows known provider names when recognized, and otherwise reports an unknown or self-made banner with the source script or host evidence where possible.
+* Shows the source evidence for banner detection as an expandable hint so the main card stays compact.
 * Shows detected services by category, for example essential, marketing, analytics, functional, and social.
-* Lists visible cookies and maps common cookie names to likely services.
+* Lists visible cookies, local browser storage such as `localStorage` and `sessionStorage`, and marks whether a key appears related to the banner.
 * Tracks third-party browser requests while the current tab is open.
-* Runs a best-effort delta check by trying to click a detected “deny all” option, then comparing cookies and third-party traffic afterward.
+* Runs a best-effort delta check by reloading the page without cache, trying to find the banner and deny option, and then comparing cookies and third-party traffic afterward.
 * Flags cookies or third-party hosts that remain visible after opt-out.
+* Opens the delta result in a separate details tab for easier reading.
 * Searches the current page and linked imprint/privacy/contact pages for data protection contact details.
-* Provides a draft email link when a DPO email address can be detected.
-* Links to likely data protection authority information.
+* Provides a draft email link when a DPO email address can be detected and falls back to the German federal data protection authority contact if no state authority can be inferred.
+* Includes a compact banner-overview action that tries to open the second level or preferences view of the cookie banner when the provider supports it.
+* Shows a color status in the extension toolbar icon: green for covered cookies, yellow for unclear cases, and red for likely non-essential trackers without consent.
 * Supports English and German with a manual language toggle.
 * Offers a donation link through Buy Me a Coffee.
 
@@ -59,6 +62,7 @@ CookieBuddy currently has no build step and no dependency installation.
 Useful local checks:
 
 ```sh
+node --test tests/core.test.mjs tests/popup.integration.test.mjs
 node --check src/background.js
 node --check src/content.js
 node --check src/popup.js
@@ -66,6 +70,8 @@ node --check src/details.js
 node --check src/i18n.js
 node -e "for (const file of \['manifest.json','\_locales/en/messages.json','\_locales/de/messages.json']) JSON.parse(require('fs').readFileSync(file,'utf8'))"
 ```
+
+The repository also includes a small GitHub Actions workflow in `.github/workflows/ci.yml` that runs the same checks on every push and pull request.
 
 After changing extension files, reload the extension in `chrome://extensions`.
 
@@ -78,9 +84,12 @@ After changing extension files, reload the extension in `chrome://extensions`.
 * `src/background.js`: Third-party request tracking.
 * `src/content.js`: Page, banner, category, service, and contact analysis.
 * `src/popup.js`: Popup behavior, delta check, help toggle, and rendering.
+* `src/core.js`: Shared helpers for cookie, traffic, and delta logic.
 * `src/details.js`: Details page rendering.
 * `src/i18n.js`: English/German language handling.
 * `src/styles.css`: Accessible light/dark UI styling.
+* `tests/core.test.mjs`: Unit tests for shared analysis helpers.
+* `tests/popup.integration.test.mjs`: Integration-style popup test with a mocked browser environment.
 * `\_locales/en/messages.json`: English UI text.
 * `\_locales/de/messages.json`: German UI text.
 
