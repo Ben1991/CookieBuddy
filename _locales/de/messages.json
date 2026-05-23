@@ -8,6 +8,9 @@
   "popupTitle": {
     "message": "Consent-Delta prüfen"
   },
+  "skipToBanner": {
+    "message": "Zum Banner springen"
+  },
   "legalDisclaimer": {
     "message": "Dies ist keine Rechtsberatung. Bitte prüfe die Inhalte weiterhin selbst. Der Ersteller übernimmt keine Haftung für die Ergebnisse."
   },
@@ -37,6 +40,15 @@
   },
   "bannerHeading": {
     "message": "Banner"
+  },
+  "bannerInstructions": {
+    "message": "Der Bannerbereich kann mit dem Button oben oder mit dem Ziehgriff am unteren Rand der Karte vergrößert werden."
+  },
+  "enlargeBannerButton": {
+    "message": "Banner größer anzeigen"
+  },
+  "shrinkBannerButton": {
+    "message": "Banner kleiner anzeigen"
   },
   "legendHeading": {
     "message": "Legende"

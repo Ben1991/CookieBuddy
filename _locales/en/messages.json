@@ -8,6 +8,9 @@
   "popupTitle": {
     "message": "Consent delta check"
   },
+  "skipToBanner": {
+    "message": "Skip to banner"
+  },
   "legalDisclaimer": {
     "message": "this is not legal advice. please still review the content. the creator takes no liability for the results."
   },
@@ -37,6 +40,15 @@
   },
   "bannerHeading": {
     "message": "Banner"
+  },
+  "bannerInstructions": {
+    "message": "The banner area can be enlarged with the button above or with the resize handle at the bottom of the card."
+  },
+  "enlargeBannerButton": {
+    "message": "Make banner larger"
+  },
+  "shrinkBannerButton": {
+    "message": "Make banner smaller"
   },
   "legendHeading": {
     "message": "Legend"

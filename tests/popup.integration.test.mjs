@@ -27,6 +27,10 @@ test("popup renders scan results and toggles help", async () => {
   helpButton.click();
   assert.equal(helpPanel.hidden, false);
 
+  const sizeButton = document.getElement("bannerSizeButton");
+  sizeButton.click();
+  assert.equal(sizeButton.attributes.get("aria-pressed"), "true");
+
   const overviewButton = document.getElement("bannerOverviewButton");
   overviewButton.click();
   await flush();
@@ -39,6 +43,8 @@ function createDocument() {
   const defs = [
     "statusPill",
     "bannerResult",
+    "bannerSection",
+    "bannerSizeButton",
     "categoryResult",
     "cookieResult",
     "cookieCount",
@@ -209,6 +215,10 @@ class FakeElement {
   setAttribute(name, value) {
     this.attributes.set(name, String(value));
     if (name === "aria-expanded") this.ariaExpanded = String(value);
+  }
+
+  getAttribute(name) {
+    return this.attributes.get(name) || null;
   }
 
   addEventListener(type, handler) {

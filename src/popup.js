@@ -13,6 +13,8 @@ const state = {
 const elements = {
   statusPill: document.querySelector("#statusPill"),
   bannerResult: document.querySelector("#bannerResult"),
+  bannerSection: document.querySelector("#bannerSection"),
+  bannerSizeButton: document.querySelector("#bannerSizeButton"),
   categoryResult: document.querySelector("#categoryResult"),
   cookieResult: document.querySelector("#cookieResult"),
   cookieCount: document.querySelector("#cookieCount"),
@@ -33,6 +35,7 @@ const deltaGuide = "1) Reloads the page without cache so the banner can appear f
 elements.refreshButton.addEventListener("click", () => scanCurrentTab());
 elements.deltaButton.addEventListener("click", () => runDeltaCheck());
 elements.bannerOverviewButton?.addEventListener("click", () => openBannerOverview());
+elements.bannerSizeButton?.addEventListener("click", () => toggleBannerSize());
 elements.helpButton.addEventListener("click", () => {
   const isOpen = !elements.helpPanel.hidden;
   elements.helpPanel.hidden = isOpen;
@@ -162,6 +165,7 @@ function renderBanner() {
   const banner = state.analysis.banner;
   const sourceLabel = banner.source?.host || banner.source?.value || banner.evidence?.[0]?.value || t("noSourceDetected");
   elements.bannerResult.classList.remove("skeleton");
+  elements.bannerSection.dataset.expanded = String(elements.bannerSizeButton?.getAttribute("aria-pressed") === "true");
   elements.bannerResult.innerHTML = `
     <div>
       <span class="label">${escapeHtml(t("detectedLabel"))}</span>
@@ -372,6 +376,14 @@ function determineIconStatus(delta = null) {
   if (!banner || banner.confidence === "none") return "yellow";
   if (hasThirdPartyTraffic || suspiciousCookies.length > 0) return "yellow";
   return "green";
+}
+
+function toggleBannerSize() {
+  const expanded = elements.bannerSizeButton.getAttribute("aria-pressed") === "true";
+  elements.bannerSizeButton.setAttribute("aria-pressed", String(!expanded));
+  elements.bannerSizeButton.textContent = expanded ? t("enlargeBannerButton") : t("shrinkBannerButton");
+  elements.bannerSection.dataset.expanded = String(!expanded);
+  elements.bannerResult.scrollTop = 0;
 }
 
 async function getCookiesForTab(tab) {
