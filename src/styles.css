@@ -148,6 +148,13 @@ h1 {
   line-height: 1.45;
 }
 
+.hero-status {
+  margin: 8px 0 0;
+  color: var(--accent-strong);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
 .disclaimer {
   max-width: 260px;
   margin-bottom: 0;

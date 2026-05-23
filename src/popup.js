@@ -12,6 +12,7 @@ const state = {
 
 const elements = {
   statusPill: document.querySelector("#statusPill"),
+  scanStatusText: document.querySelector("#scanStatusText"),
   bannerResult: document.querySelector("#bannerResult"),
   categoryResult: document.querySelector("#categoryResult"),
   cookieResult: document.querySelector("#cookieResult"),
@@ -243,6 +244,7 @@ function renderCookies() {
   const storage = storageItems.slice(0, 8);
   elements.cookieResult.innerHTML = `
     <div class="storage-summary">
+    ${totalCookies === 0 && totalLocalItems === 0 ? `<p class="empty-state" role="status" aria-live="polite">${escapeHtml(t("cookiesTrafficEmptyState"))}</p>` : ""}
       <div class="metric-row">
         <span>${escapeHtml(t("cookieCount", totalCookies))}</span>
         <span>${escapeHtml(t("storageCount", [state.analysis.storage?.localStorageKeys?.length || 0, state.analysis.storage?.sessionStorageKeys?.length || 0]))}</span>
@@ -490,6 +492,23 @@ function setStatus(key, mode) {
   state.statusMode = mode;
   elements.statusPill.textContent = t(key);
   elements.statusPill.dataset.mode = mode;
+  if (elements.scanStatusText) {
+    const scanMessage = key === "statusReady"
+      ? t("scanStatusReady")
+      : key === "statusScanning"
+        ? t("scanStatusScanning")
+        : key === "statusNeedsAccess"
+          ? t("scanStatusNeedsAccess")
+          : key === "statusChecking"
+            ? t("scanStatusChecking")
+            : key === "statusDeltaFound"
+              ? t("scanStatusDeltaFound")
+              : key === "statusCheckFailed"
+                ? t("scanStatusFailed")
+                : t("scanStatusChecked");
+    elements.scanStatusText.textContent = scanMessage;
+    elements.scanStatusText.dataset.mode = mode;
+  }
 }
 
 function formatCookie(cookie) {
