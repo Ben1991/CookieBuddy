@@ -54,10 +54,43 @@
         </div>
       </section>
 
+      <section class="card legend-card">
+        <div class="section-title">
+          <h2 data-i18n="legendHeading">Legend</h2>
+        </div>
+        <div class="legend-grid">
+          <div class="legend-item">
+            <span class="legend-dot green" aria-hidden="true"></span>
+            <div>
+              <strong data-i18n="legendGreenTitle">Green</strong>
+              <p class="muted" data-i18n="legendGreenBody">All cookies appear covered by consent.</p>
+            </div>
+          </div>
+          <div class="legend-item">
+            <span class="legend-dot yellow" aria-hidden="true"></span>
+            <div>
+              <strong data-i18n="legendYellowTitle">Yellow</strong>
+              <p class="muted" data-i18n="legendYellowBody">The situation is unclear or mixed.</p>
+            </div>
+          </div>
+          <div class="legend-item">
+            <span class="legend-dot red" aria-hidden="true"></span>
+            <div>
+              <strong data-i18n="legendRedTitle">Red</strong>
+              <p class="muted" data-i18n="legendRedBody">A non-essential tracker appears to run without consent.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section class="card">
         <div class="section-title">
           <h2 data-i18n="servicesByCategoryHeading">Services by category</h2>
-          <a id="detailsLink" class="text-link" href="details.html" target="_blank" rel="noreferrer" data-i18n="detailsLink">Details</a>
+          <div class="section-actions">
+            <button id="bannerOverviewButton" class="ghost-button small" type="button" data-i18n="bannerOverviewButton" title="Show the banner preferences or second level of the cookie banner">Übersicht aus dem Cookie Banner zeigen</button>
+            <span id="bannerOverviewStatus" class="muted status-inline" aria-live="polite"></span>
+            <a id="detailsLink" class="text-link" href="details.html" target="_blank" rel="noreferrer" data-i18n="detailsLink">Details</a>
+          </div>
         </div>
         <div id="categoryResult" class="category-grid"></div>
       </section>

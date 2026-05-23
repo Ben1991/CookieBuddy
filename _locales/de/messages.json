@@ -38,6 +38,27 @@
   "bannerHeading": {
     "message": "Banner"
   },
+  "legendHeading": {
+    "message": "Legende"
+  },
+  "legendGreenTitle": {
+    "message": "Grün"
+  },
+  "legendGreenBody": {
+    "message": "Alle Cookies scheinen durch Consent abgedeckt zu sein."
+  },
+  "legendYellowTitle": {
+    "message": "Gelb"
+  },
+  "legendYellowBody": {
+    "message": "Die Lage ist unklar oder gemischt."
+  },
+  "legendRedTitle": {
+    "message": "Rot"
+  },
+  "legendRedBody": {
+    "message": "Ein nicht-essenzieller Tracker läuft offenbar ohne Consent."
+  },
   "refreshButton": {
     "message": "Aktualisieren"
   },
@@ -46,6 +67,9 @@
   },
   "servicesByCategoryHeading": {
     "message": "Dienste nach Kategorie"
+  },
+  "bannerOverviewButton": {
+    "message": "Übersicht aus dem Cookie Banner zeigen"
   },
   "detailsLink": {
     "message": "Details"
@@ -145,6 +169,21 @@
   },
   "sourceEvidenceLabel": {
     "message": "Quellenhinweis"
+  },
+  "bannerOverviewSearching": {
+    "message": "Suche nach Banner-Einstellungen..."
+  },
+  "bannerOverviewOpened": {
+    "message": "Geöffnet: $1"
+  },
+  "bannerOverviewFoundButNotOpened": {
+    "message": "Gefunden, aber nicht geöffnet: $1"
+  },
+  "bannerOverviewNotFound": {
+    "message": "Kein Button für Banner-Einstellungen gefunden."
+  },
+  "bannerOverviewFailed": {
+    "message": "Die Banner-Übersicht konnte auf dieser Seite nicht geöffnet werden."
   },
   "noSourceDetected": {
     "message": "Keine Consent-Quelle erkannt"

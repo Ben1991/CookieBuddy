@@ -89,6 +89,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if (message.type === "OPEN_BANNER_OVERVIEW") {
+    openBannerOverview().then(sendResponse);
+    return true;
+  }
+
   return false;
 });
 
@@ -390,6 +395,64 @@ async function tryDenyAll() {
     label: clicked?.innerText?.trim() || clicked?.getAttribute("aria-label") || "",
     found: candidates.length > 0
   };
+}
+
+async function openBannerOverview() {
+  const candidates = collectBannerOverviewCandidates();
+  const clicked = candidates.find((element) => {
+    try {
+      element.click();
+      return true;
+    } catch {
+      return false;
+    }
+  });
+
+  await wait(900);
+  return {
+    clicked: Boolean(clicked),
+    found: candidates.length > 0,
+    label: clicked?.innerText?.trim() || clicked?.getAttribute("aria-label") || ""
+  };
+}
+
+function collectBannerOverviewCandidates() {
+  const selectors = [
+    "#onetrust-pc-btn-handler",
+    ".ot-pc-refuse-all-handler",
+    ".ot-sdk-show-settings",
+    "[data-testid*='settings' i]",
+    "[data-testid*='preferences' i]",
+    "[aria-label*='settings' i]",
+    "[aria-label*='preferences' i]",
+    "[aria-label*='manage' i]",
+    "[aria-label*='consent' i]",
+    "button",
+    "a"
+  ];
+
+  const textMatchers = [
+    /settings/i,
+    /preferences/i,
+    /manage/i,
+    /customi[sz]e/i,
+    /cookie settings/i,
+    /privacy settings/i,
+    /consent/i,
+    /show details/i,
+    /anzeigen/i,
+    /einstellungen/i,
+    /präferenzen/i,
+    /verwalten/i
+  ];
+
+  const selectorMatches = selectors.flatMap((selector) => Array.from(document.querySelectorAll(selector)));
+  return Array.from(new Set(selectorMatches))
+    .filter((element) => element instanceof HTMLElement)
+    .filter((element) => {
+      const label = `${element.innerText || ""} ${element.getAttribute("aria-label") || ""}`.trim();
+      return textMatchers.some((matcher) => matcher.test(label));
+    });
 }
 
 function collectDenyCandidates() {

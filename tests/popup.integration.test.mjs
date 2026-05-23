@@ -9,7 +9,7 @@ const localeMessages = {
 
 test("popup renders scan results and toggles help", async () => {
   const document = createDocument();
-  const window = { Node: class {}, HTMLElement: class {}, URL };
+  const window = { Node: class {}, HTMLElement: FakeElement, URL };
 
   setupChromeMock("en");
   setupDomGlobals({ document, window });
@@ -26,6 +26,12 @@ test("popup renders scan results and toggles help", async () => {
   assert.equal(helpPanel.hidden, true);
   helpButton.click();
   assert.equal(helpPanel.hidden, false);
+
+  const overviewButton = document.getElement("bannerOverviewButton");
+  overviewButton.click();
+  await flush();
+  assert.equal(globalThis.chrome.tabs.lastMessage?.type, "OPEN_BANNER_OVERVIEW");
+  assert.match(document.getElement("bannerOverviewStatus").textContent, /Opened|Geöffnet|Looking|Suche/);
 });
 
 function createDocument() {
@@ -39,20 +45,28 @@ function createDocument() {
     "deltaResult",
     "contactResult",
     "detailsLink",
+    "bannerOverviewButton",
+    "bannerOverviewStatus",
     "refreshButton",
     "deltaButton",
     "languageSelect",
     "helpButton",
-    "helpPanel"
+    "helpPanel",
+    "mockBannerSettings"
   ];
   for (const id of defs) elements.set(id, new FakeElement(id));
   elements.get("helpPanel").hidden = true;
+  elements.get("mockBannerSettings").textContent = "Cookie settings";
+  elements.get("mockBannerSettings").setAttribute("aria-label", "Cookie settings");
 
   return {
     documentElement: { lang: "en" },
     querySelector: (selector) => selector.startsWith("#") ? elements.get(selector.slice(1)) || null : null,
     querySelectorAll: (selector) => {
       if (selector === "[data-i18n]" || selector === "[data-i18n-aria-label]") return [];
+      if (selector.includes("button") || selector.includes("a") || selector.includes("settings") || selector.includes("preferences") || selector.includes("manage")) {
+        return [elements.get("mockBannerSettings")];
+      }
       return [];
     },
     getElement: (id) => elements.get(id)
@@ -137,8 +151,10 @@ function setupChromeMock(locale) {
     tabs: {
       query: async () => [{ id: 1, url: analysis.url, title: analysis.title }],
       sendMessage: async (_, message) => {
+        globalThis.chrome.tabs.lastMessage = message;
         if (message.type === "ANALYZE_PAGE") return analysis;
         if (message.type === "TRY_DENY_ALL") return { clicked: true, label: "Reject all" };
+        if (message.type === "OPEN_BANNER_OVERVIEW") return { found: true, clicked: true, label: "Show settings" };
         return {};
       }
     },
