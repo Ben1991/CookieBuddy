@@ -89,6 +89,12 @@ a:focus-visible {
   min-width: 0;
 }
 
+.banner-card {
+  min-height: 33vh;
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
+
 .hero {
   display: flex;
   align-items: center;
@@ -226,6 +232,10 @@ h3 {
 .result-grid {
   flex-wrap: wrap;
   align-items: stretch;
+  min-height: 18vh;
+  overflow: auto;
+  resize: vertical;
+  padding-bottom: 6px;
 }
 
 .result-grid > div {
@@ -234,6 +244,10 @@ h3 {
   border-radius: 14px;
   background: var(--panel-strong);
   min-width: 0;
+}
+
+.result-grid.skeleton {
+  min-height: 33vh;
 }
 
 .result-grid .full-width {
@@ -275,6 +289,10 @@ h3 {
 .legend-grid {
   display: grid;
   gap: 8px;
+}
+
+.legend-card {
+  padding-bottom: 12px;
 }
 
 .legend-item {
