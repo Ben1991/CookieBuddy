@@ -176,6 +176,9 @@
   "deltaNeedsPageAccess": {
     "message": "Für diese Seite fehlt der Zugriff für die Delta-Prüfung. Öffne eine normale Webseite und starte den Test dort erneut."
   },
+  "deltaNeedsManualConsent": {
+    "message": "Ich konnte keinen sichtbaren Banner oder Ablehnen-Button finden. Bitte lehne zuerst alle Cookies manuell ab und starte die Delta-Prüfung dann erneut."
+  },
   "deltaCheckFailed": {
     "message": "Die Delta-Prüfung konnte nicht abgeschlossen werden."
   },
