@@ -49,7 +49,7 @@ In simple terms: if the user says “no” to optional cookies, CookieBuddy look
 2. Go to `chrome://extensions`.
 3. Enable `Developer mode`.
 4. Click `Load unpacked`.
-5. Select this folder: `/Users/benjamin.maier/git/cookiebuddy`.
+5. Select this folder: `/path/to/cookiebuddy`.
 6. Open a website and click the CookieBuddy extension icon.
 
 ## Setup For Development
