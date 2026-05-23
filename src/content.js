@@ -99,6 +99,7 @@ async function analyzePage() {
   const banner = detectBanner({ htmlSample, pageText, resources });
   const categories = detectCategories(pageText, htmlSample, resources);
   const contacts = await detectContacts();
+  const storage = collectStoredData({ banner, categories, pageText, htmlSample });
 
   return {
     url: location.href,
@@ -108,6 +109,7 @@ async function analyzePage() {
     categories,
     resources,
     contacts,
+    storage,
     scannedAt: new Date().toISOString()
   };
 }
@@ -279,6 +281,44 @@ function detectCategories(pageText, htmlSample, resources) {
   return categories;
 }
 
+function collectStoredData({ banner, categories, pageText, htmlSample }) {
+  const localStorageKeys = Object.keys(localStorage || {});
+  const sessionStorageKeys = Object.keys(sessionStorage || {});
+  const indexedDbNames = [];
+  const matchesBanner = (key) => {
+    const haystack = `${banner.name} ${pageText} ${htmlSample} ${Object.values(categories).flatMap((category) => category.services.map((service) => service.name)).join(" ")}`.toLowerCase();
+    return haystack.includes(key.toLowerCase());
+  };
+
+  const items = [
+    ...localStorageKeys.map((key) => ({
+      key,
+      scope: "localStorage",
+      valuePreview: previewStorageValue(localStorage.getItem(key)),
+      inBanner: matchesBanner(key)
+    })),
+    ...sessionStorageKeys.map((key) => ({
+      key,
+      scope: "sessionStorage",
+      valuePreview: previewStorageValue(sessionStorage.getItem(key)),
+      inBanner: matchesBanner(key)
+    })),
+    ...indexedDbNames.map((name) => ({
+      key: name,
+      scope: "IndexedDB",
+      valuePreview: "Database",
+      inBanner: matchesBanner(name)
+    }))
+  ];
+
+  return {
+    localStorageKeys,
+    sessionStorageKeys,
+    indexedDbNames,
+    items: items.sort((a, b) => Number(b.inBanner) - Number(a.inBanner) || a.scope.localeCompare(b.scope) || a.key.localeCompare(b.key)).slice(0, 50)
+  };
+}
+
 function collectResources() {
   return performance
     .getEntriesByType("resource")
@@ -377,20 +417,20 @@ function isContactCandidate(href, text) {
 }
 
 function inferAuthority(hostname) {
-  if (!hostname.endsWith(".de")) {
+  if (hostname.endsWith(".de")) {
     return {
-      key: "local",
-      name: "Local data protection authority",
-      note: "CookieBuddy could not infer a specific authority from the domain. Check the company imprint or privacy notice for jurisdiction.",
-      url: "https://edpb.europa.eu/about-edpb/about-edpb/members_en"
+      key: "german",
+      name: "German data protection authorities",
+      note: "Germany has state-level authorities. The exact authority depends on the company seat shown in the imprint.",
+      url: "https://www.bfdi.bund.de/EN/Service/Anschriften/anschriften_table.html"
     };
   }
 
   return {
-    key: "german",
-    name: "German data protection authorities",
-    note: "Germany has state-level authorities. The exact authority depends on the company seat shown in the imprint.",
-    url: "https://www.bfdi.bund.de/EN/Service/Anschriften/anschriften_table.html"
+    key: "fallback",
+    name: "Federal data protection authority",
+    note: "CookieBuddy could not infer a state-level authority from the domain. Use the BfDI as the fallback contact and check the imprint or privacy notice for the responsible state authority.",
+    url: "https://www.bfdi.bund.de/SharedDocs/Kontaktdaten/DE/BfDI_Kontakt.html"
   };
 }
 
@@ -414,6 +454,12 @@ function getBaseDomain(hostname) {
 
 function stripHtml(html) {
   return html.replace(/<script[\s\S]*?<\/script>/gi, " ").replace(/<style[\s\S]*?<\/style>/gi, " ").replace(/<[^>]+>/g, " ");
+}
+
+function previewStorageValue(value) {
+  if (!value) return "Empty";
+  const trimmed = value.trim();
+  return trimmed.length > 48 ? `${trimmed.slice(0, 45)}...` : trimmed;
 }
 
 function dedupeContacts(contacts) {
