@@ -176,6 +176,9 @@
   "deltaNeedsPageAccess": {
     "message": "This page does not allow the delta check. Open a normal website and run the test there."
   },
+  "deltaNeedsManualConsent": {
+    "message": "I could not find a visible banner or deny option. Please decline all cookies manually first, then run the delta check again."
+  },
   "deltaCheckFailed": {
     "message": "The delta check could not be completed."
   },

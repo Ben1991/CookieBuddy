@@ -26,6 +26,8 @@ const elements = {
   helpPanel: document.querySelector("#helpPanel")
 };
 
+const deltaGuide = "1) Reloads the page without cache so the banner can appear fresh.\n2) Tries to find the banner and the deny option and clicks it when available.\n3) If no deny option is found, you must decline all cookies manually first and run the delta check again.\n4) Opens the result in a new tab for easier reading.";
+
 elements.refreshButton.addEventListener("click", () => scanCurrentTab());
 elements.deltaButton.addEventListener("click", () => runDeltaCheck());
 elements.helpButton.addEventListener("click", () => {
@@ -81,12 +83,26 @@ async function runDeltaCheck() {
 
   setStatus("statusChecking", "busy");
   elements.deltaButton.disabled = true;
+  elements.deltaButton.title = deltaGuide;
   elements.deltaResult.innerHTML = `<p class="muted">${escapeHtml(t("deltaCheckingDescription"))}</p>`;
 
   try {
+    await chrome.tabs.reload(state.tab.id, { bypassCache: true });
+    await wait(1200);
+    await ensureContentScript(state.tab.id);
+    const freshAnalysis = await sendToTab(state.tab.id, { target: "cookiebuddy-content", type: "ANALYZE_PAGE" });
+    state.analysis = freshAnalysis;
+
+    if (!freshAnalysis.banner || freshAnalysis.banner.confidence === "none") {
+      throw new Error(t("deltaNeedsManualConsent"));
+    }
+
     await chrome.runtime.sendMessage({ target: "cookiebuddy-background", type: "CLEAR_TRAFFIC", tabId: state.tab.id });
     const before = await snapshot(t("snapshotCurrentState"));
     const denyResult = await sendToTab(state.tab.id, { target: "cookiebuddy-content", type: "TRY_DENY_ALL" });
+    if (!denyResult?.found) {
+      throw new Error(t("deltaNeedsManualConsent"));
+    }
     await wait(1800);
     const afterDeny = await snapshot(t("snapshotAfterDenyAll"));
     const delta = buildDelta({
@@ -105,6 +121,7 @@ async function runDeltaCheck() {
 
     await chrome.storage.local.set({ cookiebuddyLastDelta: delta });
     renderDelta(delta);
+    await openDeltaTab(delta);
     setStatus(delta.riskLevel === "high" ? "statusDeltaFound" : "statusChecked", delta.riskLevel === "high" ? "warn" : "ok");
   } catch (error) {
     elements.deltaResult.innerHTML = `<p class="error">${escapeHtml(error.message || t("deltaCheckFailed"))}</p>`;
@@ -274,6 +291,13 @@ async function ensureContentScript(tabId) {
       files: ["src/content.js"]
     });
   }
+}
+
+async function openDeltaTab(delta) {
+  await chrome.storage.local.set({ cookiebuddyLastDelta: delta });
+  await chrome.tabs.create({
+    url: chrome.runtime.getURL("details.html?view=delta")
+  });
 }
 
 async function getCookiesForTab(tab) {

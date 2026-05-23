@@ -387,7 +387,8 @@ async function tryDenyAll() {
   await wait(1400);
   return {
     clicked: Boolean(clicked),
-    label: clicked?.innerText?.trim() || clicked?.getAttribute("aria-label") || ""
+    label: clicked?.innerText?.trim() || clicked?.getAttribute("aria-label") || "",
+    found: candidates.length > 0
   };
 }
 
