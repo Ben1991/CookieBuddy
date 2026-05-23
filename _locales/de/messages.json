@@ -20,6 +20,27 @@
   "statusReady": {
     "message": "Bereit"
   },
+  "scanStatusReady": {
+    "message": "Letzter Scan bereit."
+  },
+  "scanStatusScanning": {
+    "message": "Aktuelle Seite wird gescannt."
+  },
+  "scanStatusNeedsAccess": {
+    "message": "F??r einen vollst??ndigen Scan wird Seitenzugriff ben??tigt."
+  },
+  "scanStatusChecking": {
+    "message": "Die Delta-Pr??fung l??uft."
+  },
+  "scanStatusDeltaFound": {
+    "message": "Im aktuellen Scan wurde ein Delta gefunden."
+  },
+  "scanStatusFailed": {
+    "message": "Die letzte Pr??fung ist fehlgeschlagen."
+  },
+  "scanStatusChecked": {
+    "message": "Die letzte Pr??fung ist abgeschlossen."
+  },
   "statusScanning": {
     "message": "Scan läuft"
   },

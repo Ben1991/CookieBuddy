@@ -20,6 +20,27 @@
   "statusReady": {
     "message": "Ready"
   },
+  "scanStatusReady": {
+    "message": "Last scan ready."
+  },
+  "scanStatusScanning": {
+    "message": "Scanning the current page."
+  },
+  "scanStatusNeedsAccess": {
+    "message": "Page access is needed for a full scan."
+  },
+  "scanStatusChecking": {
+    "message": "Running the delta check."
+  },
+  "scanStatusDeltaFound": {
+    "message": "Delta found in the current scan."
+  },
+  "scanStatusFailed": {
+    "message": "The last check failed."
+  },
+  "scanStatusChecked": {
+    "message": "The last check completed."
+  },
   "statusScanning": {
     "message": "Scanning"
   },
@@ -220,6 +241,9 @@
   },
   "noCookiesVisible": {
     "message": "No cookies visible to the extension for this tab."
+  },
+  "cookiesTrafficEmptyState": {
+    "message": "No visible cookies or locally stored data were found for this page."
   },
   "deltaCheckingDescription": {
     "message": "Trying a deny-all action, then comparing cookies and third-party traffic. This is best-effort because banners use different controls."

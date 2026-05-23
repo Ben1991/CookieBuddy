@@ -88,10 +88,70 @@ test("legend marks the active badge status", async () => {
   assert.match(legendHtml, /current|aktuell/);
 });
 
+test("cookies and traffic show an empty state when nothing is found", async () => {
+  const document = createDocument();
+  const window = { Node: class {}, HTMLElement: FakeElement, URL };
+
+  setupChromeMock("en");
+  setupDomGlobals({ document, window });
+
+  globalThis.chrome.tabs.sendMessage = async (_, message) => {
+    globalThis.chrome.tabs.lastMessage = message;
+    if (message.type === "ANALYZE_PAGE") {
+      return {
+        url: "https://example.com",
+        host: "example.com",
+        title: "Example",
+        banner: {
+          name: "Cookiebot",
+          confidence: "high",
+          source: { host: "cdn.cookiebot.com" },
+          evidence: [{ value: "cookiebot" }]
+        },
+        categories: {
+          essential: { services: [] },
+          marketing: { services: [] },
+          analytics: { services: [] },
+          functional: { services: [] },
+          social: { services: [] }
+        },
+        storage: {
+          localStorageKeys: [],
+          sessionStorageKeys: [],
+          indexedDbNames: [],
+          items: []
+        },
+        contacts: {
+          dpo: {
+            name: "Data Protection Officer",
+            email: "privacy@example.com"
+          },
+          authority: {
+            key: "fallback",
+            name: "Federal data protection authority",
+            note: "Fallback note",
+            url: "https://www.bfdi.bund.de/SharedDocs/Kontaktdaten/DE/BfDI_Kontakt.html"
+          }
+        }
+      };
+    }
+    if (message.type === "TRY_DENY_ALL") return { clicked: true, label: "Reject all" };
+    if (message.type === "OPEN_BANNER_OVERVIEW") return { found: true, clicked: true, label: "Show settings" };
+    return {};
+  };
+  globalThis.chrome.cookies.getAll = async () => [];
+
+  await import(`../src/popup.js?test=${Date.now()}-empty`);
+  await flush();
+
+  assert.match(document.getElement("cookieResult").textContent, /No visible cookies or locally stored data were found|FÃ¼r diese Seite wurden keine sichtbaren Cookies oder lokal gespeicherten Daten gefunden/);
+});
+
 function createDocument() {
   const elements = new Map();
   const defs = [
     "statusPill",
+    "scanStatusText",
     "popupIntro",
     "bannerResult",
     "categoryResult",
@@ -118,6 +178,7 @@ function createDocument() {
   elements.get("helpPanel").hidden = true;
   elements.get("mockBannerSettings").textContent = "Cookie settings";
   elements.get("mockBannerSettings").setAttribute("aria-label", "Cookie settings");
+  elements.get("scanStatusText").dataset.i18n = "scanStatusReady";
   elements.get("popupIntro").dataset.i18n = "popupIntro";
   elements.get("legendGrid").innerHTML = "";
   elements.get("statusPill").dataset.i18n = "statusReady";
@@ -263,6 +324,7 @@ async function assertPopupLocale(locale, expected) {
 
   assert.equal(document.documentElement.lang, locale);
   assert.equal(document.getElement("statusPill").textContent, localeMessages[locale].statusReady.message);
+  assert.equal(document.getElement("scanStatusText").textContent, localeMessages[locale].scanStatusReady.message);
   assert.equal(document.getElement("popupIntro").textContent, expected.intro);
   assert.equal(document.getElement("helpButton").textContent, expected.help);
   assert.equal(document.getElement("cookiesTrafficHeading").textContent, expected.cookies);
