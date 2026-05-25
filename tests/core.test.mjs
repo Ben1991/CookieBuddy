@@ -5,6 +5,7 @@ import {
   capitalize,
   cookieKey,
   formatCookie,
+  formatDeltaReport,
   getBaseDomain,
   isEssentialCookie,
   normalizeTraffic,
@@ -79,4 +80,86 @@ test("builds a delta summary from the before and after states", () => {
   assert.equal(delta.riskLevel, "high");
   assert.equal(delta.thirdPartyHosts.includes("tracker.example.net"), true);
   assert.equal(delta.summary, "found");
+});
+
+test("formats delta report as plain text", () => {
+  const delta = buildDelta({
+    beforeCookies: [
+      { domain: ".example.com", path: "/", name: "session" }
+    ],
+    afterCookies: [
+      { domain: ".example.com", path: "/", name: "session" },
+      { domain: ".example.com", path: "/", name: "_ga" }
+    ],
+    beforeTraffic: [{ host: "cdn.example.com" }],
+    afterTraffic: [{ host: "cdn.example.com" }, { host: "tracker.example.net" }],
+    denyClicked: true,
+    denyLabel: "Reject all",
+    labels: {
+      deltaFoundSummary: "Delta found",
+      noDeltaSummary: "No delta"
+    },
+    tabUrl: "https://example.com"
+  });
+
+  const report = formatDeltaReport(delta, "https://example.com");
+  
+  assert.match(report, /COOKIE CONSENT DELTA REPORT/);
+  assert.match(report, /example.com/);
+  assert.match(report, /HIGH RISK/);
+  assert.match(report, /Delta found/);
+  assert.match(report, /_ga/);
+  assert.match(report, /tracker.example.net/);
+});
+
+test("formats delta report with low risk", () => {
+  const delta = buildDelta({
+    beforeCookies: [
+      { domain: ".example.com", path: "/", name: "session" }
+    ],
+    afterCookies: [
+      { domain: ".example.com", path: "/", name: "session" }
+    ],
+    beforeTraffic: [],
+    afterTraffic: [],
+    denyClicked: true,
+    denyLabel: "Reject all",
+    labels: {
+      deltaFoundSummary: "Delta found",
+      noDeltaSummary: "No delta"
+    },
+    tabUrl: "https://example.com"
+  });
+
+  const report = formatDeltaReport(delta, "https://example.com");
+  
+  assert.match(report, /LOW RISK/);
+  assert.match(report, /No obvious concerns/);
+  assert.match(report, /No new cookies created/);
+  assert.match(report, /No third-party traffic/);
+});
+
+test("formats delta report without deny click", () => {
+  const delta = buildDelta({
+    beforeCookies: [
+      { domain: ".example.com", path: "/", name: "session" }
+    ],
+    afterCookies: [
+      { domain: ".example.com", path: "/", name: "session" }
+    ],
+    beforeTraffic: [],
+    afterTraffic: [],
+    denyClicked: false,
+    denyLabel: "",
+    labels: {
+      deltaFoundSummary: "Delta found",
+      noDeltaSummary: "No delta"
+    },
+    tabUrl: "https://example.com"
+  });
+
+  const report = formatDeltaReport(delta);
+  
+  assert.match(report, /HIGH RISK/);
+  assert.match(report, /Deny button could NOT be clicked/);
 });
