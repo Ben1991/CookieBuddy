@@ -1,4 +1,8 @@
-const CMP_SIGNATURES = [
+// Public CMP list - will be populated from external source
+let PUBLIC_CMP_LIST = null;
+
+// Fallback embedded CMP signatures for when external fetch unavailable
+const FALLBACK_CMP_SIGNATURES = [
   { name: "Usercentrics", patterns: ["usercentrics", "uc-settings", "uc-center-container", "uc-privacy", "cmp.usercentrics"] },
   { name: "OneTrust", patterns: ["onetrust", "ot-sdk", "optanon", "cookiepro", "optanonconsent"] },
   { name: "Cookiebot", patterns: ["cookiebot", "cybotcookiebot", "cookiebot.com"] },
@@ -19,7 +23,7 @@ const CMP_SIGNATURES = [
   { name: "Civic Cookie Control", patterns: ["civicuk", "cookiecontrol", "cookie-control"] }
 ];
 
-const CMP_GLOBALS = [
+const FALLBACK_CMP_GLOBALS = [
   { name: "IAB TCF compatible CMP", keys: ["__tcfapi", "__cmp"] },
   { name: "Google Consent Mode", keys: ["google_tag_data"] },
   { name: "Usercentrics", keys: ["UC_UI", "UC_UI_SUPPRESS_CMP_DISPLAY"] },
@@ -75,6 +79,44 @@ const DENY_SELECTORS = [
   "[aria-label*='reject' i]",
   "button"
 ];
+
+// Load public CMP list on initialization
+async function loadPublicCmpList() {
+  try {
+    // Attempt to fetch public CMP list from iabgpp-es CDN
+    const response = await fetch('https://cdn.jsdelivr.net/gh/InteractiveAdvertisingBureau/iabgpp-es@main/src/cmpList.json', {
+      cache: 'force-cache',
+      credentials: 'omit'
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      PUBLIC_CMP_LIST = data;
+      console.log('[CookieBuddy] Loaded public CMP list with', Object.keys(data).length, 'providers');
+    }
+  } catch (error) {
+    console.log('[CookieBuddy] Public CMP list fetch failed, using fallback signatures:', error);
+  }
+}
+
+// Initialize CMP list on script load
+loadPublicCmpList();
+
+function getCmpSignatures() {
+  if (PUBLIC_CMP_LIST && typeof PUBLIC_CMP_LIST === 'object') {
+    // Convert public CMP list format to our signature format
+    return Object.entries(PUBLIC_CMP_LIST).map(([id, cmp]) => ({
+      name: cmp.name || id,
+      patterns: cmp.signaling_patterns ? cmp.signaling_patterns.map(p => p.toLowerCase()) : []
+    })).filter(cmp => cmp.patterns.length > 0);
+  }
+  return FALLBACK_CMP_SIGNATURES;
+}
+
+function getCmpGlobals() {
+  // TODO: Extend this when public CMP list includes global API information
+  return FALLBACK_CMP_GLOBALS;
+}
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (!message || message.target !== "cookiebuddy-content") return false;
@@ -132,7 +174,8 @@ function detectBanner({ htmlSample, pageText, resources }) {
     ...domSignals.map((signal) => signal.value)
   ].join(" ").toLowerCase();
 
-  const matches = CMP_SIGNATURES
+  const cmpSignatures = getCmpSignatures();
+  const matches = cmpSignatures
     .map((cmp) => ({
       name: cmp.name,
       score: cmp.patterns.filter((item) => haystack.includes(item)).length,
@@ -243,7 +286,8 @@ function collectConsentSourceSignals(urls) {
 }
 
 function detectGlobalCmpApis() {
-  return CMP_GLOBALS
+  const cmpGlobals = getCmpGlobals();
+  return cmpGlobals
     .map((candidate) => ({
       name: candidate.name,
       evidence: candidate.keys
