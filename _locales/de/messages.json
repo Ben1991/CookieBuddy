@@ -27,19 +27,19 @@
     "message": "Aktuelle Seite wird gescannt."
   },
   "scanStatusNeedsAccess": {
-    "message": "F??r einen vollst??ndigen Scan wird Seitenzugriff ben??tigt."
+    "message": "Für einen vollständigen Scan wird Seitenzugriff benötigt."
   },
   "scanStatusChecking": {
-    "message": "Die Delta-Pr??fung l??uft."
+    "message": "Die Delta-Prüfung läuft."
   },
   "scanStatusDeltaFound": {
     "message": "Im aktuellen Scan wurde ein Delta gefunden."
   },
   "scanStatusFailed": {
-    "message": "Die letzte Pr??fung ist fehlgeschlagen."
+    "message": "Die letzte Prüfung ist fehlgeschlagen."
   },
   "scanStatusChecked": {
-    "message": "Die letzte Pr??fung ist abgeschlossen."
+    "message": "Die letzte Prüfung ist abgeschlossen."
   },
   "statusScanning": {
     "message": "Scan läuft"
@@ -153,7 +153,7 @@
     "message": "So funktioniert es"
   },
   "helpIntro": {
-    "message": "CookieBuddy schaut sich die aktuelle Seite an und prüft, ob nach „Alle ablehnen“ weiterhin Cookies oder Drittanbieter-Anfragen passieren."
+    "message": "CookieBuddy schaut sich die aktuelle Seite an und prüft, ob nach „Alle ablehnen" weiterhin Cookies oder Drittanbieter-Anfragen passieren."
   },
   "helpStepBanner": {
     "message": "Es versucht, den Cookie-Banner-Anbieter zu erkennen."
@@ -394,5 +394,14 @@
   },
   "localAuthorityNote": {
     "message": "CookieBuddy konnte aus der Domain keine konkrete Behörde ableiten. Prüfe Impressum oder Datenschutzerklärung für die Zuständigkeit."
+  },
+  "sendDeltaMailButton": {
+    "message": "Bericht per E-Mail versenden"
+  },
+  "deltaReportSubject": {
+    "message": "CookieBuddy-Auditbericht für $1"
+  },
+  "deltaReportMailBody": {
+    "message": "Sehr geehrte Damen und Herren,\n\nanbei erhalten Sie den CookieBuddy-Auditbericht für unsere Überprüfung der Cookie-Einwilligungsimplementierung unter $1.\n\nDieser Bericht dokumentiert die Ergebnisse unserer automatisierten Prüfung. Bitte beachten Sie die beigefügten Audit-Ergebnisse für detaillierte Informationen über Cookies und Drittanbieter-Traffic, die nach dem Widerruf der Einwilligung erkannt wurden.\n\nWir würden eine Erläuterung zu den Ergebnissen und zur Rechtsgrundlage für jede Datenverarbeitung schätzen, die als fortlaufend nach dem Widerruf der Einwilligung erkannt wurde.\n\nMit freundlichen Grüßen"
   }
 }
