@@ -1,11 +1,69 @@
-const trafficByTab = new Map();
-const iconStatusByTab = new Map();
+const TRAFFIC_STORAGE_KEY = "cookiebuddyTraffic";
+const ICON_STATUS_STORAGE_KEY = "cookiebuddyIconStatus";
+
+/**
+ * Helper to get traffic data from session storage
+ */
+async function getTraffic(tabId) {
+  const data = await chrome.storage.session.get(TRAFFIC_STORAGE_KEY);
+  const trafficByTab = data[TRAFFIC_STORAGE_KEY] || {};
+  return trafficByTab[tabId] || [];
+}
+
+/**
+ * Helper to set traffic data in session storage
+ */
+async function setTraffic(tabId, traffic) {
+  const data = await chrome.storage.session.get(TRAFFIC_STORAGE_KEY);
+  const trafficByTab = data[TRAFFIC_STORAGE_KEY] || {};
+  trafficByTab[tabId] = traffic;
+  await chrome.storage.session.set({ [TRAFFIC_STORAGE_KEY]: trafficByTab });
+}
+
+/**
+ * Helper to get icon status from session storage
+ */
+async function getIconStatus(tabId) {
+  const data = await chrome.storage.session.get(ICON_STATUS_STORAGE_KEY);
+  const iconStatusByTab = data[ICON_STATUS_STORAGE_KEY] || {};
+  return iconStatusByTab[tabId] || "neutral";
+}
+
+/**
+ * Helper to set icon status in session storage
+ */
+async function setIconStatus(tabId, status) {
+  const data = await chrome.storage.session.get(ICON_STATUS_STORAGE_KEY);
+  const iconStatusByTab = data[ICON_STATUS_STORAGE_KEY] || {};
+  iconStatusByTab[tabId] = status;
+  await chrome.storage.session.set({ [ICON_STATUS_STORAGE_KEY]: iconStatusByTab });
+}
+
+/**
+ * Helper to clear traffic data for a tab
+ */
+async function clearTabTraffic(tabId) {
+  const data = await chrome.storage.session.get(TRAFFIC_STORAGE_KEY);
+  const trafficByTab = data[TRAFFIC_STORAGE_KEY] || {};
+  delete trafficByTab[tabId];
+  await chrome.storage.session.set({ [TRAFFIC_STORAGE_KEY]: trafficByTab });
+}
+
+/**
+ * Helper to clear icon status for a tab
+ */
+async function clearTabIconStatus(tabId) {
+  const data = await chrome.storage.session.get(ICON_STATUS_STORAGE_KEY);
+  const iconStatusByTab = data[ICON_STATUS_STORAGE_KEY] || {};
+  delete iconStatusByTab[tabId];
+  await chrome.storage.session.set({ [ICON_STATUS_STORAGE_KEY]: iconStatusByTab });
+}
 
 chrome.webRequest.onBeforeRequest.addListener(
-  (details) => {
+  async (details) => {
     if (details.tabId < 0 || !details.url) return;
 
-    const tabTraffic = trafficByTab.get(details.tabId) || [];
+    const tabTraffic = await getTraffic(details.tabId);
     tabTraffic.push({
       url: details.url,
       type: details.type,
@@ -16,23 +74,24 @@ chrome.webRequest.onBeforeRequest.addListener(
       tabTraffic.splice(0, tabTraffic.length - 500);
     }
 
-    trafficByTab.set(details.tabId, tabTraffic);
+    await setTraffic(details.tabId, tabTraffic);
   },
   { urls: ["<all_urls>"] }
 );
 
-chrome.tabs.onRemoved.addListener((tabId) => {
-  trafficByTab.delete(tabId);
-  iconStatusByTab.delete(tabId);
+chrome.tabs.onRemoved.addListener(async (tabId) => {
+  await clearTabTraffic(tabId);
+  await clearTabIconStatus(tabId);
 });
 
 chrome.tabs.onActivated.addListener(async ({ tabId }) => {
-  await applyIconStatus(iconStatusByTab.get(tabId) || "neutral");
+  const status = await getIconStatus(tabId);
+  await applyIconStatus(status || "neutral");
 });
 
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
   if (changeInfo.status === "loading") {
-    iconStatusByTab.delete(tabId);
+    await clearTabIconStatus(tabId);
     await applyIconStatus("neutral");
   }
 });
@@ -41,23 +100,30 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (!message || message.target !== "cookiebuddy-background") return false;
 
   if (message.type === "GET_TRAFFIC") {
-    sendResponse({ traffic: trafficByTab.get(message.tabId) || [] });
+    (async () => {
+      const traffic = await getTraffic(message.tabId);
+      sendResponse({ traffic });
+    })();
     return true;
   }
 
   if (message.type === "CLEAR_TRAFFIC") {
-    trafficByTab.set(message.tabId, []);
-    sendResponse({ ok: true });
+    (async () => {
+      await clearTabTraffic(message.tabId);
+      sendResponse({ ok: true });
+    })();
     return true;
   }
 
   if (message.type === "SET_ICON_STATUS") {
-    const status = normalizeStatus(message.status);
-    if (message.tabId != null) {
-      iconStatusByTab.set(message.tabId, status);
-    }
-    applyIconStatus(status);
-    sendResponse({ ok: true, status });
+    (async () => {
+      const status = normalizeStatus(message.status);
+      if (message.tabId != null) {
+        await setIconStatus(message.tabId, status);
+      }
+      await applyIconStatus(status);
+      sendResponse({ ok: true, status });
+    })();
     return true;
   }
 
