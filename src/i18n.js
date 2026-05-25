@@ -4,8 +4,19 @@ let messages = {};
 
 export async function initI18n() {
   const stored = await chrome.storage.local.get("cookiebuddyLanguage");
-  const browserLanguage = chrome.i18n.getUILanguage?.().slice(0, 2) || "en";
-  activeLanguage = normalizeLanguage(stored.cookiebuddyLanguage || browserLanguage);
+  
+  // If user hasn't manually set a language, use browser language; otherwise use stored preference
+  let language;
+  if (stored.cookiebuddyLanguage) {
+    // User has manually set a language, respect it
+    language = stored.cookiebuddyLanguage;
+  } else {
+    // Use browser language, default to EN if not supported
+    const browserLanguage = chrome.i18n.getUILanguage?.().slice(0, 2) || "en";
+    language = browserLanguage;
+  }
+  
+  activeLanguage = normalizeLanguage(language);
   messages = await loadMessages(activeLanguage);
   document.documentElement.lang = activeLanguage;
   return activeLanguage;
