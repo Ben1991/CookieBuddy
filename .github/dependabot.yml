@@ -1,0 +1,36 @@
+version: 2
+
+updates:
+  # Keep npm dependencies up to date.
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "08:00"
+      timezone: "Europe/Berlin"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "security"
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      npm-production:
+        dependency-type: "production"
+      npm-development:
+        dependency-type: "development"
+
+  # Keep GitHub Actions up to date.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "08:15"
+      timezone: "Europe/Berlin"
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "chore(actions)"
