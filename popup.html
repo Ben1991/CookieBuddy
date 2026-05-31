@@ -12,8 +12,8 @@
         <img class="logo-mark" src="assets/logo.svg" alt="" aria-hidden="true">
         <div>
           <p class="eyebrow">CookieBuddy</p>
-          <h1 data-i18n="popupTitle">Consent delta check</h1>
-          <p class="hero-intro" data-i18n="popupIntro">See what the page really does before and after consent, and spot the difference in one glance.</p>
+          <h1 data-i18n="popupTitle">Cookie review</h1>
+          <p class="hero-intro" data-i18n="popupIntro">See what the page does before and after a reject attempt.</p>
           <p id="scanStatusText" class="hero-status" aria-live="polite" data-i18n="scanStatusReady">Last scan ready.</p>
         </div>
         <div class="hero-actions">
@@ -35,7 +35,7 @@
         </div>
         <div id="helpPanel" class="help-panel" hidden>
           <p data-i18n="helpIntro">
-            CookieBuddy looks at the current page and checks whether cookies or third-party requests still happen after you choose "deny all".
+            CookieBuddy checks whether cookies or third-party requests still appear after you reject cookies.
           </p>
           <ul>
             <li data-i18n="helpStepBanner">It tries to recognize the cookie banner provider.</li>
@@ -101,7 +101,7 @@
         <div class="section-title">
           <div>
             <h2 id="cookiesTrafficHeading" data-i18n="cookiesTrafficHeading">Cookies and traffic</h2>
-            <p class="muted section-note" data-i18n="cookiesTrafficIntro">The overview groups visible cookies and locally stored browser data. The list updates after each scan.</p>
+          <p class="muted section-note" data-i18n="cookiesTrafficIntro">This view groups visible cookies and local browser data. It updates after each scan.</p>
           </div>
           <span id="cookieCount" class="muted">0 cookies</span>
         </div>
@@ -110,8 +110,8 @@
 
       <section class="card accent">
         <h2 data-i18n="deltaHeading">Delta check</h2>
-        <p class="muted" data-i18n="deltaIntro">
-          Compares the current state with a best-effort "deny all" state. CookieBuddy flags cookies and third-party requests that remain after opt-out.
+          <p class="muted" data-i18n="deltaIntro">
+          Compares the current state with a best-effort reject state. CookieBuddy flags cookies and third-party requests that remain after opt-out.
         </p>
         <button id="deltaButton" class="primary-button" type="button" data-i18n="runDeltaButton">Run delta check</button>
         <div id="deltaResult" class="delta-box"></div>
@@ -127,7 +127,7 @@
 
       <section class="card privacy-card">
         <h2 data-i18n="privacyHeading">Privacy</h2>
-        <p class="muted" data-i18n="privacyIntro">
+          <p class="muted" data-i18n="privacyIntro">
           CookieBuddy does not track you and does not send scan results to the creator or to any analytics service.
         </p>
         <ul class="privacy-list">
