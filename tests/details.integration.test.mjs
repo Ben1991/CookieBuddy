@@ -68,7 +68,7 @@ test("details page offers authority mail when available", async () => {
   assert.ok(mailButtons[1].textContent.length > 0);
 
   mailButtons[1].click();
-  assert.match(window.location.lastAssignedUrl, /^mailto:poststelle@bfdi\.bund\.de\?/);
+  assert.match(window.location.lastAssignedUrl, /^mailto:poststelle%40bfdi\.bund\.de\?/);
   assert.match(decodeURIComponent(window.location.lastAssignedUrl), /CookieBuddy-Auditbericht/);
 });
 
