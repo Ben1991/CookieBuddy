@@ -15,7 +15,10 @@ test("details page opens a mail draft from the delta report", async () => {
   setupGlobals({ document, window, locale: "en" });
 
   globalThis.chrome.storage.local.get = async () => ({
-    cookiebuddyLastScan: { checkedAt: "2026-05-31T10:00:00Z" },
+    cookiebuddyLastScan: {
+      checkedAt: "2026-05-31T10:00:00Z",
+      analysis: { contacts: buildContactsFixture() }
+    },
     cookiebuddyLastDelta: buildDeltaFixture()
   });
 
