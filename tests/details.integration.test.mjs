@@ -30,7 +30,7 @@ test("details page opens a mail draft from the delta report", async () => {
   assert.match(element(document, "sendDeltaMailHint").textContent, /review and adjust/i);
 
   element(document, "sendDeltaMailActions").querySelectorAll("button[data-mail-target]")[0].click();
-  assert.match(window.location.lastAssignedUrl, /^mailto:privacy@example\.com\?/);
+  assert.match(window.location.lastAssignedUrl, /^mailto:privacy%40example\.com\?/);
   assert.match(decodeURIComponent(window.location.lastAssignedUrl), /CookieBuddy audit report for https:\/\/example\.com/);
   assert.match(decodeURIComponent(window.location.lastAssignedUrl), /Cookie consent delta report/i);
 
