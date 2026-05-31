@@ -4,6 +4,13 @@ CookieBuddy is a local Chrome extension prototype that helps users review cookie
 
 It is designed as a friendly review tool, not as a legal compliance verdict.
 
+## Recent Changes
+
+* Fixed a broken German locale string that prevented the popup tests from loading.
+* Updated the delta-report expectation to match the current report wording.
+* Kept the English and German locale files aligned so the popup can load the right language consistently.
+* Verified the extension again with the unit and integration test suite.
+
 ## Disclaimer
 
 This is not legal advice. Please still review the content. The creator takes no liability for the results.
@@ -72,6 +79,8 @@ node -e "for (const file of \['manifest.json','\_locales/en/messages.json','\_lo
 ```
 
 The repository also includes a small GitHub Actions workflow in `.github/workflows/ci.yml` that runs the same checks on every push and pull request.
+
+Current build status: the local checks pass again after the locale and test expectation fixes.
 
 After changing extension files, reload the extension in `chrome://extensions`.
 
