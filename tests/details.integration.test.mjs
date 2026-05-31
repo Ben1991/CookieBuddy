@@ -255,7 +255,7 @@ class FakeElement {
 
   set innerHTML(value) {
     this._html = String(value);
-    this._text = stripTags(this._html);
+    this._text = this._html;
     this._childrenButtons = [];
 
     const isGerman = String(globalThis.document?.documentElement?.lang || "").startsWith("de");
@@ -303,13 +303,4 @@ class FakeElement {
   setAttribute(name, value) {
     this.attributes.set(name, String(value));
   }
-}
-
-function stripTags(value) {
-  return String(value)
-    .split("<").join(" ")
-    .split(">").join(" ")
-    .replaceAll("\n", " ")
-    .replace(/\s+/g, " ")
-    .trim();
 }
