@@ -261,7 +261,7 @@ class FakeElement {
       const mailTarget = attrs.match(/data-mail-target="([^"]+)"/)?.[1];
       if (id) button.id = id;
       if (mailTarget) button.dataset.mailTarget = mailTarget;
-      button.textContent = match[2].replace(/<[^>]+>/g, "").trim();
+      button.textContent = match[2].replace(/[<>]/g, "").trim();
       return button;
     });
   }
