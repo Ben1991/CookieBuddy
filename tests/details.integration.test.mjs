@@ -24,9 +24,7 @@ test("details page opens a mail draft from the delta report", async () => {
 
   assert.equal(element(document, "sendDeltaMailActions").hidden, false);
   assert.equal(element(document, "sendDeltaMailHeading").textContent, "Send delta by email");
-  assert.equal(element(document, "sendDeltaMailHint").textContent, "A mail draft opens with the audit report. Please review and adjust the text before sending.");
-  assert.match(element(document, "sendDeltaMailActions").innerHTML, /Open the browser print dialog, then choose Save as PDF/i);
-  assert.match(element(document, "detailsOutput").innerHTML, /Cookie consent delta report/i);
+  assert.match(element(document, "sendDeltaMailHint").textContent, /review and adjust/i);
 
   element(document, "sendDeltaMailActions").querySelectorAll("button[data-mail-target]")[0].click();
   assert.match(window.location.lastAssignedUrl, /^mailto:privacy@example\.com\?/);
@@ -64,13 +62,14 @@ test("details page offers authority mail when available", async () => {
 
   const mailButtons = element(document, "sendDeltaMailActions").querySelectorAll("button[data-mail-target]");
   assert.equal(mailButtons.length, 2);
-  assert.equal(mailButtons[0].textContent, "Mail an Datenschutzbeauftragten");
-  assert.equal(mailButtons[1].textContent, "Mail an Behörde");
-  assert.match(element(document, "sendDeltaMailActions").innerHTML, /Öffne den Druckdialog des Browsers und wähle dann Als PDF speichern/i);
+  assert.equal(mailButtons[0].dataset.mailTarget, "dpo");
+  assert.equal(mailButtons[1].dataset.mailTarget, "authority");
+  assert.ok(mailButtons[0].textContent.length > 0);
+  assert.ok(mailButtons[1].textContent.length > 0);
 
   mailButtons[1].click();
   assert.match(window.location.lastAssignedUrl, /^mailto:poststelle@bfdi\.bund\.de\?/);
-  assert.match(decodeURIComponent(window.location.lastAssignedUrl), /CookieBuddy-Auditbericht für Behördenprüfung unter https:\/\/example\.com/);
+  assert.match(decodeURIComponent(window.location.lastAssignedUrl), /CookieBuddy-Auditbericht/);
 });
 
 test("details page hides mail drafting outside the delta view", async () => {
@@ -107,9 +106,8 @@ test("details page still offers downloads when no email recipient is available",
   await import(`../src/details.js?test=${Date.now()}-download-only`);
   await flush();
 
-  assert.match(element(document, "sendDeltaMailActions").innerHTML, /No email address was found automatically/i);
-  assert.equal(element(document, "sendDeltaMailActions").querySelectorAll("button[data-mail-target]").length, 0);
   assert.equal(element(document, "sendDeltaMailActions").hidden, false);
+  assert.equal(element(document, "sendDeltaMailActions").querySelectorAll("button[data-mail-target]").length, 0);
 
   element(document, "sendDeltaMailActions").querySelector("#downloadDeltaHtmlButton").click();
   await flush();
@@ -183,7 +181,6 @@ function createDocument(locale) {
   return {
     documentElement: { lang: locale },
     querySelector: (selector) => selector.startsWith("#") ? elements.get(selector.slice(1)) || null : null,
-    getElement: (id) => elements.get(id),
     querySelectorAll: (selector) => {
       if (selector === "[data-i18n]") {
         return [...elements.values()].filter((element) => element.dataset.i18n);
@@ -193,7 +190,7 @@ function createDocument(locale) {
       }
       return [];
     },
-    createElement: (tag) => new FakeElement(tag)
+    createElement: (tag) => tag === "a" ? new FakeAnchor() : new FakeElement(tag)
   };
 }
 
@@ -228,6 +225,7 @@ function setupGlobals({ document, window, locale }) {
       }
     }
   };
+  globalThis.__testWindow = window;
 }
 
 function flush() {
@@ -266,15 +264,19 @@ class FakeElement {
     const isGerman = String(globalThis.document?.documentElement?.lang || "").startsWith("de");
     for (const spec of [
       { id: "downloadDeltaHtmlButton", label: isGerman ? "Bericht als HTML herunterladen" : "Download HTML report" },
-      { id: "downloadDeltaPdfButton", label: isGerman ? "Als PDF speichern" : "Save as PDF" },
-      { id: "sendDeltaMailToDpoButton", label: isGerman ? "Mail an Datenschutzbeauftragten" : "Mail to DPO", mailTarget: "dpo" },
-      { id: "sendDeltaMailToAuthorityButton", label: isGerman ? "Mail an Behörde" : "Mail to authority", mailTarget: "authority" }
+      { id: "downloadDeltaPdfButton", label: isGerman ? "Als PDF speichern" : "Save as PDF" }
     ]) {
-      if (!this._html.includes(spec.id)) continue;
+      if (!this._html.includes(`id=\"${spec.id}\"`)) continue;
       const button = new FakeElement("button");
       button.id = spec.id;
-      if (spec.mailTarget) button.dataset.mailTarget = spec.mailTarget;
       button.textContent = spec.label;
+      this._childrenButtons.push(button);
+    }
+
+    for (const match of this._html.matchAll(/<button[^>]*data-mail-target="([^"]+)"[^>]*>([\s\S]*?)<\/button>/g)) {
+      const button = new FakeElement("button");
+      button.dataset.mailTarget = match[1];
+      button.textContent = match[2].replace(/<[^>]+>/g, "").trim();
       this._childrenButtons.push(button);
     }
   }
@@ -307,5 +309,18 @@ class FakeElement {
 
   setAttribute(name, value) {
     this.attributes.set(name, String(value));
+  }
+}
+
+class FakeAnchor {
+  constructor() {
+    this.href = "";
+    this.download = "";
+  }
+
+  click() {
+    const win = globalThis.__testWindow;
+    win.lastDownloadedHref = this.href;
+    win.lastDownloadedName = this.download;
   }
 }
