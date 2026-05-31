@@ -22,23 +22,23 @@ test("details page opens a mail draft from the delta report", async () => {
   await import(`../src/details.js?test=${Date.now()}`);
   await flush();
 
-  assert.equal(document.getElement("sendDeltaMailActions").hidden, false);
-  assert.equal(document.getElement("sendDeltaMailHeading").textContent, "Send delta by email");
-  assert.equal(document.getElement("sendDeltaMailHint").textContent, "A mail draft opens with the audit report. Please review and adjust the text before sending.");
-  assert.match(document.getElement("sendDeltaMailActions").innerHTML, /Open the browser print dialog, then choose Save as PDF/i);
-  assert.match(document.getElement("detailsOutput").innerHTML, /Cookie consent delta report/i);
+  assert.equal(element(document, "sendDeltaMailActions").hidden, false);
+  assert.equal(element(document, "sendDeltaMailHeading").textContent, "Send delta by email");
+  assert.equal(element(document, "sendDeltaMailHint").textContent, "A mail draft opens with the audit report. Please review and adjust the text before sending.");
+  assert.match(element(document, "sendDeltaMailActions").innerHTML, /Open the browser print dialog, then choose Save as PDF/i);
+  assert.match(element(document, "detailsOutput").innerHTML, /Cookie consent delta report/i);
 
-  document.getElement("sendDeltaMailActions").querySelectorAll("button[data-mail-target]")[0].click();
+  element(document, "sendDeltaMailActions").querySelectorAll("button[data-mail-target]")[0].click();
   assert.match(window.location.lastAssignedUrl, /^mailto:privacy@example\.com\?/);
   assert.match(decodeURIComponent(window.location.lastAssignedUrl), /CookieBuddy audit report for https:\/\/example\.com/);
   assert.match(decodeURIComponent(window.location.lastAssignedUrl), /Cookie consent delta report/i);
 
-  document.getElement("sendDeltaMailActions").querySelector("#downloadDeltaHtmlButton").click();
+  element(document, "sendDeltaMailActions").querySelector("#downloadDeltaHtmlButton").click();
   await flush();
   assert.equal(window.lastDownloadedName, "cookiebuddy-delta-report.html");
   assert.match(await window.lastDownloadedTextPromise, /CookieBuddy delta report/);
 
-  document.getElement("sendDeltaMailActions").querySelector("#downloadDeltaPdfButton").click();
+  element(document, "sendDeltaMailActions").querySelector("#downloadDeltaPdfButton").click();
   assert.equal(window.lastPrinted, true);
 });
 
@@ -62,11 +62,11 @@ test("details page offers authority mail when available", async () => {
   await import(`../src/details.js?test=${Date.now()}-authority`);
   await flush();
 
-  const mailButtons = document.getElement("sendDeltaMailActions").querySelectorAll("button[data-mail-target]");
+  const mailButtons = element(document, "sendDeltaMailActions").querySelectorAll("button[data-mail-target]");
   assert.equal(mailButtons.length, 2);
   assert.equal(mailButtons[0].textContent, "Mail an Datenschutzbeauftragten");
   assert.equal(mailButtons[1].textContent, "Mail an Behörde");
-  assert.match(document.getElement("sendDeltaMailActions").innerHTML, /Öffne den Druckdialog des Browsers und wähle dann Als PDF speichern/i);
+  assert.match(element(document, "sendDeltaMailActions").innerHTML, /Öffne den Druckdialog des Browsers und wähle dann Als PDF speichern/i);
 
   mailButtons[1].click();
   assert.match(window.location.lastAssignedUrl, /^mailto:poststelle@bfdi\.bund\.de\?/);
@@ -87,7 +87,7 @@ test("details page hides mail drafting outside the delta view", async () => {
   await import(`../src/details.js?test=${Date.now()}-summary`);
   await flush();
 
-  assert.equal(document.getElement("sendDeltaMailActions").hidden, true);
+  assert.equal(element(document, "sendDeltaMailActions").hidden, true);
 });
 
 test("details page still offers downloads when no email recipient is available", async () => {
@@ -107,11 +107,11 @@ test("details page still offers downloads when no email recipient is available",
   await import(`../src/details.js?test=${Date.now()}-download-only`);
   await flush();
 
-  assert.match(document.getElement("sendDeltaMailActions").innerHTML, /No email address was found automatically/i);
-  assert.equal(document.getElement("sendDeltaMailActions").querySelectorAll("button[data-mail-target]").length, 0);
-  assert.equal(document.getElement("sendDeltaMailActions").hidden, false);
+  assert.match(element(document, "sendDeltaMailActions").innerHTML, /No email address was found automatically/i);
+  assert.equal(element(document, "sendDeltaMailActions").querySelectorAll("button[data-mail-target]").length, 0);
+  assert.equal(element(document, "sendDeltaMailActions").hidden, false);
 
-  document.getElement("sendDeltaMailActions").querySelector("#downloadDeltaHtmlButton").click();
+  element(document, "sendDeltaMailActions").querySelector("#downloadDeltaHtmlButton").click();
   await flush();
   assert.equal(window.lastDownloadedName, "cookiebuddy-delta-report.html");
 });
@@ -183,6 +183,7 @@ function createDocument(locale) {
   return {
     documentElement: { lang: locale },
     querySelector: (selector) => selector.startsWith("#") ? elements.get(selector.slice(1)) || null : null,
+    getElement: (id) => elements.get(id),
     querySelectorAll: (selector) => {
       if (selector === "[data-i18n]") {
         return [...elements.values()].filter((element) => element.dataset.i18n);
@@ -231,6 +232,10 @@ function setupGlobals({ document, window, locale }) {
 
 function flush() {
   return new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+function element(document, id) {
+  return document.querySelector(`#${id}`);
 }
 
 class FakeElement {
