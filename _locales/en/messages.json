@@ -397,5 +397,44 @@
   },
   "localAuthorityNote": {
     "message": "CookieBuddy could not infer a specific authority from the domain. Check the company imprint or privacy notice for jurisdiction."
+  },
+  "sendDeltaMailButton": {
+    "message": "Send report by email"
+  },
+  "sendDeltaMailToDpoButton": {
+    "message": "Mail to DPO"
+  },
+  "sendDeltaMailToAuthorityButton": {
+    "message": "Mail to authority"
+  },
+  "sendDeltaMailHeading": {
+    "message": "Send delta by email"
+  },
+  "sendDeltaMailHint": {
+    "message": "A mail draft opens with the audit report. Please review and adjust the text before sending."
+  },
+  "noDeltaMailRecipient": {
+    "message": "No email address was found automatically, but you can still download the report."
+  },
+  "downloadDeltaHtmlButton": {
+    "message": "Download HTML report"
+  },
+  "downloadDeltaPdfButton": {
+    "message": "Save as PDF"
+  },
+  "deltaReportDocumentTitle": {
+    "message": "CookieBuddy delta report"
+  },
+  "deltaPdfHint": {
+    "message": "Open the browser print dialog, then choose Save as PDF."
+  },
+  "deltaAuthorityReportSubject": {
+    "message": "CookieBuddy audit report for authority review on $1"
+  },
+  "deltaReportSubject": {
+    "message": "CookieBuddy audit report for $1"
+  },
+  "deltaReportMailBody": {
+    "message": "Hello,\n\nattached is the CookieBuddy audit report for our review of the cookie consent implementation on $1.\n\nThis report documents the results of our automated check. Please refer to the audit findings below for details about cookies and third-party traffic detected after consent was withdrawn.\n\nPlease provide clarification on the findings and the legal basis for any processing that was detected as continuing after consent was withdrawn.\n\nKind regards"
   }
 }
