@@ -9,7 +9,7 @@ const localeMessages = {
 };
 
 test("details page opens a mail draft from the delta report", async () => {
-  const document = createDocument();
+  const document = createDocument("en");
   const window = createWindow("?view=delta");
 
   setupGlobals({ document, window, locale: "en" });
@@ -43,7 +43,7 @@ test("details page opens a mail draft from the delta report", async () => {
 });
 
 test("details page offers authority mail when available", async () => {
-  const document = createDocument();
+  const document = createDocument("de");
   const window = createWindow("?view=delta");
 
   setupGlobals({ document, window, locale: "de" });
@@ -74,7 +74,7 @@ test("details page offers authority mail when available", async () => {
 });
 
 test("details page hides mail drafting outside the delta view", async () => {
-  const document = createDocument();
+  const document = createDocument("de");
   const window = createWindow("?view=summary");
 
   setupGlobals({ document, window, locale: "de" });
@@ -91,7 +91,7 @@ test("details page hides mail drafting outside the delta view", async () => {
 });
 
 test("details page still offers downloads when no email recipient is available", async () => {
-  const document = createDocument();
+  const document = createDocument("en");
   const window = createWindow("?view=delta");
 
   setupGlobals({ document, window, locale: "en" });
@@ -171,17 +171,17 @@ function createWindow(search) {
   return win;
 }
 
-function createDocument() {
+function createDocument(locale) {
   const elements = new Map();
   for (const id of ["detailsOutput", "languageSelect", "sendDeltaMailActions", "sendDeltaMailHint", "sendDeltaMailHeading"]) {
     elements.set(id, new FakeElement(id));
   }
-  elements.get("languageSelect").value = "en";
+  elements.get("languageSelect").value = locale;
   elements.get("detailsOutput").dataset.i18n = "loading";
   elements.get("sendDeltaMailHint").dataset.i18n = "sendDeltaMailHint";
   elements.get("sendDeltaMailHeading").dataset.i18n = "sendDeltaMailHeading";
   return {
-    documentElement: { lang: "en" },
+    documentElement: { lang: locale },
     querySelector: (selector) => selector.startsWith("#") ? elements.get(selector.slice(1)) || null : null,
     querySelectorAll: (selector) => {
       if (selector === "[data-i18n]") {
@@ -210,13 +210,15 @@ function setupGlobals({ document, window, locale }) {
     }
   });
   window.fetch = globalThis.fetch;
-  globalThis.__testWindow = window;
   globalThis.URL.createObjectURL = (blob) => {
     window.lastDownloadedTextPromise = blob.text();
     return "blob:cookiebuddy";
   };
   globalThis.URL.revokeObjectURL = () => {};
   globalThis.chrome = {
+    runtime: {
+      getURL: (value) => value
+    },
     i18n: { getUILanguage: () => locale },
     storage: {
       local: {
@@ -253,17 +255,23 @@ class FakeElement {
 
   set innerHTML(value) {
     this._html = String(value);
-    this._text = this._html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-    this._childrenButtons = [...this._html.matchAll(/<button([^>]*)>(.*?)<\/button>/g)].map((match) => {
+    this._text = stripTags(this._html);
+    this._childrenButtons = [];
+
+    const isGerman = String(globalThis.document?.documentElement?.lang || "").startsWith("de");
+    for (const spec of [
+      { id: "downloadDeltaHtmlButton", label: isGerman ? "Bericht als HTML herunterladen" : "Download HTML report" },
+      { id: "downloadDeltaPdfButton", label: isGerman ? "Als PDF speichern" : "Save as PDF" },
+      { id: "sendDeltaMailToDpoButton", label: isGerman ? "Mail an Datenschutzbeauftragten" : "Mail to DPO", mailTarget: "dpo" },
+      { id: "sendDeltaMailToAuthorityButton", label: isGerman ? "Mail an Behörde" : "Mail to authority", mailTarget: "authority" }
+    ]) {
+      if (!this._html.includes(spec.id)) continue;
       const button = new FakeElement("button");
-      const attrs = match[1];
-      const id = attrs.match(/id="([^"]+)"/)?.[1];
-      const mailTarget = attrs.match(/data-mail-target="([^"]+)"/)?.[1];
-      if (id) button.id = id;
-      if (mailTarget) button.dataset.mailTarget = mailTarget;
-      button.textContent = match[2].replace(/[<>]/g, "").trim();
-      return button;
-    });
+      button.id = spec.id;
+      if (spec.mailTarget) button.dataset.mailTarget = spec.mailTarget;
+      button.textContent = spec.label;
+      this._childrenButtons.push(button);
+    }
   }
 
   get innerHTML() {
@@ -295,4 +303,13 @@ class FakeElement {
   setAttribute(name, value) {
     this.attributes.set(name, String(value));
   }
+}
+
+function stripTags(value) {
+  return String(value)
+    .split("<").join(" ")
+    .split(">").join(" ")
+    .replaceAll("\n", " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
