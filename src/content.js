@@ -1,6 +1,3 @@
-// Public CMP list - will be populated from external source
-let PUBLIC_CMP_LIST = null;
-
 // Fallback embedded CMP signatures for when external fetch unavailable
 const FALLBACK_CMP_SIGNATURES = [
   { name: "Usercentrics", patterns: ["usercentrics", "uc-settings", "uc-center-container", "uc-privacy", "cmp.usercentrics"] },
@@ -80,36 +77,7 @@ const DENY_SELECTORS = [
   "button"
 ];
 
-// Load public CMP list on initialization
-async function loadPublicCmpList() {
-  try {
-    // Attempt to fetch public CMP list from iabgpp-es CDN
-    const response = await fetch('https://cdn.jsdelivr.net/gh/InteractiveAdvertisingBureau/iabgpp-es@main/src/cmpList.json', {
-      cache: 'force-cache',
-      credentials: 'omit'
-    });
-    
-    if (response.ok) {
-      const data = await response.json();
-      PUBLIC_CMP_LIST = data;
-      console.log('[CookieBuddy] Loaded public CMP list with', Object.keys(data).length, 'providers');
-    }
-  } catch (error) {
-    console.log('[CookieBuddy] Public CMP list fetch failed, using fallback signatures:', error);
-  }
-}
-
-// Initialize CMP list on script load
-loadPublicCmpList();
-
 function getCmpSignatures() {
-  if (PUBLIC_CMP_LIST && typeof PUBLIC_CMP_LIST === 'object') {
-    // Convert public CMP list format to our signature format
-    return Object.entries(PUBLIC_CMP_LIST).map(([id, cmp]) => ({
-      name: cmp.name || id,
-      patterns: cmp.signaling_patterns ? cmp.signaling_patterns.map(p => p.toLowerCase()) : []
-    })).filter(cmp => cmp.patterns.length > 0);
-  }
   return FALLBACK_CMP_SIGNATURES;
 }
 
@@ -392,6 +360,10 @@ async function detectContacts() {
   const linkedContacts = [];
   for (const link of links) {
     try {
+      if (!isSafeContactLink(link.href)) {
+        continue;
+      }
+
       const response = await fetch(link.href, { credentials: "include" });
       const text = await response.text();
       linkedContacts.push(...extractContactsFromText(stripHtml(text)));
@@ -522,6 +494,15 @@ function collectDenyCandidates() {
 
 function isContactCandidate(href, text) {
   return /imprint|impressum|privacy|datenschutz|legal|contact|kontakt/i.test(`${href} ${text}`);
+}
+
+function isSafeContactLink(href) {
+  try {
+    const url = new URL(href);
+    return url.origin === location.origin;
+  } catch {
+    return false;
+  }
 }
 
 function inferAuthority(hostname) {
