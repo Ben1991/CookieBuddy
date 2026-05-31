@@ -55,19 +55,19 @@ test("popup loads German texts when German is active", async () => {
 
 test("popup keeps core visible texts aligned with the active locale", async () => {
   await assertPopupLocale("en", {
-    intro: "Get a quick read on what the page really does before and after consent.",
+    intro: "See what the page does before and after a reject attempt.",
     help: "How it works",
     cookies: "Cookies and traffic",
-    cookiesIntro: "This overview groups visible cookies and locally stored browser data. The list updates after each scan.",
+    cookiesIntro: "This view groups visible cookies and local browser data. It updates after each scan.",
     contact: "Contact",
     openSource: "Open source"
   });
 
   await assertPopupLocale("de", {
-    intro: "Finde auf einen Blick heraus, was die Seite vor und nach der Einwilligung wirklich macht.",
+    intro: "Sieh, was die Seite vor und nach einem Ablehnen-Versuch macht.",
     help: "So funktioniert es",
     cookies: "Cookies und Traffic",
-    cookiesIntro: "Die Übersicht bündelt sichtbare Cookies und lokal gespeicherte Browserdaten. Die Liste aktualisiert sich nach jedem Scan.",
+    cookiesIntro: "Diese Ansicht bündelt sichtbare Cookies und lokale Browserdaten. Sie aktualisiert sich nach jedem Scan.",
     contact: "Kontakt",
     openSource: "Open Source"
   });
