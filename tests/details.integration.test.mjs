@@ -276,7 +276,7 @@ class FakeElement {
     for (const match of this._html.matchAll(/<button[^>]*data-mail-target="([^"]+)"[^>]*>([\s\S]*?)<\/button>/g)) {
       const button = new FakeElement("button");
       button.dataset.mailTarget = match[1];
-      button.textContent = match[2].replace(/<[^>]+>/g, "").trim();
+      button.textContent = match[2].replace(/[<>]/g, "").trim();
       this._childrenButtons.push(button);
     }
   }
