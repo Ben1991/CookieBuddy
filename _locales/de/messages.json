@@ -398,6 +398,36 @@
   "sendDeltaMailButton": {
     "message": "Bericht per E-Mail versenden"
   },
+  "sendDeltaMailToDpoButton": {
+    "message": "Mail an Datenschutzbeauftragten"
+  },
+  "sendDeltaMailToAuthorityButton": {
+    "message": "Mail an Behörde"
+  },
+  "sendDeltaMailHeading": {
+    "message": "Delta per E-Mail versenden"
+  },
+  "sendDeltaMailHint": {
+    "message": "Es wird ein Mail-Entwurf mit dem Auditbericht geöffnet. Bitte den Text vor dem Absenden noch prüfen und anpassen."
+  },
+  "noDeltaMailRecipient": {
+    "message": "Es wurde automatisch keine E-Mail-Adresse gefunden, aber der Bericht kann trotzdem heruntergeladen werden."
+  },
+  "downloadDeltaHtmlButton": {
+    "message": "Bericht als HTML herunterladen"
+  },
+  "downloadDeltaPdfButton": {
+    "message": "Als PDF speichern"
+  },
+  "deltaReportDocumentTitle": {
+    "message": "CookieBuddy-Delta-Bericht"
+  },
+  "deltaPdfHint": {
+    "message": "Öffne den Druckdialog des Browsers und wähle dann Als PDF speichern."
+  },
+  "deltaAuthorityReportSubject": {
+    "message": "CookieBuddy-Auditbericht für Behördenprüfung unter $1"
+  },
   "deltaReportSubject": {
     "message": "CookieBuddy-Auditbericht für $1"
   },
