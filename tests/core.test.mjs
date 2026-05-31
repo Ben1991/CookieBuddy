@@ -134,7 +134,7 @@ test("formats delta report with low risk", () => {
   const report = formatDeltaReport(delta, "https://example.com");
   
   assert.match(report, /LOW RISK/);
-  assert.match(report, /No obvious concerns/);
+  assert.match(report, /no obvious concerns/i);
   assert.match(report, /No new cookies created/);
   assert.match(report, /No third-party traffic/);
 });

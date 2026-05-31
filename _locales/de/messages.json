@@ -153,7 +153,7 @@
     "message": "So funktioniert es"
   },
   "helpIntro": {
-    "message": "CookieBuddy schaut sich die aktuelle Seite an und prüft, ob nach „Alle ablehnen" weiterhin Cookies oder Drittanbieter-Anfragen passieren."
+    "message": "CookieBuddy schaut sich die aktuelle Seite an und pr?ft, ob nach ?Alle ablehnen? weiterhin Cookies oder Drittanbieter-Anfragen passieren."
   },
   "helpStepBanner": {
     "message": "Es versucht, den Cookie-Banner-Anbieter zu erkennen."
@@ -405,3 +405,4 @@
     "message": "Sehr geehrte Damen und Herren,\n\nanbei erhalten Sie den CookieBuddy-Auditbericht für unsere Überprüfung der Cookie-Einwilligungsimplementierung unter $1.\n\nDieser Bericht dokumentiert die Ergebnisse unserer automatisierten Prüfung. Bitte beachten Sie die beigefügten Audit-Ergebnisse für detaillierte Informationen über Cookies und Drittanbieter-Traffic, die nach dem Widerruf der Einwilligung erkannt wurden.\n\nWir würden eine Erläuterung zu den Ergebnissen und zur Rechtsgrundlage für jede Datenverarbeitung schätzen, die als fortlaufend nach dem Widerruf der Einwilligung erkannt wurde.\n\nMit freundlichen Grüßen"
   }
 }
+
