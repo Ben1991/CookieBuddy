@@ -8,13 +8,13 @@
   </head>
   <body>
     <main class="shell" aria-live="polite">
-      <header class="hero">
-        <img class="logo-mark" src="assets/logo.svg" alt="" aria-hidden="true">
-        <div>
-          <p class="eyebrow">CookieBuddy</p>
-          <h1 data-i18n="popupTitle">Consent delta check</h1>
-          <p class="hero-intro" data-i18n="popupIntro">See what the page really does before and after consent, and spot the difference in one glance.</p>
-          <p id="scanStatusText" class="hero-status" aria-live="polite" data-i18n="scanStatusReady">Last scan ready.</p>
+      <header class="hero popup-hero">
+        <div class="brand-lockup">
+          <img class="logo-mark" src="assets/logo.svg" alt="" aria-hidden="true">
+          <div>
+            <p class="eyebrow">CookieBuddy</p>
+            <h1 data-i18n="popupTitle">Consent delta check</h1>
+          </div>
         </div>
         <div class="hero-actions">
           <label class="language-toggle">
@@ -28,7 +28,20 @@
         </div>
       </header>
 
-      <section class="card">
+      <section id="statusCard" class="status-card" aria-live="polite">
+        <div class="status-icon" data-status="yellow" aria-hidden="true">
+          <img src="assets/logo.svg" alt="">
+        </div>
+        <div>
+          <p id="scanStatusText" class="hero-status" data-i18n="scanStatusReady">Last scan ready.</p>
+          <p class="hero-intro" data-i18n="popupIntro">See what the page really does before and after consent, and spot the difference in one glance.</p>
+        </div>
+        <span class="status-chevron" aria-hidden="true">›</span>
+      </section>
+
+      <section id="overviewGrid" class="overview-grid" aria-label="Scan overview"></section>
+
+      <section class="card utility-card">
         <div class="section-title">
           <h2 data-i18n="helpHeading">Help</h2>
           <button id="helpButton" class="ghost-button" type="button" aria-expanded="false" aria-controls="helpPanel" data-i18n="helpButton">How it works</button>
@@ -46,9 +59,12 @@
         </div>
       </section>
 
-      <section class="card banner-card" id="bannerSection" aria-labelledby="bannerHeading">
+      <section class="card list-card" id="bannerSection" aria-labelledby="bannerHeading">
         <div class="section-title">
-          <h2 id="bannerHeading" data-i18n="bannerHeading">Banner</h2>
+          <div class="section-heading-row">
+            <span class="tile-icon purple" aria-hidden="true">✓</span>
+            <h2 id="bannerHeading" data-i18n="bannerHeading">Banner</h2>
+          </div>
           <button id="refreshButton" class="ghost-button" type="button" data-i18n="refreshButton">Refresh</button>
         </div>
         <div id="bannerResult" class="result-grid skeleton" role="region" aria-live="polite">
@@ -56,9 +72,12 @@
         </div>
       </section>
 
-      <section class="card legend-card" aria-labelledby="legendHeading">
+      <section class="card legend-card list-card" aria-labelledby="legendHeading">
         <div class="section-title">
-          <h2 id="legendHeading" data-i18n="legendHeading">Legend</h2>
+          <div class="section-heading-row">
+            <span class="tile-icon green" aria-hidden="true">i</span>
+            <h2 id="legendHeading" data-i18n="legendHeading">Legend</h2>
+          </div>
         </div>
         <div id="legendGrid" class="legend-grid">
           <div class="legend-item">
@@ -85,9 +104,12 @@
         </div>
       </section>
 
-      <section class="card" aria-labelledby="servicesByCategoryHeading">
+      <section class="card list-card" aria-labelledby="servicesByCategoryHeading">
         <div class="section-title">
-          <h2 id="servicesByCategoryHeading" data-i18n="servicesByCategoryHeading">Services by category</h2>
+          <div class="section-heading-row">
+            <span class="tile-icon blue" aria-hidden="true">≡</span>
+            <h2 id="servicesByCategoryHeading" data-i18n="servicesByCategoryHeading">Services by category</h2>
+          </div>
           <div class="section-actions">
             <button id="bannerOverviewButton" class="ghost-button small" type="button" data-i18n="bannerOverviewButton" title="Show the banner preferences or second level of the cookie banner">Übersicht aus dem Cookie Banner zeigen</button>
             <span id="bannerOverviewStatus" class="muted status-inline" aria-live="polite"></span>
@@ -97,10 +119,13 @@
         <div id="categoryResult" class="category-grid"></div>
       </section>
 
-      <section class="card" aria-labelledby="cookiesTrafficHeading">
+      <section class="card list-card" aria-labelledby="cookiesTrafficHeading">
         <div class="section-title">
-          <div>
+          <div class="section-heading-row">
+            <span class="tile-icon orange" aria-hidden="true">●</span>
             <h2 id="cookiesTrafficHeading" data-i18n="cookiesTrafficHeading">Cookies and traffic</h2>
+          </div>
+          <div>
             <p class="muted section-note" data-i18n="cookiesTrafficIntro">The overview groups visible cookies and locally stored browser data. The list updates after each scan.</p>
           </div>
           <span id="cookieCount" class="muted">0 cookies</span>
@@ -108,8 +133,11 @@
         <div id="cookieResult" class="compact-list" aria-live="polite" aria-busy="false"></div>
       </section>
 
-      <section class="card accent">
-        <h2 data-i18n="deltaHeading">Delta check</h2>
+      <section class="card accent list-card">
+        <div class="section-heading-row">
+          <span class="tile-icon green" aria-hidden="true">△</span>
+          <h2 data-i18n="deltaHeading">Delta check</h2>
+        </div>
         <p class="muted" data-i18n="deltaIntro">
           Compares the current state with a best-effort "deny all" state. CookieBuddy flags cookies and third-party requests that remain after opt-out.
         </p>
@@ -117,16 +145,22 @@
         <div id="deltaResult" class="delta-box"></div>
       </section>
 
-      <section class="card">
+      <section class="card list-card">
         <div class="section-title">
-          <h2 data-i18n="contactHeading">Contact</h2>
+          <div class="section-heading-row">
+            <span class="tile-icon blue" aria-hidden="true">✉</span>
+            <h2 data-i18n="contactHeading">Contact</h2>
+          </div>
           <span class="muted" data-i18n="contactSubheading">DPO / authority</span>
         </div>
         <div id="contactResult" class="contact-box"></div>
       </section>
 
-      <section class="card privacy-card">
-        <h2 data-i18n="privacyHeading">Privacy</h2>
+      <section class="card privacy-card list-card">
+        <div class="section-heading-row">
+          <span class="tile-icon purple" aria-hidden="true">▣</span>
+          <h2 data-i18n="privacyHeading">Privacy</h2>
+        </div>
         <p class="muted" data-i18n="privacyIntro">
           CookieBuddy does not track you and does not send scan results to the creator or to any analytics service.
         </p>
@@ -138,8 +172,11 @@
         </ul>
       </section>
 
-      <section class="card open-source-card">
-        <h2 data-i18n="openSourceHeading">Open source</h2>
+      <section class="card open-source-card list-card">
+        <div class="section-heading-row">
+          <span class="tile-icon neutral" aria-hidden="true">{ }</span>
+          <h2 data-i18n="openSourceHeading">Open source</h2>
+        </div>
         <p class="muted" data-i18n="openSourceIntro">
           CookieBuddy is intended to be open source. Contributions, bug reports, and banner-detection improvements are welcome.
         </p>
@@ -148,17 +185,21 @@
         </a>
       </section>
 
-      <footer class="support-footer">
-        <a class="donate-button" href="https://buymeacoffee.com/thenext1991" target="_blank" rel="noreferrer">
-          <span data-i18n="donateButton">Support me and donate</span>
-        </a>
-      </footer>
-
-      <section class="card">
+      <section class="card disclaimer-card">
         <p class="disclaimer" data-i18n="legalDisclaimer">
           Dies ist keine Rechtsberatung. Bitte prüfe die Inhalte weiterhin selbst. Der Ersteller übernimmt keine Haftung für die Ergebnisse.
         </p>
       </section>
+
+      <footer class="support-footer">
+        <div>
+          <strong>Like CookieBuddy?</strong>
+          <span>Support development with a coffee</span>
+        </div>
+        <a class="donate-button" href="https://buymeacoffee.com/thenext1991" target="_blank" rel="noreferrer">
+          <span data-i18n="donateButton">Support me and donate</span>
+        </a>
+      </footer>
     </main>
 
     <script src="src/popup.js" type="module"></script>

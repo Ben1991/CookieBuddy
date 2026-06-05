@@ -31,8 +31,12 @@ test("details page opens a mail draft from the delta report", async () => {
 
   element(document, "sendDeltaMailActions").querySelectorAll("button[data-mail-target]")[0].click();
   assert.match(window.location.lastAssignedUrl, /^mailto:privacy%40example\.com\?/);
-  assert.match(decodeURIComponent(window.location.lastAssignedUrl), /CookieBuddy audit report for https:\/\/example\.com/);
-  assert.match(decodeURIComponent(window.location.lastAssignedUrl), /Cookie consent delta report/i);
+  assert.match(decodeURIComponent(window.location.lastAssignedUrl), /Question regarding cookies and third-party requests after opt-out/);
+  assert.match(decodeURIComponent(window.location.lastAssignedUrl), /After selecting "reject all", "deny all"/);
+  assert.match(decodeURIComponent(window.location.lastAssignedUrl), /Browser storage entries/);
+  assert.match(decodeURIComponent(window.location.lastAssignedUrl), /consent_state \(localStorage\)/);
+  assert.match(decodeURIComponent(window.location.lastAssignedUrl), /Detection evidence/);
+  assert.match(decodeURIComponent(window.location.lastAssignedUrl), /Usercentrics/);
 
   element(document, "sendDeltaMailActions").querySelector("#downloadDeltaHtmlButton").click();
   await flush();
@@ -72,7 +76,10 @@ test("details page offers authority mail when available", async () => {
 
   mailButtons[1].click();
   assert.match(window.location.lastAssignedUrl, /^mailto:poststelle%40bfdi\.bund\.de\?/);
-  assert.match(decodeURIComponent(window.location.lastAssignedUrl), /CookieBuddy-Auditbericht/);
+  assert.match(decodeURIComponent(window.location.lastAssignedUrl), /Bitte um Prüfung: mögliche Cookies und Drittanbieter-Requests nach Opt-out/);
+  assert.match(decodeURIComponent(window.location.lastAssignedUrl), /Nach Auswahl von "Alle ablehnen", "Ablehnen"/);
+  assert.match(decodeURIComponent(window.location.lastAssignedUrl), /Browser-Speicher-Einträge/);
+  assert.match(decodeURIComponent(window.location.lastAssignedUrl), /Bitte behandeln Sie diese Nachricht als Bitte um Klärung/);
 });
 
 test("details page hides mail drafting outside the delta view", async () => {
@@ -128,7 +135,16 @@ function buildDeltaFixture() {
     afterDenyCounts: { cookies: 4, thirdPartyHosts: 1 },
     remainingCookies: [{ name: "_ga", domain: ".example.com", service: "Google Analytics" }],
     newCookies: [{ name: "_hjSessionUser_123", domain: ".example.com", service: "Hotjar" }],
-    thirdPartyHosts: ["tracker.example.net"]
+    thirdPartyHosts: ["tracker.example.net"],
+    remainingStorageEntries: [
+      { key: "consent_state", scope: "localStorage", inBanner: true },
+      { key: "session_prefs", scope: "sessionStorage", inBanner: false }
+    ],
+    banner: {
+      name: "Usercentrics",
+      source: { host: "cdn.usercentrics.eu" },
+      evidence: [{ source: "DOM marker", value: "#usercentrics-root" }]
+    }
   };
 }
 
