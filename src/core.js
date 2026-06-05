@@ -58,7 +58,7 @@ export function normalizeTraffic(traffic, firstPartyHost) {
     .filter((item) => item.thirdParty);
 }
 
-export function buildDelta({ beforeCookies, afterCookies, beforeTraffic, afterTraffic, denyClicked, denyLabel, labels, tabUrl }) {
+export function buildDelta({ beforeCookies, afterCookies, beforeTraffic, afterTraffic, afterStorageEntries = [], banner = null, denyClicked, denyLabel, labels, tabUrl }) {
   const beforeCookieKeys = new Set(beforeCookies.map(cookieKey));
   const remainingCookies = afterCookies.filter((cookie) => beforeCookieKeys.has(cookieKey(cookie)) || !isEssentialCookie(cookie));
   const newCookies = afterCookies.filter((cookie) => !beforeCookieKeys.has(cookieKey(cookie)));
@@ -78,6 +78,8 @@ export function buildDelta({ beforeCookies, afterCookies, beforeTraffic, afterTr
     remainingCookies: suspiciousCookies,
     newCookies,
     thirdPartyHosts,
+    remainingStorageEntries: afterStorageEntries,
+    banner,
     beforeCounts: {
       cookies: beforeCookies.length,
       thirdPartyHosts: Array.from(new Set(beforeTraffic.map((item) => item.host))).length
