@@ -12,7 +12,12 @@ export function cookieKey(cookie) {
 }
 
 export function isEssentialCookie(cookie) {
-  return /session|csrf|xsrf|auth|consent|cookie|privacy|necessary/i.test(cookie.name);
+  return /session|csrf|xsrf|auth|consent|cookie|privacy|necessary|required|essential|cf_bm|cf_clearance/i.test(cookie.name);
+}
+
+// Treat common security and delivery infrastructure as allowed after opt-out.
+export function isEssentialHost(hostname) {
+  return /(^|\.)cloudflare\.com$|(^|\.)cloudflare\.net$|(^|\.)cloudfront\.net$|(^|\.)akamaihd\.net$|(^|\.)fastly\.net$|(^|\.)hcaptcha\.com$|(^|\.)recaptcha\.net$|(^|\.)gstatic\.com$/i.test(hostname);
 }
 
 export function serviceForCookie(cookie, unknownServiceLabel = "Unknown service") {
@@ -58,33 +63,41 @@ export function normalizeTraffic(traffic, firstPartyHost) {
     .filter((item) => item.thirdParty);
 }
 
-export function buildDelta({ beforeCookies, afterCookies, beforeTraffic, afterTraffic, denyClicked, denyLabel, labels, tabUrl }) {
+export function buildDelta({ beforeCookies, afterCookies, beforeTraffic, afterTraffic, denyClicked, denyLabel, manualConsentConfirmed, labels, tabUrl }) {
   const beforeCookieKeys = new Set(beforeCookies.map(cookieKey));
-  const remainingCookies = afterCookies.filter((cookie) => beforeCookieKeys.has(cookieKey(cookie)) || !isEssentialCookie(cookie));
-  const newCookies = afterCookies.filter((cookie) => !beforeCookieKeys.has(cookieKey(cookie)));
-  const thirdPartyHosts = Array.from(new Set(afterTraffic.map((item) => item.host))).sort();
+  const remainingCookies = afterCookies.filter((cookie) => beforeCookieKeys.has(cookieKey(cookie)) && !isEssentialCookie(cookie));
+  const newCookies = afterCookies.filter((cookie) => !beforeCookieKeys.has(cookieKey(cookie)) && !isEssentialCookie(cookie));
+  const essentialCookies = afterCookies.filter((cookie) => isEssentialCookie(cookie));
+  const allThirdPartyHosts = Array.from(new Set(afterTraffic.map((item) => item.host))).sort();
+  const thirdPartyHosts = allThirdPartyHosts.filter((host) => !isEssentialHost(host));
+  const essentialThirdPartyHosts = allThirdPartyHosts.filter((host) => isEssentialHost(host));
   const suspiciousCookies = remainingCookies.filter((cookie) => !isEssentialCookie(cookie));
-  const hasDelta = suspiciousCookies.length > 0 || newCookies.length > 0 || thirdPartyHosts.length > 0 || !denyClicked;
+  const hasDelta = suspiciousCookies.length > 0 || newCookies.length > 0 || thirdPartyHosts.length > 0 || (!denyClicked && !manualConsentConfirmed);
 
   return {
     checkedAt: new Date().toISOString(),
     url: tabUrl,
     denyAction: {
       clicked: Boolean(denyClicked),
-      label: denyLabel || ""
+      label: denyLabel || "",
+      manual: Boolean(manualConsentConfirmed && !denyClicked)
     },
     riskLevel: hasDelta ? "high" : "low",
     summary: hasDelta ? labels.deltaFoundSummary : labels.noDeltaSummary,
     remainingCookies: suspiciousCookies,
     newCookies,
     thirdPartyHosts,
+    essentialCookies,
+    essentialThirdPartyHosts,
     beforeCounts: {
       cookies: beforeCookies.length,
       thirdPartyHosts: Array.from(new Set(beforeTraffic.map((item) => item.host))).length
     },
     afterDenyCounts: {
       cookies: afterCookies.length,
-      thirdPartyHosts: thirdPartyHosts.length
+      thirdPartyHosts: allThirdPartyHosts.length,
+      suspiciousThirdPartyHosts: thirdPartyHosts.length,
+      essentialThirdPartyHosts: essentialThirdPartyHosts.length
     }
   };
 }

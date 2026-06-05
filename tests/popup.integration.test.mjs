@@ -88,6 +88,66 @@ test("legend marks the active badge status", async () => {
   assert.match(legendHtml, /current|aktuell/);
 });
 
+test("banner overview failure keeps the detected banner visible", async () => {
+  const document = createDocument();
+  const window = { Node: class {}, HTMLElement: FakeElement, URL };
+
+  setupChromeMock("en");
+  setupDomGlobals({ document, window });
+
+  globalThis.chrome.tabs.sendMessage = async (_, message) => {
+    globalThis.chrome.tabs.lastMessage = message;
+    if (message.type === "ANALYZE_PAGE") {
+      return {
+        url: "https://example.com",
+        host: "example.com",
+        title: "Example",
+        banner: {
+          name: "Cookiebot",
+          confidence: "high",
+          source: { host: "cdn.cookiebot.com" },
+          evidence: [{ value: "cookiebot" }]
+        },
+        categories: {
+          essential: { services: [] },
+          marketing: { services: [] },
+          analytics: { services: [] },
+          functional: { services: [] },
+          social: { services: [] }
+        },
+        storage: {
+          localStorageKeys: [],
+          sessionStorageKeys: [],
+          indexedDbNames: [],
+          items: []
+        },
+        contacts: {
+          dpo: null,
+          authority: {
+            key: "fallback",
+            name: "Federal data protection authority",
+            note: "Fallback note",
+            url: "https://www.bfdi.bund.de/SharedDocs/Kontaktdaten/DE/BfDI_Kontakt.html"
+          }
+        }
+      };
+    }
+    if (message.type === "OPEN_BANNER_OVERVIEW") return { found: false, clicked: false, label: "" };
+    return {};
+  };
+
+  await import(`../src/popup.js?test=${Date.now()}-overview-failure`);
+  await flush();
+
+  const beforeHtml = document.getElement("bannerResult").innerHTML;
+  document.getElement("bannerOverviewButton").click();
+  await flush();
+
+  assert.match(beforeHtml, /Cookiebot/);
+  assert.match(document.getElement("bannerResult").innerHTML, /Cookiebot/);
+  assert.match(document.getElement("bannerOverviewStatus").textContent, /No banner settings button/);
+});
+
 test("cookies and traffic show an empty state when nothing is found", async () => {
   const document = createDocument();
   const window = { Node: class {}, HTMLElement: FakeElement, URL };

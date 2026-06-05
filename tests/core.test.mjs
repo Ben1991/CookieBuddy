@@ -8,6 +8,7 @@ import {
   formatDeltaReport,
   getBaseDomain,
   isEssentialCookie,
+  isEssentialHost,
   normalizeTraffic,
   serviceForCookie
 } from "../src/core.js";
@@ -22,7 +23,14 @@ test("builds stable cookie keys", () => {
 
 test("detects essential cookies by name", () => {
   assert.equal(isEssentialCookie({ name: "cookie_consent" }), true);
+  assert.equal(isEssentialCookie({ name: "__cf_bm" }), true);
   assert.equal(isEssentialCookie({ name: "ga_id" }), false);
+});
+
+test("detects essential infrastructure hosts", () => {
+  assert.equal(isEssentialHost("static.cloudflare.com"), true);
+  assert.equal(isEssentialHost("assets.cloudfront.net"), true);
+  assert.equal(isEssentialHost("google-analytics.com"), false);
 });
 
 test("maps known cookie services and falls back cleanly", () => {
@@ -67,7 +75,7 @@ test("builds a delta summary from the before and after states", () => {
       { domain: ".example.com", path: "/", name: "_hjSession" }
     ],
     beforeTraffic: [{ host: "cdn.example.com" }],
-    afterTraffic: [{ host: "cdn.example.com" }, { host: "tracker.example.net" }],
+    afterTraffic: [{ host: "cdn.example.com" }, { host: "tracker.example.net" }, { host: "static.cloudflare.com" }],
     denyClicked: true,
     denyLabel: "Reject all",
     labels: {
@@ -79,7 +87,36 @@ test("builds a delta summary from the before and after states", () => {
 
   assert.equal(delta.riskLevel, "high");
   assert.equal(delta.thirdPartyHosts.includes("tracker.example.net"), true);
+  assert.equal(delta.thirdPartyHosts.includes("static.cloudflare.com"), false);
+  assert.equal(delta.essentialThirdPartyHosts.includes("static.cloudflare.com"), true);
   assert.equal(delta.summary, "found");
+});
+
+test("keeps delta low when only essential cookies and infrastructure remain after manual opt-out", () => {
+  const delta = buildDelta({
+    beforeCookies: [
+      { domain: ".example.com", path: "/", name: "session" }
+    ],
+    afterCookies: [
+      { domain: ".example.com", path: "/", name: "session" },
+      { domain: ".example.com", path: "/", name: "__cf_bm" }
+    ],
+    beforeTraffic: [],
+    afterTraffic: [{ host: "static.cloudflare.com" }],
+    denyClicked: false,
+    manualConsentConfirmed: true,
+    denyLabel: "",
+    labels: {
+      deltaFoundSummary: "Delta found",
+      noDeltaSummary: "No delta"
+    },
+    tabUrl: "https://example.com"
+  });
+
+  assert.equal(delta.riskLevel, "low");
+  assert.deepEqual(delta.thirdPartyHosts, []);
+  assert.deepEqual(delta.essentialThirdPartyHosts, ["static.cloudflare.com"]);
+  assert.equal(delta.denyAction.manual, true);
 });
 
 test("formats delta report as plain text", () => {
