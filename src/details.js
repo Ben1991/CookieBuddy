@@ -1,6 +1,4 @@
 import { applyI18n, getLanguage, initI18n, setLanguage, t } from "./i18n.js";
-import { formatDeltaReport } from "./core.js";
-
 const output = document.querySelector("#detailsOutput");
 const languageSelect = document.querySelector("#languageSelect");
 const sendDeltaMailHint = document.querySelector("#sendDeltaMailHint");
@@ -317,15 +315,31 @@ function buildDeltaHtmlDocument(delta, options = {}) {
   <title>${escapeHtml(title)}</title>
   <style>
     body{font-family:Arial,sans-serif;line-height:1.5;margin:32px;color:#1f2937;background:#fff}
-    .delta-report{max-width:900px}
-    .risk{padding:16px;border-radius:12px;margin-bottom:16px;border:1px solid #d1d5db}
-    .risk.high{background:#fef2f2}
-    .risk.low{background:#f0fdf4}
-    .metric-row{display:flex;gap:16px;flex-wrap:wrap;margin:12px 0}
-    .chip{display:block;padding:8px 12px;border:1px solid #d1d5db;border-radius:999px;margin:8px 0}
+    .delta-report{display:grid;gap:18px;max-width:980px}
+    .delta-report-header{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}
+    .eyebrow{margin:0 0 4px;color:#64748b;font-size:12px;font-weight:700;text-transform:uppercase}
+    .status-pill{display:inline-flex;padding:6px 10px;border:1px solid #d1d5db;border-radius:8px;font-weight:700}
+    .status-pill.high{background:#fef3c7;color:#92400e}
+    .status-pill.low{background:#dcfce7;color:#166534}
+    .delta-fact-grid,.delta-detected-box,.delta-findings section,.delta-side-panel section{padding:14px;border:1px solid #d1d5db;border-radius:8px}
+    .delta-fact-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;background:#f8fafc}
+    .delta-fact-grid span{display:block;color:#64748b;font-size:12px;font-weight:700}
+    .delta-fact-grid strong{overflow-wrap:anywhere}
+    .delta-detected-box{background:#fffbeb;border-color:#fcd34d}
+    .metric-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+    .metric-row span{display:grid;gap:2px;padding:10px;border:1px solid #d1d5db;border-radius:8px;background:#fff}
+    .metric-row strong{font-size:22px}
+    .delta-content-grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(240px,.8fr);gap:14px}
+    .delta-findings,.delta-side-panel{display:grid;gap:14px}
+    .delta-table{width:100%;border-collapse:collapse;font-size:13px}
+    .delta-table th,.delta-table td{padding:8px;border-bottom:1px solid #e5e7eb;text-align:left;vertical-align:top;overflow-wrap:anywhere}
+    .delta-table th{color:#64748b;font-size:12px}
+    .delta-list{margin:0;padding-left:18px;color:#475569}
+    .empty-state{padding:10px;border:1px dashed #cbd5e1;border-radius:8px;color:#475569}
     h1,h2,h3{margin-top:0}
     .muted{color:#4b5563}
     .error{color:#b91c1c}
+    @media(max-width:760px){.delta-content-grid,.delta-fact-grid,.metric-row{grid-template-columns:1fr}.delta-report-header{display:block}}
     @media print{body{margin:0} .muted.print-note{display:block}}
   </style>
 </head>
