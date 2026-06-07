@@ -109,37 +109,49 @@ test("popup delta view separates non-essential findings from allowed infrastruct
 
   setupChromeMock("en");
   setupDomGlobals({ document, window });
-
-  globalThis.chrome.runtime.sendMessage = async ({ type }) => {
-    if (type === "GET_TRAFFIC") {
-      return {
-        traffic: [
-          { url: "https://tracker.example.net/pixel.js", type: "script" },
-          { url: "https://static.cloudflare.com/cdn.js", type: "script" }
-        ]
-      };
-    }
-    if (type === "CLEAR_TRAFFIC") return {};
-    return {};
+  const originalSetTimeout = globalThis.setTimeout;
+  const originalClearTimeout = globalThis.clearTimeout;
+  globalThis.setTimeout = (callback) => {
+    callback();
+    return 0;
   };
+  globalThis.clearTimeout = () => {};
 
-  globalThis.chrome.tabs.sendMessage = async (_, message) => {
-    globalThis.chrome.tabs.lastMessage = message;
-    if (message.type === "TRY_DENY_ALL") return { clicked: true, label: "Reject all", found: true };
-    return setupChromeMockAnalysis();
-  };
+  try {
+    globalThis.chrome.runtime.sendMessage = async ({ type }) => {
+      if (type === "GET_TRAFFIC") {
+        return {
+          traffic: [
+            { url: "https://tracker.example.net/pixel.js", type: "script" },
+            { url: "https://static.cloudflare.com/cdn.js", type: "script" }
+          ]
+        };
+      }
+      if (type === "CLEAR_TRAFFIC") return {};
+      return {};
+    };
 
-  await import(`../src/popup.js?test=${Date.now()}-delta-split`);
-  await flush();
+    globalThis.chrome.tabs.sendMessage = async (_, message) => {
+      globalThis.chrome.tabs.lastMessage = message;
+      if (message.type === "TRY_DENY_ALL") return { clicked: true, label: "Reject all", found: true };
+      return setupChromeMockAnalysis();
+    };
 
-  document.getElement("deltaButton").click();
-  await flush();
-  await flush();
+    await import(`../src/popup.js?test=${Date.now()}-delta-split`);
+    await flush();
 
-  const deltaHtml = document.getElement("deltaResult").innerHTML;
-  assert.match(deltaHtml, /non-essential cookies still present/i);
-  assert.match(deltaHtml, /non-essential third-party traffic after opt-out/i);
-  assert.match(deltaHtml, /essential third-party infrastructure/i);
+    document.getElement("deltaButton").click();
+    await flush();
+    await flush();
+
+    const deltaHtml = document.getElement("deltaResult").innerHTML;
+    assert.match(deltaHtml, /non-essential cookies still present/i);
+    assert.match(deltaHtml, /non-essential third-party traffic after opt-out/i);
+    assert.match(deltaHtml, /essential third-party infrastructure/i);
+  } finally {
+    globalThis.setTimeout = originalSetTimeout;
+    globalThis.clearTimeout = originalClearTimeout;
+  }
 });
 
 test("banner overview failure keeps the detected banner visible", async () => {
@@ -328,6 +340,7 @@ function setupDomGlobals({ document, window }) {
   globalThis.Node = window.Node;
   globalThis.HTMLElement = window.HTMLElement;
   globalThis.URL = window.URL;
+  globalThis.confirm = window.confirm || (() => true);
   globalThis.fetch = async (url) => ({
     async json() {
       const text = String(url);
