@@ -112,6 +112,7 @@ async function runDeltaCheck() {
       afterCookies: afterDeny.cookies,
       beforeTraffic: before.thirdPartyTraffic,
       afterTraffic: afterDeny.thirdPartyTraffic,
+      afterStorageEntries: afterDeny.analysis.storage?.items || [],
       denyClicked: denyResult.clicked,
       denyLabel: denyResult.label,
       labels: {

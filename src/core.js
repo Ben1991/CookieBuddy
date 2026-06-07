@@ -58,13 +58,24 @@ export function normalizeTraffic(traffic, firstPartyHost) {
     .filter((item) => item.thirdParty);
 }
 
-export function buildDelta({ beforeCookies, afterCookies, beforeTraffic, afterTraffic, denyClicked, denyLabel, labels, tabUrl }) {
+export function buildDelta({
+  beforeCookies,
+  afterCookies,
+  beforeTraffic,
+  afterTraffic,
+  afterStorageEntries = [],
+  denyClicked,
+  denyLabel,
+  labels,
+  tabUrl
+}) {
   const beforeCookieKeys = new Set(beforeCookies.map(cookieKey));
   const remainingCookies = afterCookies.filter((cookie) => beforeCookieKeys.has(cookieKey(cookie)) || !isEssentialCookie(cookie));
   const newCookies = afterCookies.filter((cookie) => !beforeCookieKeys.has(cookieKey(cookie)));
   const thirdPartyHosts = Array.from(new Set(afterTraffic.map((item) => item.host))).sort();
+  const remainingStorageEntries = afterStorageEntries.filter(Boolean);
   const suspiciousCookies = remainingCookies.filter((cookie) => !isEssentialCookie(cookie));
-  const hasDelta = suspiciousCookies.length > 0 || newCookies.length > 0 || thirdPartyHosts.length > 0 || !denyClicked;
+  const hasDelta = suspiciousCookies.length > 0 || newCookies.length > 0 || thirdPartyHosts.length > 0 || remainingStorageEntries.length > 0 || !denyClicked;
 
   return {
     checkedAt: new Date().toISOString(),
@@ -78,13 +89,15 @@ export function buildDelta({ beforeCookies, afterCookies, beforeTraffic, afterTr
     remainingCookies: suspiciousCookies,
     newCookies,
     thirdPartyHosts,
+    afterStorageEntries: remainingStorageEntries,
     beforeCounts: {
       cookies: beforeCookies.length,
       thirdPartyHosts: Array.from(new Set(beforeTraffic.map((item) => item.host))).length
     },
     afterDenyCounts: {
       cookies: afterCookies.length,
-      thirdPartyHosts: thirdPartyHosts.length
+      thirdPartyHosts: thirdPartyHosts.length,
+      storageEntries: remainingStorageEntries.length
     }
   };
 }
