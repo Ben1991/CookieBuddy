@@ -31,7 +31,7 @@ const elements = {
   helpPanel: document.querySelector("#helpPanel")
 };
 
-const deltaGuide = "1) Reloads the page without cache so the banner can appear fresh.\n2) Tries to find the banner and the deny option and clicks it when available.\n3) If no deny option is found, you must decline all cookies manually first and run the delta check again.\n4) Opens the result in a new tab for easier reading.";
+const deltaGuide = "1) Reloads the page without cache.\n2) Tries to find the banner and a reject option.\n3) If no reject option is found, reject cookies manually and run the check again.\n4) Opens the result in a new tab.";
 
 elements.refreshButton.addEventListener("click", () => scanCurrentTab());
 elements.deltaButton.addEventListener("click", () => runDeltaCheck());

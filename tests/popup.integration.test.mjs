@@ -55,10 +55,10 @@ test("popup loads German texts when German is active", async () => {
 
 test("popup keeps core visible texts aligned with the active locale", async () => {
   await assertPopupLocale("en", {
-    intro: "Get a quick read on what the page really does before and after consent.",
+    intro: "See what the page does before and after a reject attempt.",
     help: "How it works",
     cookies: "Cookies and traffic",
-    cookiesIntro: "This overview groups visible cookies and locally stored browser data. The list updates after each scan.",
+    cookiesIntro: "This view groups visible cookies and local browser data. It updates after each scan.",
     contact: "Contact",
     openSource: "Open source"
   });
@@ -204,7 +204,7 @@ test("cookies and traffic show an empty state when nothing is found", async () =
   await import(`../src/popup.js?test=${Date.now()}-empty`);
   await flush();
 
-  assert.match(document.getElement("cookieResult").textContent, /No visible cookies or locally stored data were found|FÃ¼r diese Seite wurden keine sichtbaren Cookies oder lokal gespeicherten Daten gefunden/);
+  assert.match(document.getElement("cookieResult").textContent, /No visible cookies or locally stored data were found|Für diese Seite wurden keine sichtbaren Cookies oder lokal gespeicherten Daten gefunden/);
 });
 
 function createDocument() {

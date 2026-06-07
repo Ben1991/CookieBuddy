@@ -1,160 +1,103 @@
 # CookieBuddy
 
-CookieBuddy is a local Chrome extension prototype that helps users review cookie banners, cookies, and third-party traffic after opt-out.
+CookieBuddy is a Chrome extension that helps you review cookie banners and tracking behavior on a website.
 
-It is designed as a friendly review tool, not as a legal compliance verdict.
+It gives you a local, browser-side summary of:
 
-## Recent Changes
+- the cookie banner it detects
+- visible cookies and browser storage
+- third-party requests made while the tab is open
+- contact details for privacy follow-up
+- a best-effort before/after delta check after trying to reject cookies
 
-* Fixed a broken German locale string that prevented the popup tests from loading.
-* Updated the delta-report expectation to match the current report wording.
-* Kept the English and German locale files aligned so the popup can load the right language consistently.
-* Verified the extension again with the unit and integration test suite.
+It is a review tool, not legal advice.
 
-## Disclaimer
+## What It Does
 
-This is not legal advice. Please still review the content. The creator takes no liability for the results.
+- Detects consent banners from page text, DOM hints, loaded scripts, and known CMP signatures.
+- Shows the banner name, confidence level, and source evidence.
+- Groups detected services by category, such as analytics, marketing, functional, and social.
+- Lists visible cookies and storage keys, and marks items that appear related to the banner.
+- Tracks third-party requests while the tab is open.
+- Tries a best-effort "deny all" click when you run the delta check.
+- Opens a separate details view for the delta result.
+- Tries to open the banner's preferences or second-level view when supported.
+- Searches the page and linked legal pages for privacy contact details.
+- Drafts email links for access, correction, and deletion requests.
+- Exports the delta report as HTML or a printable view.
+- Supports English and German, with a manual language switch.
+- Shows a simple status color in the extension icon: green, yellow, or red.
 
-## What CookieBuddy Does
-
-* Detects consent banners dynamically from loaded scripts, resource hosts, browser-visible CMP APIs, DOM markers, and visible consent wording.
-* Shows known provider names when recognized, and otherwise reports an unknown or self-made banner with the source script or host evidence where possible.
-* Shows the source evidence for banner detection as an expandable hint so the main card stays compact.
-* Shows detected services by category, for example essential, marketing, analytics, functional, and social.
-* Lists visible cookies, local browser storage such as `localStorage` and `sessionStorage`, and marks whether a key appears related to the banner.
-* Tracks third-party browser requests while the current tab is open.
-* Runs a best-effort delta check by reloading the page without cache, trying to find the banner and deny option, and then comparing cookies and third-party traffic afterward.
-* Flags cookies or third-party hosts that remain visible after opt-out.
-* Opens the delta result in a separate details tab for easier reading.
-* Searches the current page and linked imprint/privacy/contact pages for data protection contact details.
-* Provides a draft email link when a DPO email address can be detected and falls back to the German federal data protection authority contact if no state authority can be inferred.
-* Includes a compact banner-overview action that tries to open the second level or preferences view of the cookie banner when the provider supports it.
-* Shows a color status in the extension toolbar icon: green for covered cookies, yellow for unclear cases, and red for likely non-essential trackers without consent.
-* Supports English and German with a manual language toggle.
-* Offers a donation link through Buy Me a Coffee.
-
-## How The Delta Check Works
-
-The delta check compares two states:
-
-1. The current page state before changing consent.
-2. The page state after CookieBuddy tries to click a “deny all” or similar opt-out button.
-
-CookieBuddy then checks whether cookies or third-party requests are still present.
-
-In simple terms: if the user says “no” to optional cookies, CookieBuddy looks for signs that data still flows anyway.
-
-## Important Limitations
-
-* Cookie banner controls vary heavily. Automatic “deny all” clicking is best-effort and may not work on every site.
-* Chrome extension APIs can see browser cookies and network requests, but not every server-side data transfer.
-* Some cookies are technically necessary. CookieBuddy flags likely non-essential cookies based on naming and domain patterns, which should be reviewed by a human.
-* Service detection is heuristic. A heuristic is an informed rule of thumb, not a guaranteed fact.
-* Consent banner detection is dynamic and evidence-based. If the provider is unknown, CookieBuddy reports the detected script, host, or page marker instead of forcing it into a fixed provider list.
-* Responsible data protection authority detection is approximate. For German `.de` domains, CookieBuddy links to the official German authority overview because the exact authority depends on the company seat in the imprint.
-
-## Local Installation
+## How To Use
 
 1. Open Chrome.
 2. Go to `chrome://extensions`.
 3. Enable `Developer mode`.
 4. Click `Load unpacked`.
-5. Select this folder: `/path/to/cookiebuddy`.
+5. Select this folder.
 6. Open a website and click the CookieBuddy extension icon.
+7. Use `Refresh` to rescan the page.
+8. Use `Delta Check` to test what remains after a reject attempt.
 
-## Setup For Development
+If the banner does not expose a reject button, reject cookies manually and run the delta check again.
 
-CookieBuddy currently has no build step and no dependency installation.
+## What The Delta Check Means
 
-Useful local checks:
+CookieBuddy compares two states:
+
+1. Before the reject attempt.
+2. After CookieBuddy tries to click a deny or reject control.
+
+If cookies or third-party traffic still appear after the reject attempt, CookieBuddy flags the result as suspicious. This is a signal to review, not proof of non-compliance.
+
+## Main Limits
+
+- Cookie banners vary a lot, so automatic reject clicking is best effort.
+- Chrome can only see what the browser exposes locally.
+- Cookie and tracker detection is heuristic, which means it is a rule of thumb rather than a guaranteed fact.
+- Privacy contact detection is approximate and may need manual review.
+
+## Development
+
+CookieBuddy has no build step and no package installation.
+
+Run these checks:
 
 ```sh
-node --test tests/core.test.mjs tests/popup.integration.test.mjs
-node --check src/background.js
-node --check src/content.js
-node --check src/popup.js
-node --check src/details.js
-node --check src/i18n.js
-node -e "for (const file of \['manifest.json','\_locales/en/messages.json','\_locales/de/messages.json']) JSON.parse(require('fs').readFileSync(file,'utf8'))"
+node --test tests/core.test.mjs tests/popup.integration.test.mjs tests/details.integration.test.mjs
+node --check src/popup.js && node --check src/content.js && node --check src/details.js
+node --check src/background.js && node --check src/i18n.js
+node -e "for (const file of ['manifest.json','_locales/en/messages.json','_locales/de/messages.json']) JSON.parse(require('fs').readFileSync(file,'utf8'))"
 ```
-
-The repository also includes a small GitHub Actions workflow in `.github/workflows/ci.yml` that runs the same checks on every push and pull request.
-
-Current build status: the local checks pass again after the locale and test expectation fixes.
 
 After changing extension files, reload the extension in `chrome://extensions`.
 
 ## Project Structure
 
-* `manifest.json`: Chrome extension configuration.
-* `popup.html`: Main extension popup.
-* `details.html`: Last scan and delta details page.
-* `assets/logo.svg`: CookieBuddy logo.
-* `src/background.js`: Third-party request tracking.
-* `src/content.js`: Page, banner, category, service, and contact analysis.
-* `src/popup.js`: Popup behavior, delta check, help toggle, and rendering.
-* `src/core.js`: Shared helpers for cookie, traffic, and delta logic.
-* `src/details.js`: Details page rendering.
-* `src/i18n.js`: English/German language handling.
-* `src/styles.css`: Accessible light/dark UI styling.
-* `tests/core.test.mjs`: Unit tests for shared analysis helpers.
-* `tests/popup.integration.test.mjs`: Integration-style popup test with a mocked browser environment.
-* `\_locales/en/messages.json`: English UI text.
-* `\_locales/de/messages.json`: German UI text.
+- `manifest.json`: Chrome extension configuration
+- `popup.html`: Main popup
+- `details.html`: Delta and scan details
+- `src/background.js`: Third-party request tracking and badge status
+- `src/content.js`: Page analysis, banner detection, contacts, and banner actions
+- `src/popup.js`: Popup flow, scan actions, and delta check
+- `src/core.js`: Shared cookie and delta helpers
+- `src/details.js`: Details view and report export
+- `src/i18n.js`: English and German text handling
+- `tests/`: Unit and integration tests
 
-## Open Source Repository
+## Privacy
 
-The public repository link is:
+CookieBuddy is designed to stay local.
 
-https://github.com/Ben1991/CookieBuddy
+- No analytics
+- No remote logging
+- No account system
+- No scan upload
+- No telemetry
 
-If the repository URL changes later, update the link in:
+Scan results are stored only in Chrome local extension storage on the device.
 
-* `popup.html`
-* this `README.md`
+## Links
 
-## Contribution Guidelines
-
-Contributions are welcome, especially for:
-
-* More cookie banner provider detections.
-* Better service and cookie mappings.
-* Better authority lookup logic.
-* Accessibility improvements.
-* UI copy improvements in English or German.
-* Additional localizations.
-* Test cases for common consent banners.
-
-Before opening a contribution:
-
-1. Keep the tool clear that it provides review signals, not legal advice.
-2. Avoid collecting or sending user browsing data to external servers.
-3. Prefer local-only analysis whenever possible.
-4. Keep explanations understandable for non-technical users.
-5. Run the local checks listed above.
-6. Describe what changed, why it changed, and any remaining limitations.
-
-## Privacy Principles
-
-CookieBuddy is designed to be anonymous for users and to avoid tracking.
-
-* No analytics.
-* No tracking pixels.
-* No remote logging.
-* No account system.
-* No user identifier.
-* No scan-result upload to the creator.
-* No external server is contacted by CookieBuddy for telemetry.
-* Scan analysis runs locally in the browser.
-* The last scan and delta result are stored only in Chrome local extension storage on the user's device.
-* CookieBuddy reads pages, cookies, and browser requests only to show the user the local analysis.
-* Contact, GitHub, authority, and donation links open only when the user clicks them.
-* Once a user opens an external website or email client, that external service is outside CookieBuddy's control and may apply its own privacy rules.
-
-For contributors: do not add analytics, telemetry, remote logging, fingerprinting, account creation, or automatic upload of browsing data.
-
-## Donate
-
-If CookieBuddy helps you, you can support the project here:
-
-https://buymeacoffee.com/thenext1991
+- Repository: https://github.com/Ben1991/CookieBuddy
+- Donate: https://buymeacoffee.com/thenext1991

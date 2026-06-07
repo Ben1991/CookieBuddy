@@ -1,114 +1,110 @@
 # Security Policy
 
-Thank you for helping keep CookieBuddy safe.
-
-CookieBuddy is a local Chrome extension prototype that helps users review cookie banners, cookies, browser storage, and third-party traffic after opt-out. Because the extension can inspect page content, cookies, local browser storage, and network requests in the active browser tab, security and privacy issues are treated seriously.
+CookieBuddy is a browser extension that inspects page content, cookies, local storage, and network requests in the active tab. Security and privacy issues matter because the app works close to user data.
 
 ## Supported Versions
 
-CookieBuddy currently has no published releases. Security fixes are handled on the default branch:
+CookieBuddy does not have published releases yet. Security fixes are handled on the default branch.
 
 | Version / Branch | Supported |
 | --- | --- |
 | `main` | Yes |
 | Older commits, forks, or unpublished builds | No |
 
-If releases are published later, this table should be updated to list the supported release versions.
+If releases are published later, this table should be updated.
 
 ## Reporting a Vulnerability
 
-Please do **not** report security vulnerabilities through public GitHub issues.
+Please do not report security issues through public GitHub issues.
 
-Instead, report vulnerabilities privately by one of the following methods:
+Use private reporting instead:
 
-1. Use GitHub private vulnerability reporting, if it is enabled for this repository.
-2. If private vulnerability reporting is not enabled, contact the maintainer directly through a private channel listed on the maintainer’s GitHub profile.
+1. GitHub private vulnerability reporting, if enabled.
+2. A private message to the maintainer, if private reporting is not available.
 
-When reporting a vulnerability, please include as much detail as possible:
+Please include:
 
-- A clear description of the issue.
+- A short description of the issue.
 - Steps to reproduce it.
-- The affected files, features, or browser extension permissions.
+- The affected file or feature.
 - The browser and operating system used.
-- Whether user data, browsing data, cookies, local storage, or network request data could be exposed.
-- Any proof-of-concept code, screenshots, or logs that help explain the issue.
-- Whether the issue requires user interaction or only affects development builds.
+- Whether cookies, local storage, scan results, or request data could be exposed.
+- Any proof-of-concept code, screenshots, or logs that help explain the problem.
 
-Please avoid including real personal data, real cookies, session tokens, account identifiers, or sensitive browsing history in your report.
+Please do not include real cookies, tokens, personal data, or browsing history.
 
-## What Counts as a Security Issue
+## What Counts As A Security Issue
 
-Examples of security issues include, but are not limited to:
+Examples include:
 
-- Exposure of cookies, local storage, browsing data, scan results, or request data to third parties.
-- Unexpected network calls, telemetry, analytics, logging, or upload of scan results.
-- Cross-site scripting or HTML/script injection in the popup, details page, or rendered scan output.
-- Unsafe handling of page content, cookie names, hostnames, URLs, consent banner text, or translated strings.
+- Exposure of cookies, local storage, scan results, or request data.
+- Unexpected network calls, telemetry, analytics, logging, or uploads.
+- XSS or script injection in the popup, details page, or rendered scan output.
+- Unsafe handling of page content, cookie names, hostnames, URLs, consent text, or translations.
 - Extension permission misuse or unnecessary privilege escalation.
-- Vulnerabilities that allow another website, extension, or script to read CookieBuddy data.
-- Insecure handling of external links, email draft links, donation links, authority links, or GitHub links.
-- Supply-chain risks in dependencies, tests, workflows, or future build tooling.
-- Problems in the delta check that could lead to unintended data exposure or unsafe page interaction.
+- Vulnerabilities that let another website, extension, or script read CookieBuddy data.
+- Insecure handling of external links, email links, donation links, or authority links.
+- Supply-chain risks in dependencies, tests, workflows, or build tooling.
+- Delta-check problems that could cause unintended data exposure or unsafe page interaction.
 
-## What Usually Does Not Count as a Security Issue
+## What Usually Is Not A Security Issue
 
-The following are usually not treated as security vulnerabilities unless they also create a concrete security or privacy risk:
+These are usually not security vulnerabilities unless they also create a concrete security or privacy risk:
 
 - Incorrect cookie or service classification.
-- Missed cookie banner detection.
+- Missed banner detection.
 - False positives or false negatives in heuristic analysis.
-- A website where automatic “deny all” clicking does not work.
-- Legal or compliance disagreements about whether a site’s cookie behavior is lawful.
+- A site where automatic reject clicking does not work.
+- Legal or compliance disagreements about a site’s cookie behavior.
 - General feature requests or UI improvements.
 
 CookieBuddy provides review signals, not legal compliance verdicts.
 
 ## Response Expectations
 
-This is a small open-source project, so response times may vary. The maintainer will try to follow this process:
+The maintainer will try to:
 
 1. Acknowledge the report when possible.
-2. Review and reproduce the issue.
-3. Assess severity and affected users.
+2. Reproduce the issue.
+3. Assess severity and impact.
 4. Prepare a fix or mitigation.
-5. Credit the reporter if they want to be credited.
-6. Publish the fix and, where appropriate, explain the impact.
+5. Credit the reporter if requested.
 
-Please allow a reasonable amount of time before publicly disclosing the issue.
+Please allow reasonable time before public disclosure.
 
 ## Responsible Disclosure
 
 Please act in good faith:
 
-- Do not publicly disclose the vulnerability before a fix or mitigation is available.
-- Do not exploit the issue beyond what is necessary to demonstrate impact.
+- Do not publicly disclose the issue before a fix or mitigation is available.
+- Do not exploit the issue beyond what is needed to demonstrate impact.
 - Do not access, modify, delete, or share data that does not belong to you.
 - Do not use real third-party accounts, real session cookies, or sensitive personal data for testing.
 - Prefer minimal proof-of-concept examples.
 
-## Privacy and Data Handling
+## Privacy And Data Handling
 
-CookieBuddy is intended to run analysis locally in the user’s browser. Contributions and security fixes should preserve these principles:
+CookieBuddy is intended to run locally in the browser. Changes should preserve that model:
 
 - No analytics.
 - No tracking pixels.
 - No remote logging.
 - No account system.
 - No user identifier.
-- No automatic scan-result upload.
+- No automatic scan upload.
 - No telemetry server.
-- Local-only scan analysis wherever possible.
+- Local-only scan analysis where possible.
 
-Any change that introduces external communication, data collection, telemetry, analytics, account features, remote logging, or automatic upload of browsing-related data should be treated as security- and privacy-sensitive and clearly discussed before merging.
+Any change that adds external communication, data collection, telemetry, analytics, account features, remote logging, or automatic upload of browsing data should be treated as security- and privacy-sensitive.
 
-## Security Review Guidance for Contributors
+## Security Review Guidance
 
 When contributing code, please pay special attention to:
 
-- Escaping or safely rendering all page-derived content.
-- Treating cookie names, hostnames, URLs, local storage keys, banner text, and provider names as untrusted input.
+- Escaping or safely rendering page-derived content.
+- Treating cookie names, hostnames, URLs, storage keys, banner text, and provider names as untrusted input.
 - Avoiding `innerHTML` for untrusted data unless it is sanitized safely.
-- Keeping Chrome extension permissions as narrow as possible.
+- Keeping extension permissions as narrow as possible.
 - Avoiding unnecessary remote requests.
 - Avoiding new dependencies unless they are clearly needed.
 - Keeping tests updated for security-relevant parsing, rendering, and storage behavior.
@@ -116,16 +112,14 @@ When contributing code, please pay special attention to:
 
 ## Scope
 
-This policy applies to the CookieBuddy repository and its source code, tests, extension files, GitHub Actions workflow, and documentation.
+This policy applies to the repository and its source code, tests, extension files, workflows, and documentation.
 
 It does not apply to:
 
 - Websites analyzed by CookieBuddy.
-- External services opened by user-clicked links.
+- External services opened by clicked links.
 - Email clients opened through draft email links.
 - Browser behavior outside CookieBuddy’s control.
-- Third-party forks or modified builds not maintained in this repository.
+- Third-party forks or modified builds not maintained here.
 
-## Thank You
-
-Security reports and privacy-focused reviews are appreciated. Responsible reports help protect users and improve CookieBuddy for everyone.
+Thank you for helping keep CookieBuddy safe.

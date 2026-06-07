@@ -3,16 +3,16 @@
     "message": "CookieBuddy"
   },
   "extensionDescription": {
-    "message": "Inspect cookie banners, consent categories, cookies, and traffic deltas after opt-out."
+    "message": "Review cookie banners, cookies, and traffic after a reject attempt."
   },
   "popupTitle": {
-    "message": "Consent delta check"
+    "message": "Cookie review"
   },
   "legalDisclaimer": {
     "message": "this is not legal advice. please still review the content. the creator takes no liability for the results."
   },
   "popupIntro": {
-    "message": "Get a quick read on what the page really does before and after consent."
+    "message": "See what the page does before and after a reject attempt."
   },
   "languageLabel": {
     "message": "Language"
@@ -108,7 +108,7 @@
     "message": "Cookies and traffic"
   },
   "cookiesTrafficIntro": {
-    "message": "This overview groups visible cookies and locally stored browser data. The list updates after each scan."
+    "message": "This view groups visible cookies and local browser data. It updates after each scan."
   },
   "visibleCookiesHeading": {
     "message": "Visible cookies"
@@ -153,7 +153,7 @@
     "message": "How it works"
   },
   "helpIntro": {
-    "message": "CookieBuddy looks at the current page and checks whether cookies or third-party requests still happen after you choose “deny all”."
+    "message": "CookieBuddy checks whether cookies or third-party requests still appear after you reject cookies."
   },
   "helpStepBanner": {
     "message": "It tries to recognize the cookie banner provider."

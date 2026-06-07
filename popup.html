@@ -8,13 +8,13 @@
   </head>
   <body>
     <main class="shell" aria-live="polite">
-      <header class="hero popup-hero">
-        <div class="brand-lockup">
-          <img class="logo-mark" src="assets/logo.svg" alt="" aria-hidden="true">
-          <div>
-            <p class="eyebrow">CookieBuddy</p>
-            <h1 data-i18n="popupTitle">Consent delta check</h1>
-          </div>
+      <header class="hero">
+        <img class="logo-mark" src="assets/logo.svg" alt="" aria-hidden="true">
+        <div>
+          <p class="eyebrow">CookieBuddy</p>
+          <h1 data-i18n="popupTitle">Cookie review</h1>
+          <p class="hero-intro" data-i18n="popupIntro">See what the page does before and after a reject attempt.</p>
+          <p id="scanStatusText" class="hero-status" aria-live="polite" data-i18n="scanStatusReady">Last scan ready.</p>
         </div>
         <div class="hero-actions">
           <label class="language-toggle">
@@ -48,7 +48,7 @@
         </div>
         <div id="helpPanel" class="help-panel" hidden>
           <p data-i18n="helpIntro">
-            CookieBuddy looks at the current page and checks whether cookies or third-party requests still happen after you choose "deny all".
+            CookieBuddy checks whether cookies or third-party requests still appear after you reject cookies.
           </p>
           <ul>
             <li data-i18n="helpStepBanner">It tries to recognize the cookie banner provider.</li>
