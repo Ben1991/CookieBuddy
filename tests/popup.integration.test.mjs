@@ -125,7 +125,7 @@ test("popup delta view separates non-essential findings from allowed infrastruct
 
   globalThis.chrome.tabs.sendMessage = async (_, message) => {
     globalThis.chrome.tabs.lastMessage = message;
-    if (message.type === "TRY_DENY_ALL") return { clicked: false, label: "", found: false };
+    if (message.type === "TRY_DENY_ALL") return { clicked: true, label: "Reject all", found: true };
     return setupChromeMockAnalysis();
   };
 
