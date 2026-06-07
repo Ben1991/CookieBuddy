@@ -360,7 +360,7 @@ h3 {
 
 .overview-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(72px, 1fr));
   border: 1px solid var(--line);
   border-radius: 8px;
   overflow: hidden;
@@ -398,6 +398,10 @@ h3 {
   overflow-wrap: anywhere;
   font-size: 0.9rem;
   line-height: 1.15;
+}
+
+.overview-value {
+  display: block;
 }
 
 .overview-tile strong.numeric {

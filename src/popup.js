@@ -197,6 +197,7 @@ function renderOverview() {
 
   const categories = state.analysis.categories || {};
   const serviceCount = Object.values(categories).reduce((total, category) => total + (category.services?.length || 0), 0);
+  const storage = state.analysis.storage || {};
   const thirdPartyCount = normalizeTraffic(state.traffic || [], state.analysis.host || "").length;
   const suspiciousCookies = (state.cookies || []).filter((cookie) => !/session|csrf|xsrf|auth|consent|cookie|privacy|necessary/i.test(cookie.name)).length;
   const bannerName = state.analysis.banner?.name || t("noSourceDetected");
@@ -206,6 +207,7 @@ function renderOverview() {
     renderOverviewTile("blue", "≡", t("servicesByCategoryHeading"), serviceCount, ""),
     renderOverviewTile("orange", "●", t("cookiesTrafficHeading"), state.cookies.length, suspiciousCookies ? `${suspiciousCookies} ${t("reviewRecommended").toLowerCase()}` : ""),
     renderOverviewTile("navy", "↗", t("thirdPartyTrafficAfterOptOut"), thirdPartyCount, "")
+    , renderOverviewTile("green", "▣", t("localStorageHeading"), (storage.items || []).length, t("storageCount", [storage.localStorageKeys?.length || 0, storage.sessionStorageKeys?.length || 0]))
   ].join("");
 }
 
