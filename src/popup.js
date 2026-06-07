@@ -1,5 +1,5 @@
 import { applyI18n, getLanguage, initI18n, setLanguage, t } from "./i18n.js";
-import { buildDelta, capitalize, getBaseDomain, normalizeTraffic, serviceForCookie } from "./core.js";
+import { buildDelta, capitalize, getBaseDomain, isEssentialCookie, isEssentialHost, normalizeTraffic, serviceForCookie } from "./core.js";
 
 const state = {
   tab: null,
@@ -12,7 +12,9 @@ const state = {
 
 const elements = {
   statusPill: document.querySelector("#statusPill"),
+  statusCard: document.querySelector("#statusCard"),
   scanStatusText: document.querySelector("#scanStatusText"),
+  overviewGrid: document.querySelector("#overviewGrid"),
   bannerResult: document.querySelector("#bannerResult"),
   categoryResult: document.querySelector("#categoryResult"),
   cookieResult: document.querySelector("#cookieResult"),
@@ -99,12 +101,9 @@ async function runDeltaCheck() {
   elements.deltaResult.innerHTML = `<p class="muted">${escapeHtml(t("deltaCheckingDescription"))}</p>`;
 
   try {
-    await chrome.runtime.sendMessage({ target: "cookiebuddy-background", type: "CLEAR_TRAFFIC", tabId: state.tab.id });
     const before = await snapshot(t("snapshotCurrentState"));
     const denyResult = await sendToTab(state.tab.id, { target: "cookiebuddy-content", type: "TRY_DENY_ALL" });
-    if (!denyResult?.found) {
-      throw new Error(t("deltaNeedsManualConsent"));
-    }
+    await chrome.runtime.sendMessage({ target: "cookiebuddy-background", type: "CLEAR_TRAFFIC", tabId: state.tab.id });
     await wait(1800);
     const afterDeny = await snapshot(t("snapshotAfterDenyAll"));
     const delta = buildDelta({
@@ -112,8 +111,11 @@ async function runDeltaCheck() {
       afterCookies: afterDeny.cookies,
       beforeTraffic: before.thirdPartyTraffic,
       afterTraffic: afterDeny.thirdPartyTraffic,
-      denyClicked: denyResult.clicked,
-      denyLabel: denyResult.label,
+      afterStorageEntries: afterDeny.analysis?.storage?.items || [],
+      banner: afterDeny.analysis?.banner || before.analysis?.banner || null,
+      denyClicked: denyResult?.clicked,
+      denyLabel: denyResult?.label,
+      manualConsentConfirmed: !denyResult?.found,
       labels: {
         deltaFoundSummary: t("deltaFoundSummary"),
         noDeltaSummary: t("noDeltaSummary")
@@ -150,6 +152,8 @@ async function snapshot(label) {
 }
 
 function render() {
+  renderStatusCard();
+  renderOverview();
   renderBanner();
   renderLegend();
   renderCategories();
@@ -157,18 +161,80 @@ function render() {
   renderContacts();
 }
 
+// Updates the main status card so the toolbar-badge meaning is visible inside the popup.
+function renderStatusCard() {
+  if (!elements.statusCard) return;
+  const badgeStatus = determineIconStatus();
+  const statusMeta = {
+    green: {
+      title: t("legendGreenTitle"),
+      body: t("legendGreenBody")
+    },
+    yellow: {
+      title: t("legendYellowTitle"),
+      body: t("legendYellowBody")
+    },
+    red: {
+      title: t("legendRedTitle"),
+      body: t("legendRedBody")
+    }
+  }[badgeStatus];
+
+  elements.statusCard.dataset.status = badgeStatus;
+  elements.statusCard.querySelector(".status-icon")?.setAttribute("data-status", badgeStatus);
+  if (elements.scanStatusText) {
+    elements.scanStatusText.innerHTML = `${escapeHtml(t("statusReady"))}: <strong>${escapeHtml(statusMeta.title)}</strong>`;
+  }
+  const intro = elements.statusCard.querySelector(".hero-intro");
+  if (intro) intro.textContent = statusMeta.body;
+}
+
+// Renders the compact metric tiles at the top of the popup from the latest scan data.
+function renderOverview() {
+  if (!elements.overviewGrid || !state.analysis) return;
+
+  const categories = state.analysis.categories || {};
+  const serviceCount = Object.values(categories).reduce((total, category) => total + (category.services?.length || 0), 0);
+  const storage = state.analysis.storage || {};
+  const thirdPartyCount = normalizeTraffic(state.traffic || [], state.analysis.host || "").length;
+  const suspiciousCookies = (state.cookies || []).filter((cookie) => !/session|csrf|xsrf|auth|consent|cookie|privacy|necessary/i.test(cookie.name)).length;
+  const bannerName = state.analysis.banner?.name || t("noSourceDetected");
+
+  elements.overviewGrid.innerHTML = [
+    renderOverviewTile("purple", "✓", t("bannerHeading"), bannerName, ""),
+    renderOverviewTile("blue", "≡", t("servicesByCategoryHeading"), serviceCount, ""),
+    renderOverviewTile("orange", "●", t("cookiesTrafficHeading"), state.cookies.length, suspiciousCookies ? `${suspiciousCookies} ${t("reviewRecommended").toLowerCase()}` : ""),
+    renderOverviewTile("navy", "↗", t("thirdPartyTrafficAfterOptOut"), thirdPartyCount, "")
+    , renderOverviewTile("green", "▣", t("localStorageHeading"), (storage.items || []).length, t("storageCount", [storage.localStorageKeys?.length || 0, storage.sessionStorageKeys?.length || 0]))
+  ].join("");
+}
+
+function renderOverviewTile(tone, icon, label, value, note) {
+  const valueClass = /^\d+$/.test(String(value)) ? "overview-value numeric" : "overview-value";
+  return `
+    <article class="overview-tile ${tone}">
+      <span class="tile-icon ${tone}" aria-hidden="true">${escapeHtml(icon)}</span>
+      <div>
+        <span>${escapeHtml(label)}</span>
+        <strong class="${valueClass}">${escapeHtml(value)}</strong>
+        ${note ? `<small>${escapeHtml(note)}</small>` : ""}
+      </div>
+    </article>
+  `;
+}
+
 function renderBanner() {
   const banner = state.analysis.banner;
   const sourceLabel = banner.source?.host || banner.source?.value || banner.evidence?.[0]?.value || t("noSourceDetected");
   elements.bannerResult.classList.remove("skeleton");
   elements.bannerResult.innerHTML = `
-    <div>
-      <span class="label">${escapeHtml(t("detectedLabel"))}</span>
-      <strong>${escapeHtml(banner.name)}</strong>
-    </div>
-    <div>
-      <span class="label">${escapeHtml(t("confidenceLabel"))}</span>
-      <strong>${escapeHtml(banner.confidence)}</strong>
+    <div class="banner-summary">
+      <span class="tile-icon purple" aria-hidden="true">✓</span>
+      <div>
+        <span class="label">${escapeHtml(t("detectedLabel"))}</span>
+        <strong>${escapeHtml(banner.name)}</strong>
+        <p class="muted">${escapeHtml(t("confidenceLabel"))}: ${escapeHtml(banner.confidence)}</p>
+      </div>
     </div>
     <details class="full-width banner-source">
       <summary class="label">${escapeHtml(t("sourceEvidenceLabel"))}</summary>
@@ -224,11 +290,15 @@ function renderLegend() {
 
 function renderCategories() {
   const categories = state.analysis.categories;
+  const tones = ["green", "orange", "red", "purple", "blue"];
   elements.categoryResult.innerHTML = Object.entries(categories)
-    .map(([name, data]) => `
-      <article class="category-card">
-        <span>${escapeHtml(t(`category${capitalize(name)}`))}</span>
-        <strong>${data.services.length}</strong>
+    .map(([name, data], index) => `
+      <article class="category-card ${tones[index % tones.length]}">
+        <span class="category-dot ${tones[index % tones.length]}" aria-hidden="true"></span>
+        <div>
+          <span>${escapeHtml(t(`category${capitalize(name)}`))}</span>
+          <strong>${data.services.length}</strong>
+        </div>
       </article>
     `)
     .join("");
@@ -364,17 +434,22 @@ function buildMailBody(kind) {
 function renderDelta(delta) {
   const cookieItems = [...delta.remainingCookies, ...delta.newCookies].slice(0, 8);
   elements.deltaResult.innerHTML = `
-    <div class="risk ${delta.riskLevel}">
-      <strong>${delta.riskLevel === "high" ? escapeHtml(t("deltaFoundTitle")) : escapeHtml(t("noObviousDeltaTitle"))}</strong>
-      <p>${escapeHtml(delta.summary)}</p>
+    <div class="risk ${delta.riskLevel} delta-summary-card">
+      <div>
+        <strong>${delta.riskLevel === "high" ? escapeHtml(t("deltaFoundTitle")) : escapeHtml(t("noObviousDeltaTitle"))}</strong>
+        <p>${escapeHtml(delta.summary)}</p>
+      </div>
+      <span class="status-chevron" aria-hidden="true">›</span>
     </div>
-    <div class="metric-row">
-      <span>${escapeHtml(t("cookiesMetric", [delta.beforeCounts.cookies, delta.afterDenyCounts.cookies]))}</span>
-      <span>${escapeHtml(t("thirdPartyHostsMetric", [delta.beforeCounts.thirdPartyHosts, delta.afterDenyCounts.thirdPartyHosts]))}</span>
+    <div class="delta-mini-grid">
+      <span><strong>${escapeHtml(delta.afterDenyCounts.cookies)}</strong>${escapeHtml(t("cookiesStillVisibleMetric"))}</span>
+      <span><strong>${escapeHtml(delta.afterDenyCounts.thirdPartyHosts)}</strong>${escapeHtml(t("thirdPartyStillContactedMetric"))}</span>
+      <span><strong>${escapeHtml(delta.remainingStorageEntries?.length || 0)}</strong>${escapeHtml(t("storageStillVisibleMetric"))}</span>
     </div>
-    ${delta.denyAction.clicked ? `<p class="muted">${escapeHtml(t("clickedDenyControl", delta.denyAction.label || t("detectedButton")))}</p>` : `<p class="error">${escapeHtml(t("noDenyButtonClicked"))}</p>`}
-    ${cookieItems.length ? `<h3>${escapeHtml(t("cookiesStillPresent"))}</h3>${cookieItems.map((cookie) => `<p class="chip">${escapeHtml(cookie.name)} · ${escapeHtml(cookie.domain)} · ${escapeHtml(cookie.service)}</p>`).join("")}` : ""}
-    ${delta.thirdPartyHosts.length ? `<h3>${escapeHtml(t("thirdPartyTrafficAfterOptOut"))}</h3>${delta.thirdPartyHosts.slice(0, 10).map((host) => `<p class="chip">${escapeHtml(host)}</p>`).join("")}` : ""}
+    ${delta.denyAction.clicked ? `<p class="muted">${escapeHtml(t("clickedDenyControl", delta.denyAction.label || t("detectedButton")))}</p>` : `<p class="muted">${escapeHtml(t("manualDenyAssumed"))}</p>`}
+    ${cookieItems.length ? `<h3>${escapeHtml(t("nonEssentialCookiesStillPresent"))}</h3>${cookieItems.map((cookie) => `<p class="chip">${escapeHtml(cookie.name)} · ${escapeHtml(cookie.domain)} · ${escapeHtml(cookie.service)}</p>`).join("")}` : ""}
+    ${delta.thirdPartyHosts.length ? `<h3>${escapeHtml(t("nonEssentialThirdPartyTrafficAfterOptOut"))}</h3>${delta.thirdPartyHosts.slice(0, 10).map((host) => `<p class="chip">${escapeHtml(host)}</p>`).join("")}` : ""}
+    ${delta.essentialThirdPartyHosts?.length ? `<h3>${escapeHtml(t("essentialThirdPartyTrafficAllowed"))}</h3>${delta.essentialThirdPartyHosts.slice(0, 10).map((host) => `<p class="chip">${escapeHtml(host)}</p>`).join("")}` : ""}
   `;
 }
 
@@ -428,7 +503,6 @@ async function openBannerOverview() {
     }
   } catch (error) {
     setStatus("statusCheckFailed", "warn");
-    elements.bannerResult.innerHTML = `<p class="error">${escapeHtml(error.message || t("bannerOverviewFailed"))}</p>`;
     if (!elements.bannerOverviewStatus.textContent) {
       elements.bannerOverviewStatus.textContent = t("bannerOverviewFailed");
       elements.bannerOverviewStatus.dataset.state = "warn";
@@ -460,11 +534,11 @@ function determineIconStatus(delta = null) {
   const banner = state.analysis?.banner;
   const traffic = normalizeTraffic(state.traffic || [], state.analysis?.host || "");
   const visibleCookies = state.cookies || [];
-  const suspiciousCookies = visibleCookies.filter((cookie) => !/session|csrf|xsrf|auth|consent|cookie|privacy|necessary/i.test(cookie.name));
-  const hasThirdPartyTraffic = traffic.length > 0;
+  const suspiciousCookies = visibleCookies.filter((cookie) => !isEssentialCookie(cookie));
+  const hasNonEssentialThirdPartyTraffic = traffic.some((item) => !isEssentialHost(item.host));
 
   if (!banner || banner.confidence === "none") return "yellow";
-  if (hasThirdPartyTraffic || suspiciousCookies.length > 0) return "yellow";
+  if (hasNonEssentialThirdPartyTraffic || suspiciousCookies.length > 0) return "yellow";
   return "green";
 }
 

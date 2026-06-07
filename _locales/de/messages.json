@@ -69,7 +69,7 @@
     "message": "Grün"
   },
   "legendGreenBody": {
-    "message": "Alle Cookies scheinen durch Consent abgedeckt zu sein."
+    "message": "Keine offensichtlichen nicht-essenziellen Cookies oder Drittanbieter-Anfragen gefunden."
   },
   "legendYellowTitle": {
     "message": "Gelb"
@@ -132,7 +132,7 @@
     "message": "Delta-Prüfung"
   },
   "deltaIntro": {
-    "message": "Vergleicht den aktuellen Zustand mit einem bestmöglichen \"Alle ablehnen\"-Zustand. CookieBuddy markiert Cookies und Drittanbieter-Anfragen, die nach dem Opt-out bestehen bleiben."
+    "message": "Vergleicht den aktuellen Zustand mit einem bestmöglichen \"Alle ablehnen\"-Zustand. CookieBuddy markiert nicht-essenzielle Cookies und Drittanbieter-Anfragen, die nach dem Opt-out bestehen bleiben."
   },
   "runDeltaButton": {
     "message": "Delta-Prüfung starten"
@@ -243,10 +243,10 @@
     "message": "Für diesen Tab sind für die Erweiterung keine Cookies sichtbar."
   },
   "deltaCheckingDescription": {
-    "message": "CookieBuddy versucht eine Alle-ablehnen-Aktion und vergleicht danach Cookies und Drittanbieter-Traffic. Das ist bestmöglich, weil Banner unterschiedliche Bedienelemente verwenden."
+    "message": "CookieBuddy versucht eine Alle-ablehnen-Aktion und prüft danach, welche Cookies und Netzwerkanfragen weiterhin passieren. Essenzielle Infrastruktur wird von auffälligem Drittanbieter-Traffic getrennt."
   },
   "deltaConsentPrompt": {
-    "message": "Bitte lehne zuerst alle Cookies auf der Seite ab. Wenn du bereit bist, bestätige den Start der Delta-Prüfung."
+    "message": "CookieBuddy versucht, Alle ablehnen anzuklicken. Wenn du bereits manuell abgelehnt hast, wird der aktuelle Post-Opt-out-Zustand geprüft. Fortfahren?"
   },
   "deltaConsentCancelled": {
     "message": "Delta-Prüfung abgebrochen. Es wurden keine Änderungen vorgenommen."
@@ -267,10 +267,10 @@
     "message": "Nach Alle ablehnen"
   },
   "deltaFoundSummary": {
-    "message": "CookieBuddy hat Cookies oder Drittanbieter-Traffic nach dem Opt-out gefunden. Das kann bedeuten, dass Daten ohne gültige Einwilligung weiterfließen und geprüft werden sollten."
+    "message": "CookieBuddy hat nicht-essenzielle Cookies oder Drittanbieter-Traffic nach dem Opt-out gefunden. Das kann bedeuten, dass Daten ohne gültige Einwilligung weiterfließen und geprüft werden sollten."
   },
   "noDeltaSummary": {
-    "message": "In dieser Browser-Sitzung wurde kein offensichtliches Post-Opt-out-Delta gefunden."
+    "message": "In dieser Browser-Sitzung wurden nach dem Opt-out keine offensichtlichen nicht-essenziellen Cookies oder Drittanbieter-Anfragen gefunden."
   },
   "mailSubject": {
     "message": "Frage zur Cookie-Einwilligung für $1"
@@ -362,11 +362,23 @@
   "noDenyButtonClicked": {
     "message": "Es konnte kein Alle-ablehnen-Button automatisch geklickt werden."
   },
+  "manualDenyAssumed": {
+    "message": "Es wurde kein Alle-ablehnen-Button automatisch geklickt. CookieBuddy behandelt deine Bestätigung als manuelles Opt-out und prüft den aktuellen Zustand."
+  },
   "cookiesStillPresent": {
     "message": "Cookies weiterhin vorhanden"
   },
+  "nonEssentialCookiesStillPresent": {
+    "message": "Nicht-essenzielle Cookies weiterhin vorhanden"
+  },
   "thirdPartyTrafficAfterOptOut": {
     "message": "Drittanbieter-Traffic nach Opt-out"
+  },
+  "nonEssentialThirdPartyTrafficAfterOptOut": {
+    "message": "Nicht-essenzieller Drittanbieter-Traffic nach Opt-out"
+  },
+  "essentialThirdPartyTrafficAllowed": {
+    "message": "Essenzielle Drittanbieter-Infrastruktur beobachtet"
   },
   "unknownService": {
     "message": "Unbekannter Dienst"
@@ -425,14 +437,199 @@
   "deltaPdfHint": {
     "message": "Öffne den Druckdialog des Browsers und wähle dann Als PDF speichern."
   },
+  "reviewRecommended": {
+    "message": "Prüfung empfohlen"
+  },
+  "checkedPageLabel": {
+    "message": "Geprüfte Seite"
+  },
+  "checkedOnLabel": {
+    "message": "Geprüft am"
+  },
+  "cookieBannerLabel": {
+    "message": "Cookie-Banner"
+  },
+  "optOutAttemptLabel": {
+    "message": "Opt-out-Versuch"
+  },
+  "stillDetectedHeading": {
+    "message": "Nach dem Opt-out-Versuch hat CookieBuddy weiterhin erkannt:"
+  },
+  "cookiesStillVisibleMetric": {
+    "message": " Cookies weiterhin sichtbar"
+  },
+  "thirdPartyStillContactedMetric": {
+    "message": " Drittanbieter-Hosts weiterhin kontaktiert"
+  },
+  "storageStillVisibleMetric": {
+    "message": " Storage-Keys weiterhin sichtbar"
+  },
+  "cookiesRemainingAfterOptOutHeading": {
+    "message": "Nach dem Opt-out verbleibende Cookies"
+  },
+  "thirdPartyHostsAfterOptOutHeading": {
+    "message": "Nach dem Opt-out kontaktierte Drittanbieter-Hosts"
+  },
+  "browserStorageAfterOptOutHeading": {
+    "message": "Browser-Speicher nach dem Opt-out"
+  },
+  "browserStorageEntriesHeading": {
+    "message": "Browser-Speicher-Einträge"
+  },
+  "bannerEvidenceHeading": {
+    "message": "Banner-Nachweise"
+  },
+  "bannerEvidenceIntro": {
+    "message": "CookieBuddy hat das Banner anhand dieser Signale erkannt:"
+  },
+  "importantLimitationsHeading": {
+    "message": "Wichtige Einschränkungen"
+  },
+  "deltaLimitationBestEffort": {
+    "message": "Best-Effort-Opt-out-Klicks funktionieren nicht auf jeder Website."
+  },
+  "deltaLimitationServerSide": {
+    "message": "Nicht jede serverseitige Datenübertragung ist beobachtbar."
+  },
+  "deltaLimitationNecessary": {
+    "message": "Einige Cookies oder Requests können technisch notwendig sein."
+  },
+  "deltaLimitationHeuristic": {
+    "message": "Kategorie-Labels sind heuristisch und sollten durch einen Menschen geprüft werden."
+  },
+  "noRemainingCookies": {
+    "message": "Nach dem Opt-out wurden keine Cookies beobachtet."
+  },
+  "noThirdPartyHosts": {
+    "message": "Nach dem Opt-out wurden keine Drittanbieter-Hosts beobachtet."
+  },
+  "noStorageEntries": {
+    "message": "Nach dem Opt-out wurden keine Browser-Speicher-Einträge beobachtet."
+  },
+  "cookieColumn": {
+    "message": "Cookie"
+  },
+  "domainColumn": {
+    "message": "Domain"
+  },
+  "categoryColumn": {
+    "message": "Kategorie (Schätzung)"
+  },
+  "reasonColumn": {
+    "message": "Grund"
+  },
+  "storageKeyColumn": {
+    "message": "Storage-Key"
+  },
+  "typeColumn": {
+    "message": "Typ"
+  },
+  "bannerRelatedColumn": {
+    "message": "Banner-Bezug?"
+  },
+  "stillPresentAfterOptOut": {
+    "message": "Nach Opt-out weiterhin vorhanden"
+  },
+  "yes": {
+    "message": "Ja"
+  },
+  "unclear": {
+    "message": "Unklar"
+  },
+  "unknownWebsite": {
+    "message": "unbekannte Website"
+  },
+  "unknownDate": {
+    "message": "unbekanntes Datum"
+  },
+  "unknownBannerProvider": {
+    "message": "Unbekannt"
+  },
+  "noneObserved": {
+    "message": "Keine beobachtet."
+  },
+  "noBannerEvidence": {
+    "message": "Keine Banner-Nachweise verfügbar."
+  },
+  "bannerProviderEvidence": {
+    "message": "Anbieter erkannt: $1"
+  },
+  "bannerSourceHostEvidence": {
+    "message": "Quell-Host: $1"
+  },
+  "bannerSourceValueEvidence": {
+    "message": "Quell-Signal: $1"
+  },
+  "sendDeltaMailToDpoHint": {
+    "message": "Entwirf eine E-Mail an den Datenschutzbeauftragten oder Datenschutzkontakt der Website."
+  },
+  "sendDeltaMailToAuthorityHint": {
+    "message": "Entwirf eine E-Mail an die zuständige Datenschutzaufsichtsbehörde."
+  },
+  "openMailDraftButton": {
+    "message": "Mail-Entwurf öffnen"
+  },
+  "mailToLabel": {
+    "message": "An"
+  },
+  "mailSubjectLabel": {
+    "message": "Betreff"
+  },
+  "mailHello": {
+    "message": "Hallo,"
+  },
+  "deltaDpoMailIntro": {
+    "message": "ich kontaktiere Sie bezüglich des Cookie- und Einwilligungsverhaltens auf Ihrer Website:"
+  },
+  "deltaAuthorityMailIntro": {
+    "message": "ich kontaktiere Sie bezüglich des Cookie- und Einwilligungsverhaltens auf Ihrer Website:"
+  },
+  "deltaMailObservation": {
+    "message": "Nach Auswahl von \"Alle ablehnen\", \"Ablehnen\" oder einer ähnlichen Opt-out-Option im Cookie-Banner habe ich weiterhin Cookies, Browser-Speicher-Einträge und/oder Drittanbieter-Requests beobachtet, die mit Analytics, Marketing, Social Media oder anderen nicht notwendigen Diensten zusammenhängen können."
+  },
+  "deltaMailItemsIntro": {
+    "message": "Die folgenden Elemente wurden nach dem Opt-out-Versuch beobachtet:"
+  },
+  "deltaMailBestEffort": {
+    "message": "Die Prüfung wurde mit einem lokalen Browser-Tool durchgeführt und ist nur eine technische Best-Effort-Beobachtung. Ich verstehe, dass einige Cookies oder Requests technisch notwendig sein können, und bitte um Ihre Erläuterung."
+  },
+  "deltaMailQuestionsIntro": {
+    "message": "Könnten Sie bitte erläutern:"
+  },
+  "deltaMailQuestionNecessary": {
+    "message": "Welche der aufgeführten Cookies, Storage-Keys und Drittanbieter-Requests technisch notwendig sind?"
+  },
+  "deltaMailQuestionLegalBasis": {
+    "message": "Auf welche Rechtsgrundlage Sie sich für jedes nach dem Opt-out verbleibende Element stützen?"
+  },
+  "deltaMailQuestionOptionalActive": {
+    "message": "Ob optionale Analytics-, Marketing-, Profiling- oder Drittanbieter-Dienste aktiv sind, bevor eine gültige Einwilligung erteilt wurde?"
+  },
+  "deltaMailQuestionWithdraw": {
+    "message": "Wie Nutzer ihre Einwilligung für optionale Verarbeitung vollständig widerrufen oder verweigern können?"
+  },
+  "deltaMailQuestionNotice": {
+    "message": "Ob Cookie-Banner und Datenschutzhinweise diese verbleibenden Cookies, Storage-Keys und Drittanbieter-Dienste zutreffend beschreiben?"
+  },
+  "deltaMailBannerReference": {
+    "message": "Zur Einordnung wurde das beobachtete Cookie-Banner erkannt als:"
+  },
+  "deltaMailDetectionEvidence": {
+    "message": "Erkennungsnachweise"
+  },
+  "deltaMailNoLegalClaim": {
+    "message": "Bitte behandeln Sie diese Nachricht als Bitte um Klärung. Sie ist nicht als formeller rechtlicher Anspruch gemeint."
+  },
+  "senderNamePlaceholder": {
+    "message": "{{sender_name}}"
+  },
   "deltaAuthorityReportSubject": {
-    "message": "CookieBuddy-Auditbericht für Behördenprüfung unter $1"
+    "message": "Bitte um Prüfung: mögliche Cookies und Drittanbieter-Requests nach Opt-out unter $1"
   },
   "deltaReportSubject": {
-    "message": "CookieBuddy-Auditbericht für $1"
+    "message": "Frage zu Cookies und Drittanbieter-Requests nach Opt-out unter $1"
   },
   "deltaReportMailBody": {
     "message": "Sehr geehrte Damen und Herren,\n\nanbei erhalten Sie den CookieBuddy-Auditbericht für unsere Überprüfung der Cookie-Einwilligungsimplementierung unter $1.\n\nDieser Bericht dokumentiert die Ergebnisse unserer automatisierten Prüfung. Bitte beachten Sie die beigefügten Audit-Ergebnisse für detaillierte Informationen über Cookies und Drittanbieter-Traffic, die nach dem Widerruf der Einwilligung erkannt wurden.\n\nWir würden eine Erläuterung zu den Ergebnissen und zur Rechtsgrundlage für jede Datenverarbeitung schätzen, die als fortlaufend nach dem Widerruf der Einwilligung erkannt wurde.\n\nMit freundlichen Grüßen"
   }
 }
-
