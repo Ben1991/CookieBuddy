@@ -76,6 +76,7 @@ test("builds a delta summary from the before and after states", () => {
     ],
     beforeTraffic: [{ host: "cdn.example.com" }],
     afterTraffic: [{ host: "cdn.example.com" }, { host: "tracker.example.net" }, { host: "static.cloudflare.com" }],
+    afterStorageEntries: [],
     denyClicked: true,
     denyLabel: "Reject all",
     labels: {
@@ -119,6 +120,29 @@ test("keeps delta low when only essential cookies and infrastructure remain afte
   assert.equal(delta.denyAction.manual, true);
 });
 
+test("treats remaining storage entries as part of the delta", () => {
+  const delta = buildDelta({
+    beforeCookies: [{ domain: ".example.com", path: "/", name: "session" }],
+    afterCookies: [{ domain: ".example.com", path: "/", name: "session" }],
+    beforeTraffic: [],
+    afterTraffic: [],
+    afterStorageEntries: [
+      { key: "consent_state", scope: "localStorage" }
+    ],
+    denyClicked: true,
+    denyLabel: "Reject all",
+    labels: {
+      deltaFoundSummary: "found",
+      noDeltaSummary: "none"
+    },
+    tabUrl: "https://example.com"
+  });
+
+  assert.equal(delta.riskLevel, "high");
+  assert.equal(delta.afterDenyCounts.storageEntries, 1);
+  assert.equal(delta.afterStorageEntries.length, 1);
+});
+
 test("formats delta report as plain text", () => {
   const delta = buildDelta({
     beforeCookies: [
@@ -130,6 +154,7 @@ test("formats delta report as plain text", () => {
     ],
     beforeTraffic: [{ host: "cdn.example.com" }],
     afterTraffic: [{ host: "cdn.example.com" }, { host: "tracker.example.net" }],
+    afterStorageEntries: [],
     denyClicked: true,
     denyLabel: "Reject all",
     labels: {
@@ -159,6 +184,7 @@ test("formats delta report with low risk", () => {
     ],
     beforeTraffic: [],
     afterTraffic: [],
+    afterStorageEntries: [],
     denyClicked: true,
     denyLabel: "Reject all",
     labels: {
@@ -186,6 +212,7 @@ test("formats delta report without deny click", () => {
     ],
     beforeTraffic: [],
     afterTraffic: [],
+    afterStorageEntries: [],
     denyClicked: false,
     denyLabel: "",
     labels: {

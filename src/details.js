@@ -63,13 +63,31 @@ function renderDeltaMailActions() {
   const contacts = detailsPayload?.cookiebuddyLastScan?.analysis?.contacts || detailsPayload?.cookiebuddyLastScan?.contacts || {};
   const dpoEmail = contacts?.dpo?.email || "";
   const authorityEmail = contacts?.authority?.email || "";
-  const mailButtons = [];
+  const delta = detailsPayload?.cookiebuddyLastDelta;
+  const website = delta?.url || t("unknownWebsite");
+  const mailCards = [];
 
   if (dpoEmail) {
-    mailButtons.push(`<button class="primary-action small" type="button" data-mail-target="dpo">${escapeHtml(t("sendDeltaMailToDpoButton"))}</button>`);
+    mailCards.push(renderMailCard({
+      tone: "blue",
+      title: t("sendDeltaMailToDpoButton"),
+      description: t("sendDeltaMailToDpoHint"),
+      recipient: dpoEmail,
+      subject: t("deltaReportSubject", website),
+      buttonLabel: t("openMailDraftButton"),
+      target: "dpo"
+    }));
   }
   if (authorityEmail) {
-    mailButtons.push(`<button class="ghost-button small" type="button" data-mail-target="authority">${escapeHtml(t("sendDeltaMailToAuthorityButton"))}</button>`);
+    mailCards.push(renderMailCard({
+      tone: "purple",
+      title: t("sendDeltaMailToAuthorityButton"),
+      description: t("sendDeltaMailToAuthorityHint"),
+      recipient: authorityEmail,
+      subject: t("deltaAuthorityReportSubject", website),
+      buttonLabel: t("openMailDraftButton"),
+      target: "authority"
+    }));
   }
 
   if (!sendDeltaMailActions) return;
@@ -86,10 +104,12 @@ function renderDeltaMailActions() {
     <div class="delta-mail-copy">
       <h3 id="sendDeltaMailHeading" data-i18n="sendDeltaMailHeading">${escapeHtml(t("sendDeltaMailHeading"))}</h3>
       <p id="sendDeltaMailHint" class="muted" data-i18n="sendDeltaMailHint">${escapeHtml(t("sendDeltaMailHint"))}</p>
-      ${mailButtons.length ? "" : `<p class="muted">${escapeHtml(t("noDeltaMailRecipient"))}</p>`}
+      ${mailCards.length ? "" : `<p class="muted">${escapeHtml(t("noDeltaMailRecipient"))}</p>`}
+    </div>
+    <div class="delta-template-grid">
+      ${mailCards.join("")}
     </div>
     <div class="contact-actions">
-      ${mailButtons.join("")}
       <button id="downloadDeltaHtmlButton" class="ghost-button small" type="button" data-i18n="downloadDeltaHtmlButton">${escapeHtml(t("downloadDeltaHtmlButton"))}</button>
       <button id="downloadDeltaPdfButton" class="ghost-button small" type="button" data-i18n="downloadDeltaPdfButton">${escapeHtml(t("downloadDeltaPdfButton"))}</button>
     </div>
@@ -105,21 +125,84 @@ function renderDeltaMailActions() {
   applyI18n(sendDeltaMailActions);
 }
 
+function renderMailCard({ tone, title, description, recipient, subject, buttonLabel, target }) {
+  return `
+    <article class="delta-template-card ${tone}">
+      <div>
+        <h4>${escapeHtml(title)}</h4>
+        <p class="muted">${escapeHtml(description)}</p>
+      </div>
+      <dl>
+        <div>
+          <dt>${escapeHtml(t("mailToLabel"))}</dt>
+          <dd>${escapeHtml(recipient)}</dd>
+        </div>
+        <div>
+          <dt>${escapeHtml(t("mailSubjectLabel"))}</dt>
+          <dd>${escapeHtml(subject)}</dd>
+        </div>
+      </dl>
+      <button class="ghost-button small" type="button" data-mail-target="${escapeHtml(target)}">${escapeHtml(buttonLabel)}</button>
+    </article>
+  `;
+}
+
 function renderDelta(delta) {
   const cookies = [...(delta.remainingCookies || []), ...(delta.newCookies || [])];
+  const storageEntries = delta.remainingStorageEntries || [];
+  const banner = delta.banner || detailsPayload?.cookiebuddyLastScan?.analysis?.banner || null;
+  const bannerEvidence = formatBannerEvidence(banner);
   return `
     <div class="delta-report">
-      <div class="risk ${delta.riskLevel}">
-        <strong>${delta.riskLevel === "high" ? t("deltaFoundTitle") : t("noObviousDeltaTitle")}</strong>
-        <p>${escapeHtml(delta.summary)}</p>
+      <div class="delta-report-header">
+        <div>
+          <p class="eyebrow">CookieBuddy</p>
+          <h2>${escapeHtml(t("deltaReportDocumentTitle"))}</h2>
+        </div>
+        <span class="status-pill ${delta.riskLevel}">${escapeHtml(delta.riskLevel === "high" ? t("reviewRecommended") : t("noObviousDeltaTitle"))}</span>
       </div>
-      <div class="metric-row">
-        <span>${escapeHtml(t("cookiesMetric", [delta.beforeCounts.cookies, delta.afterDenyCounts.cookies]))}</span>
-        <span>${escapeHtml(t("thirdPartyHostsMetric", [delta.beforeCounts.thirdPartyHosts, delta.afterDenyCounts.thirdPartyHosts]))}</span>
+      <div class="delta-fact-grid">
+        <div><span>${escapeHtml(t("checkedPageLabel"))}</span><strong>${escapeHtml(delta.url || t("unknownWebsite"))}</strong></div>
+        <div><span>${escapeHtml(t("checkedOnLabel"))}</span><strong>${escapeHtml(formatDate(delta.checkedAt))}</strong></div>
+        <div><span>${escapeHtml(t("languageLabel"))}</span><strong>${escapeHtml(getLanguage() === "de" ? "Deutsch" : "English")}</strong></div>
+        <div><span>${escapeHtml(t("cookieBannerLabel"))}</span><strong>${escapeHtml(getBannerProvider(banner))}</strong></div>
+        <div><span>${escapeHtml(t("optOutAttemptLabel"))}</span><strong>${escapeHtml(delta.denyAction?.clicked ? (delta.denyAction.label || t("detectedButton")) : t("noDenyButtonClicked"))}</strong></div>
       </div>
-      ${delta.denyAction?.clicked ? `<p class="muted">${escapeHtml(t("clickedDenyControl", delta.denyAction.label || t("detectedButton")))}</p>` : `<p class="error">${escapeHtml(t("noDenyButtonClicked"))}</p>`}
-      ${cookies.length ? `<h3>${escapeHtml(t("cookiesStillPresent"))}</h3>${cookies.map((cookie) => `<p class="chip">${escapeHtml(cookie.name)} · ${escapeHtml(cookie.domain)} · ${escapeHtml(cookie.service || "")}</p>`).join("")}` : ""}
-      ${delta.thirdPartyHosts?.length ? `<h3>${escapeHtml(t("thirdPartyTrafficAfterOptOut"))}</h3>${delta.thirdPartyHosts.slice(0, 12).map((host) => `<p class="chip">${escapeHtml(host)}</p>`).join("")}` : ""}
+      <section class="delta-detected-box">
+        <h3>${escapeHtml(t("stillDetectedHeading"))}</h3>
+        <div class="metric-row">
+          <span><strong>${cookies.length}</strong>${escapeHtml(t("cookiesStillVisibleMetric"))}</span>
+          <span><strong>${delta.thirdPartyHosts?.length || 0}</strong>${escapeHtml(t("thirdPartyStillContactedMetric"))}</span>
+          <span><strong>${storageEntries.length}</strong>${escapeHtml(t("storageStillVisibleMetric"))}</span>
+        </div>
+      </section>
+      <div class="delta-content-grid">
+        <div class="delta-findings">
+          <section>
+            <h3>${escapeHtml(t("cookiesRemainingAfterOptOutHeading"))}</h3>
+            ${cookies.length ? renderCookieTable(cookies) : `<p class="empty-state">${escapeHtml(t("noRemainingCookies"))}</p>`}
+          </section>
+          <section>
+            <h3>${escapeHtml(t("thirdPartyHostsAfterOptOutHeading"))}</h3>
+            ${delta.thirdPartyHosts?.length ? renderSimpleList(delta.thirdPartyHosts) : `<p class="empty-state">${escapeHtml(t("noThirdPartyHosts"))}</p>`}
+          </section>
+          <section>
+            <h3>${escapeHtml(t("browserStorageAfterOptOutHeading"))}</h3>
+            ${storageEntries.length ? renderStorageTable(storageEntries) : `<p class="empty-state">${escapeHtml(t("noStorageEntries"))}</p>`}
+          </section>
+        </div>
+        <aside class="delta-side-panel">
+          <section>
+            <h3>${escapeHtml(t("bannerEvidenceHeading"))}</h3>
+            <p class="muted">${escapeHtml(t("bannerEvidenceIntro"))}</p>
+            ${renderSimpleList(bannerEvidence)}
+          </section>
+          <section class="warning-panel">
+            <h3>${escapeHtml(t("importantLimitationsHeading"))}</h3>
+            ${renderSimpleList([t("deltaLimitationBestEffort"), t("deltaLimitationServerSide"), t("deltaLimitationNecessary"), t("deltaLimitationHeuristic")])}
+          </section>
+        </aside>
+      </div>
     </div>
   `;
 }
@@ -130,11 +213,69 @@ function openDeltaMailDraft(target = "dpo") {
 
   const website = delta.url || "";
   const subject = t(target === "authority" ? "deltaAuthorityReportSubject" : "deltaReportSubject", website || "unknown website");
-  const body = formatDeltaReport(delta, website);
+  const body = buildDeltaMailBody(delta, target);
   const contacts = currentDeltaTarget || {};
   const recipient = target === "authority" ? contacts.authorityEmail : contacts.dpoEmail;
   const mailto = `mailto:${recipient ? encodeURIComponent(recipient) : ""}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   window.location.assign(mailto);
+}
+
+function buildDeltaMailBody(delta, target = "dpo") {
+  const banner = delta.banner || detailsPayload?.cookiebuddyLastScan?.analysis?.banner || null;
+  const values = {
+    pageUrl: delta.url || t("unknownWebsite"),
+    remainingCookies: formatMailList([...(delta.remainingCookies || []), ...(delta.newCookies || [])].map(formatCookieForMail), t("noneObserved")),
+    thirdPartyHosts: formatMailList(delta.thirdPartyHosts || [], t("noneObserved")),
+    storageEntries: formatMailList((delta.remainingStorageEntries || []).map(formatStorageForMail), t("noneObserved")),
+    bannerProvider: getBannerProvider(banner),
+    bannerEvidence: formatMailList(formatBannerEvidence(banner), t("noBannerEvidence")),
+    senderName: t("senderNamePlaceholder")
+  };
+
+  const intro = target === "authority" ? t("deltaAuthorityMailIntro") : t("deltaDpoMailIntro");
+  return [
+    t("mailHello"),
+    "",
+    intro,
+    "",
+    values.pageUrl,
+    "",
+    t("deltaMailObservation"),
+    "",
+    t("deltaMailItemsIntro"),
+    "",
+    `**${t("cookiesRemainingAfterOptOutHeading")}**`,
+    values.remainingCookies,
+    "",
+    `**${t("thirdPartyHostsAfterOptOutHeading")}**`,
+    values.thirdPartyHosts,
+    "",
+    `**${t("browserStorageEntriesHeading")}**`,
+    values.storageEntries,
+    "",
+    t("deltaMailBestEffort"),
+    "",
+    t("deltaMailQuestionsIntro"),
+    "",
+    `1. ${t("deltaMailQuestionNecessary")}`,
+    `2. ${t("deltaMailQuestionLegalBasis")}`,
+    `3. ${t("deltaMailQuestionOptionalActive")}`,
+    `4. ${t("deltaMailQuestionWithdraw")}`,
+    `5. ${t("deltaMailQuestionNotice")}`,
+    "",
+    t("deltaMailBannerReference"),
+    "",
+    values.bannerProvider,
+    "",
+    `${t("deltaMailDetectionEvidence")}:`,
+    "",
+    values.bannerEvidence,
+    "",
+    t("deltaMailNoLegalClaim"),
+    "",
+    t("mailClosing"),
+    values.senderName
+  ].join("\n");
 }
 
 async function downloadDeltaHtmlReport() {
@@ -194,6 +335,81 @@ function buildDeltaHtmlDocument(delta, options = {}) {
   ${content}
 </body>
 </html>`;
+}
+
+function renderCookieTable(cookies) {
+  return `
+    <table class="delta-table">
+      <thead><tr><th>${escapeHtml(t("cookieColumn"))}</th><th>${escapeHtml(t("domainColumn"))}</th><th>${escapeHtml(t("categoryColumn"))}</th><th>${escapeHtml(t("reasonColumn"))}</th></tr></thead>
+      <tbody>
+        ${cookies.slice(0, 12).map((cookie) => `
+          <tr>
+            <td>${escapeHtml(cookie.name)}</td>
+            <td>${escapeHtml(cookie.domain)}</td>
+            <td>${escapeHtml(cookie.service || t("unknownService"))}</td>
+            <td>${escapeHtml(t("stillPresentAfterOptOut"))}</td>
+          </tr>
+        `).join("")}
+      </tbody>
+    </table>
+  `;
+}
+
+function renderStorageTable(entries) {
+  return `
+    <table class="delta-table">
+      <thead><tr><th>${escapeHtml(t("storageKeyColumn"))}</th><th>${escapeHtml(t("typeColumn"))}</th><th>${escapeHtml(t("bannerRelatedColumn"))}</th><th>${escapeHtml(t("reasonColumn"))}</th></tr></thead>
+      <tbody>
+        ${entries.slice(0, 12).map((entry) => `
+          <tr>
+            <td>${escapeHtml(entry.key)}</td>
+            <td>${escapeHtml(entry.scope)}</td>
+            <td>${escapeHtml(entry.inBanner ? t("yes") : t("unclear"))}</td>
+            <td>${escapeHtml(t("stillPresentAfterOptOut"))}</td>
+          </tr>
+        `).join("")}
+      </tbody>
+    </table>
+  `;
+}
+
+function renderSimpleList(items) {
+  return `<ul class="delta-list">${items.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`;
+}
+
+function formatMailList(items, emptyLabel) {
+  if (!items.length) return emptyLabel;
+  return items.map((item) => `- ${item}`).join("\n");
+}
+
+function formatCookieForMail(cookie) {
+  const service = cookie.service ? `, ${cookie.service}` : "";
+  return `${cookie.name} (${cookie.domain}${service})`;
+}
+
+function formatStorageForMail(entry) {
+  return `${entry.key} (${entry.scope})`;
+}
+
+function getBannerProvider(banner) {
+  return banner?.name || t("unknownBannerProvider");
+}
+
+function formatBannerEvidence(banner) {
+  if (!banner) return [t("noBannerEvidence")];
+  const evidence = [];
+  if (banner.name) evidence.push(t("bannerProviderEvidence", banner.name));
+  if (banner.source?.host) evidence.push(t("bannerSourceHostEvidence", banner.source.host));
+  if (banner.source?.value) evidence.push(t("bannerSourceValueEvidence", banner.source.value));
+  for (const item of banner.evidence || []) {
+    if (item.value) evidence.push(item.source ? `${item.source}: ${item.value}` : item.value);
+  }
+  return Array.from(new Set(evidence)).slice(0, 8);
+}
+
+function formatDate(value) {
+  if (!value) return t("unknownDate");
+  return new Date(value).toLocaleString();
 }
 
 function triggerDownload(blob, filename) {
