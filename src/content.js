@@ -1,4 +1,5 @@
 // Fallback embedded CMP signatures for when external fetch unavailable
+// Reviewed against common operational CMPs and IAB Europe TCF resources in June 2026.
 const FALLBACK_CMP_SIGNATURES = [
   { name: "Usercentrics", patterns: ["usercentrics", "uc-settings", "uc-center-container", "uc-privacy", "cmp.usercentrics"] },
   { name: "OneTrust", patterns: ["onetrust", "ot-sdk", "optanon", "cookiepro", "optanonconsent"] },
@@ -17,7 +18,19 @@ const FALLBACK_CMP_SIGNATURES = [
   { name: "Consentmanager", patterns: ["consentmanager", "consentmanager.net", "cmpconsent"] },
   { name: "Cookie Information", patterns: ["cookieinformation", "cookieinformation.com"] },
   { name: "Klaro", patterns: ["klaro", "klaro-consent"] },
-  { name: "Civic Cookie Control", patterns: ["civicuk", "cookiecontrol", "cookie-control"] }
+  { name: "Civic Cookie Control", patterns: ["civicuk", "cookiecontrol", "cookie-control"] },
+  { name: "Google Funding Choices", patterns: ["fundingchoicesmessages.google.com", "googlefc", "fc-consent-root"] },
+  { name: "CookieScript", patterns: ["cookie-script.com", "cookiescript", "cookie-script"] },
+  { name: "CookieFirst", patterns: ["cookiefirst", "cookiefirst.com"] },
+  { name: "CookieHub", patterns: ["cookiehub", "cookiehub.com"] },
+  { name: "Secure Privacy", patterns: ["secureprivacy", "secureprivacy.ai"] },
+  { name: "Ketch", patterns: ["ketch", "ketchcdn.com", "ketchjs"] },
+  { name: "Piwik PRO Consent Manager", patterns: ["piwik.pro", "ppms.js", "piwikpro"] },
+  { name: "Matomo Consent Manager", patterns: ["matomo", "matomo-consent", "_pk_id"] },
+  { name: "WebToffee GDPR Cookie Consent", patterns: ["webtoffee", "gdpr-cookie-consent", "cookielawinfo-checkbox", "viewed_cookie_policy"] },
+  { name: "Seers CMP", patterns: ["seersco", "seers-cmp", "seers-cookie"] },
+  { name: "TrustCommander", patterns: ["trustcommander", "commandersact", "privacy.trustcommander.net"] },
+  { name: "SFBX", patterns: ["sfbx", "sfbx.io"] }
 ];
 
 const FALLBACK_CMP_GLOBALS = [
@@ -29,7 +42,11 @@ const FALLBACK_CMP_GLOBALS = [
   { name: "OneTrust", keys: ["OneTrust", "Optanon"] },
   { name: "Osano", keys: ["Osano"] },
   { name: "Axeptio", keys: ["axeptioSDK"] },
-  { name: "Klaro", keys: ["klaro"] }
+  { name: "Klaro", keys: ["klaro"] },
+  { name: "Google Funding Choices", keys: ["googlefc"] },
+  { name: "Ketch", keys: ["ketch"] },
+  { name: "CookieScript", keys: ["CookieScript"] },
+  { name: "Piwik PRO Consent Manager", keys: ["ppms"] }
 ];
 
 const CONSENT_SOURCE_PATTERNS = [

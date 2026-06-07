@@ -1,5 +1,5 @@
 import { applyI18n, getLanguage, initI18n, setLanguage, t } from "./i18n.js";
-import { buildDelta, capitalize, getBaseDomain, normalizeTraffic, serviceForCookie } from "./core.js";
+import { buildDelta, capitalize, getBaseDomain, isEssentialCookie, isEssentialHost, normalizeTraffic, serviceForCookie } from "./core.js";
 
 const state = {
   tab: null,
@@ -101,12 +101,9 @@ async function runDeltaCheck() {
   elements.deltaResult.innerHTML = `<p class="muted">${escapeHtml(t("deltaCheckingDescription"))}</p>`;
 
   try {
-    await chrome.runtime.sendMessage({ target: "cookiebuddy-background", type: "CLEAR_TRAFFIC", tabId: state.tab.id });
     const before = await snapshot(t("snapshotCurrentState"));
     const denyResult = await sendToTab(state.tab.id, { target: "cookiebuddy-content", type: "TRY_DENY_ALL" });
-    if (!denyResult?.found) {
-      throw new Error(t("deltaNeedsManualConsent"));
-    }
+    await chrome.runtime.sendMessage({ target: "cookiebuddy-background", type: "CLEAR_TRAFFIC", tabId: state.tab.id });
     await wait(1800);
     const afterDeny = await snapshot(t("snapshotAfterDenyAll"));
     const delta = buildDelta({
@@ -116,8 +113,9 @@ async function runDeltaCheck() {
       afterTraffic: afterDeny.thirdPartyTraffic,
       afterStorageEntries: afterDeny.analysis?.storage?.items || [],
       banner: afterDeny.analysis?.banner || before.analysis?.banner || null,
-      denyClicked: denyResult.clicked,
-      denyLabel: denyResult.label,
+      denyClicked: denyResult?.clicked,
+      denyLabel: denyResult?.label,
+      manualConsentConfirmed: !denyResult?.found,
       labels: {
         deltaFoundSummary: t("deltaFoundSummary"),
         noDeltaSummary: t("noDeltaSummary")
@@ -448,9 +446,10 @@ function renderDelta(delta) {
       <span><strong>${escapeHtml(delta.afterDenyCounts.thirdPartyHosts)}</strong>${escapeHtml(t("thirdPartyStillContactedMetric"))}</span>
       <span><strong>${escapeHtml(delta.remainingStorageEntries?.length || 0)}</strong>${escapeHtml(t("storageStillVisibleMetric"))}</span>
     </div>
-    ${delta.denyAction.clicked ? `<p class="muted">${escapeHtml(t("clickedDenyControl", delta.denyAction.label || t("detectedButton")))}</p>` : `<p class="error">${escapeHtml(t("noDenyButtonClicked"))}</p>`}
-    ${cookieItems.length ? `<h3>${escapeHtml(t("cookiesStillPresent"))}</h3>${cookieItems.map((cookie) => `<p class="chip">${escapeHtml(cookie.name)} · ${escapeHtml(cookie.domain)} · ${escapeHtml(cookie.service)}</p>`).join("")}` : ""}
-    ${delta.thirdPartyHosts.length ? `<h3>${escapeHtml(t("thirdPartyTrafficAfterOptOut"))}</h3>${delta.thirdPartyHosts.slice(0, 10).map((host) => `<p class="chip">${escapeHtml(host)}</p>`).join("")}` : ""}
+    ${delta.denyAction.clicked ? `<p class="muted">${escapeHtml(t("clickedDenyControl", delta.denyAction.label || t("detectedButton")))}</p>` : `<p class="muted">${escapeHtml(t("manualDenyAssumed"))}</p>`}
+    ${cookieItems.length ? `<h3>${escapeHtml(t("nonEssentialCookiesStillPresent"))}</h3>${cookieItems.map((cookie) => `<p class="chip">${escapeHtml(cookie.name)} · ${escapeHtml(cookie.domain)} · ${escapeHtml(cookie.service)}</p>`).join("")}` : ""}
+    ${delta.thirdPartyHosts.length ? `<h3>${escapeHtml(t("nonEssentialThirdPartyTrafficAfterOptOut"))}</h3>${delta.thirdPartyHosts.slice(0, 10).map((host) => `<p class="chip">${escapeHtml(host)}</p>`).join("")}` : ""}
+    ${delta.essentialThirdPartyHosts?.length ? `<h3>${escapeHtml(t("essentialThirdPartyTrafficAllowed"))}</h3>${delta.essentialThirdPartyHosts.slice(0, 10).map((host) => `<p class="chip">${escapeHtml(host)}</p>`).join("")}` : ""}
   `;
 }
 
@@ -504,7 +503,6 @@ async function openBannerOverview() {
     }
   } catch (error) {
     setStatus("statusCheckFailed", "warn");
-    elements.bannerResult.innerHTML = `<p class="error">${escapeHtml(error.message || t("bannerOverviewFailed"))}</p>`;
     if (!elements.bannerOverviewStatus.textContent) {
       elements.bannerOverviewStatus.textContent = t("bannerOverviewFailed");
       elements.bannerOverviewStatus.dataset.state = "warn";
@@ -536,11 +534,11 @@ function determineIconStatus(delta = null) {
   const banner = state.analysis?.banner;
   const traffic = normalizeTraffic(state.traffic || [], state.analysis?.host || "");
   const visibleCookies = state.cookies || [];
-  const suspiciousCookies = visibleCookies.filter((cookie) => !/session|csrf|xsrf|auth|consent|cookie|privacy|necessary/i.test(cookie.name));
-  const hasThirdPartyTraffic = traffic.length > 0;
+  const suspiciousCookies = visibleCookies.filter((cookie) => !isEssentialCookie(cookie));
+  const hasNonEssentialThirdPartyTraffic = traffic.some((item) => !isEssentialHost(item.host));
 
   if (!banner || banner.confidence === "none") return "yellow";
-  if (hasThirdPartyTraffic || suspiciousCookies.length > 0) return "yellow";
+  if (hasNonEssentialThirdPartyTraffic || suspiciousCookies.length > 0) return "yellow";
   return "green";
 }
 

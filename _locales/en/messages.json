@@ -69,7 +69,7 @@
     "message": "Green"
   },
   "legendGreenBody": {
-    "message": "All cookies appear covered by consent."
+    "message": "No obvious non-essential cookies or third-party traffic were found."
   },
   "legendYellowTitle": {
     "message": "Yellow"
@@ -132,7 +132,7 @@
     "message": "Delta check"
   },
   "deltaIntro": {
-    "message": "Compares the current state with a best-effort \"deny all\" state. CookieBuddy flags cookies and third-party requests that remain after opt-out."
+    "message": "Compares the current state with a best-effort \"deny all\" state. CookieBuddy flags non-essential cookies and third-party requests that remain after opt-out."
   },
   "runDeltaButton": {
     "message": "Run delta check"
@@ -246,10 +246,10 @@
     "message": "No visible cookies or locally stored data were found for this page."
   },
   "deltaCheckingDescription": {
-    "message": "Trying a deny-all action, then comparing cookies and third-party traffic. This is best-effort because banners use different controls."
+    "message": "Trying a deny-all action, then checking which cookies and network requests still happen. Essential infrastructure is separated from suspicious third-party traffic."
   },
   "deltaConsentPrompt": {
-    "message": "Please decline all cookies on the page first. When you are ready, confirm to start the delta check."
+    "message": "CookieBuddy will try to click deny all. If you already declined manually, it will check the current post-opt-out state. Continue?"
   },
   "deltaConsentCancelled": {
     "message": "Delta check cancelled. No changes were made."
@@ -270,10 +270,10 @@
     "message": "After deny all"
   },
   "deltaFoundSummary": {
-    "message": "CookieBuddy found cookies or third-party traffic after opt-out. This may mean data still flows without valid consent and should be reviewed."
+    "message": "CookieBuddy found non-essential cookies or third-party traffic after opt-out. This may mean data still flows without valid consent and should be reviewed."
   },
   "noDeltaSummary": {
-    "message": "No obvious post-opt-out delta was found in this browser session."
+    "message": "No obvious non-essential cookies or third-party traffic were found after opt-out in this browser session."
   },
   "mailSubject": {
     "message": "Cookie consent question for $1"
@@ -365,11 +365,23 @@
   "noDenyButtonClicked": {
     "message": "No deny-all button could be clicked automatically."
   },
+  "manualDenyAssumed": {
+    "message": "No deny-all button was clicked automatically. CookieBuddy treated your confirmation as a manual opt-out and checked the current state."
+  },
   "cookiesStillPresent": {
     "message": "Cookies still present"
   },
+  "nonEssentialCookiesStillPresent": {
+    "message": "Non-essential cookies still present"
+  },
   "thirdPartyTrafficAfterOptOut": {
     "message": "Third-party traffic after opt-out"
+  },
+  "nonEssentialThirdPartyTrafficAfterOptOut": {
+    "message": "Non-essential third-party traffic after opt-out"
+  },
+  "essentialThirdPartyTrafficAllowed": {
+    "message": "Essential third-party infrastructure observed"
   },
   "unknownService": {
     "message": "Unknown service"
