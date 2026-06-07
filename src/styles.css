@@ -394,6 +394,17 @@ h3 {
 .overview-tile strong {
   display: block;
   margin-top: 2px;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  font-size: 0.9rem;
+  line-height: 1.15;
+}
+
+.overview-value {
+  display: block;
+}
+
+.overview-tile strong.numeric {
   font-size: 1.34rem;
   line-height: 1.05;
 }

@@ -206,18 +206,19 @@ function renderOverview() {
     renderOverviewTile("purple", "✓", t("bannerHeading"), bannerName, ""),
     renderOverviewTile("blue", "≡", t("servicesByCategoryHeading"), serviceCount, ""),
     renderOverviewTile("orange", "●", t("cookiesTrafficHeading"), state.cookies.length, suspiciousCookies ? `${suspiciousCookies} ${t("reviewRecommended").toLowerCase()}` : ""),
-    renderOverviewTile("navy", "↗", t("thirdPartyTrafficAfterOptOut"), thirdPartyCount, ""),
-    renderOverviewTile("green", "▣", t("localStorageHeading"), (storage.items || []).length, t("storageCount", [storage.localStorageKeys?.length || 0, storage.sessionStorageKeys?.length || 0]))
+    renderOverviewTile("navy", "↗", t("thirdPartyTrafficAfterOptOut"), thirdPartyCount, "")
+    , renderOverviewTile("green", "▣", t("localStorageHeading"), (storage.items || []).length, t("storageCount", [storage.localStorageKeys?.length || 0, storage.sessionStorageKeys?.length || 0]))
   ].join("");
 }
 
 function renderOverviewTile(tone, icon, label, value, note) {
+  const valueClass = /^\d+$/.test(String(value)) ? "overview-value numeric" : "overview-value";
   return `
     <article class="overview-tile ${tone}">
       <span class="tile-icon ${tone}" aria-hidden="true">${escapeHtml(icon)}</span>
       <div>
         <span>${escapeHtml(label)}</span>
-        <strong>${escapeHtml(value)}</strong>
+        <strong class="${valueClass}">${escapeHtml(value)}</strong>
         ${note ? `<small>${escapeHtml(note)}</small>` : ""}
       </div>
     </article>
