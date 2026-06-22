@@ -242,6 +242,9 @@
   "noCookiesVisible": {
     "message": "Für diesen Tab sind für die Erweiterung keine Cookies sichtbar."
   },
+  "cookiesTrafficEmptyState": {
+    "message": "Für diese Seite wurden keine sichtbaren Cookies oder lokal gespeicherten Daten gefunden."
+  },
   "deltaCheckingDescription": {
     "message": "CookieBuddy versucht eine Alle-ablehnen-Aktion und prüft danach, welche Cookies und Netzwerkanfragen weiterhin passieren. Essenzielle Infrastruktur wird von auffälligem Drittanbieter-Traffic getrennt."
   },
