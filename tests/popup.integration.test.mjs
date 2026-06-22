@@ -105,6 +105,76 @@ test("legend marks the active badge status", async () => {
   assert.match(legendHtml, /current|aktuell/);
 });
 
+test("popup overview includes the storage tile from the merged delta UX", async () => {
+  const document = createDocument();
+  const window = { Node: class {}, HTMLElement: FakeElement, URL };
+
+  setupChromeMock("en");
+  setupDomGlobals({ document, window });
+
+  await import(`../src/popup.js?test=${Date.now()}-storage-tile`);
+  await flush();
+
+  const overviewHtml = document.getElement("overviewGrid").innerHTML;
+  assert.match(overviewHtml, /localStorage/i);
+  assert.match(overviewHtml, /storage/i);
+});
+
+test("popup delta view separates non-essential findings from allowed infrastructure", async () => {
+  const document = createDocument();
+  const window = { Node: class {}, HTMLElement: FakeElement, URL };
+
+  setupChromeMock("en");
+  setupDomGlobals({ document, window });
+  const originalSetTimeout = globalThis.setTimeout;
+  const originalClearTimeout = globalThis.clearTimeout;
+  globalThis.setTimeout = (callback) => {
+    callback();
+    return 0;
+  };
+  globalThis.clearTimeout = () => {};
+
+  try {
+    globalThis.chrome.runtime.sendMessage = async ({ type }) => {
+      if (type === "GET_TRAFFIC") {
+        return {
+          traffic: [
+            { url: "https://tracker.example.net/pixel.js", type: "script" },
+            { url: "https://static.cloudflare.com/cdn.js", type: "script" }
+          ]
+        };
+      }
+      if (type === "CLEAR_TRAFFIC") return {};
+      return {};
+    };
+
+    globalThis.chrome.tabs.sendMessage = async (_, message) => {
+      globalThis.chrome.tabs.lastMessage = message;
+      if (message.type === "TRY_DENY_ALL") return { clicked: true, label: "Reject all", found: true };
+      return setupChromeMockAnalysis();
+    };
+
+    await import(`../src/popup.js?test=${Date.now()}-delta-split`);
+    await flush();
+
+    await document.getElement("deltaButton").click();
+
+    let deltaHtml = "";
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      await flush();
+      deltaHtml = document.getElement("deltaResult").innerHTML;
+      if (/non-essential cookies still present/i.test(deltaHtml)) break;
+    }
+
+    assert.match(deltaHtml, /non-essential cookies still present/i);
+    assert.match(deltaHtml, /non-essential third-party traffic after opt-out/i);
+    assert.match(deltaHtml, /essential third-party infrastructure/i);
+  } finally {
+    globalThis.setTimeout = originalSetTimeout;
+    globalThis.clearTimeout = originalClearTimeout;
+  }
+});
+
 test("banner overview failure keeps the detected banner visible", async () => {
   const document = createDocument();
   const window = { Node: class {}, HTMLElement: FakeElement, URL };
@@ -231,6 +301,7 @@ function createDocument() {
     "scanStatusText",
     "statusCardText",
     "popupIntro",
+    "overviewGrid",
     "bannerResult",
     "categoryResult",
     "cookieResult",
@@ -293,6 +364,9 @@ function setupDomGlobals({ document, window }) {
   globalThis.Node = window.Node;
   globalThis.HTMLElement = window.HTMLElement;
   globalThis.URL = window.URL;
+  globalThis.confirm = window.confirm || (() => true);
+  window.confirm = () => true;
+  globalThis.confirm = window.confirm;
   globalThis.fetch = async (url) => ({
     async json() {
       const text = String(url);
@@ -303,7 +377,51 @@ function setupDomGlobals({ document, window }) {
 }
 
 function setupChromeMock(locale) {
-  const analysis = {
+  const analysis = setupChromeMockAnalysis();
+
+  globalThis.chrome = {
+    i18n: {
+      getUILanguage: () => locale
+    },
+    runtime: {
+      getURL: (value) => value,
+      sendMessage: async ({ type }) => {
+        if (type === "GET_TRAFFIC") return { traffic: [{ url: "https://tracker.example.net/pixel.js", type: "script" }] };
+        if (type === "CLEAR_TRAFFIC") return {};
+        return {};
+      }
+    },
+    storage: {
+      local: {
+        get: async () => ({ cookiebuddyLanguage: locale }),
+        set: async () => {}
+      }
+    },
+    tabs: {
+      query: async () => [{ id: 1, url: analysis.url, title: analysis.title }],
+      create: async () => {},
+      sendMessage: async (_, message) => {
+        globalThis.chrome.tabs.lastMessage = message;
+        if (message.type === "ANALYZE_PAGE") return analysis;
+        if (message.type === "TRY_DENY_ALL") return { clicked: true, label: "Reject all" };
+        if (message.type === "OPEN_BANNER_OVERVIEW") return { found: true, clicked: true, label: "Show settings" };
+        return {};
+      }
+    },
+    cookies: {
+      getAll: async () => [
+        { name: "session", domain: ".example.com", path: "/", secure: true, sameSite: "Lax" },
+        { name: "_ga", domain: ".example.com", path: "/", secure: false, sameSite: "Lax" }
+      ]
+    },
+    scripting: {
+      executeScript: async () => {}
+    }
+  };
+}
+
+function setupChromeMockAnalysis() {
+  return {
     url: "https://example.com",
     host: "example.com",
     title: "Example",
@@ -344,45 +462,6 @@ function setupChromeMock(locale) {
         note: "Fallback: Graurheindorfer Straße 153, 53117 Bonn, phone +49 (0)228-997799-0, email poststelle@bfdi.bund.de.",
         url: "https://www.bfdi.bund.de/SharedDocs/Kontaktdaten/DE/BfDI_Kontakt.html"
       }
-    }
-  };
-
-  globalThis.chrome = {
-    i18n: {
-      getUILanguage: () => locale
-    },
-    runtime: {
-      getURL: (value) => value,
-      sendMessage: async ({ type }) => {
-        if (type === "GET_TRAFFIC") return { traffic: [{ url: "https://tracker.example.net/pixel.js", type: "script" }] };
-        if (type === "CLEAR_TRAFFIC") return {};
-        return {};
-      }
-    },
-    storage: {
-      local: {
-        get: async () => ({ cookiebuddyLanguage: locale }),
-        set: async () => {}
-      }
-    },
-    tabs: {
-      query: async () => [{ id: 1, url: analysis.url, title: analysis.title }],
-      sendMessage: async (_, message) => {
-        globalThis.chrome.tabs.lastMessage = message;
-        if (message.type === "ANALYZE_PAGE") return analysis;
-        if (message.type === "TRY_DENY_ALL") return { clicked: true, label: "Reject all" };
-        if (message.type === "OPEN_BANNER_OVERVIEW") return { found: true, clicked: true, label: "Show settings" };
-        return {};
-      }
-    },
-    cookies: {
-      getAll: async () => [
-        { name: "session", domain: ".example.com", path: "/", secure: true, sameSite: "Lax" },
-        { name: "_ga", domain: ".example.com", path: "/", secure: false, sameSite: "Lax" }
-      ]
-    },
-    scripting: {
-      executeScript: async () => {}
     }
   };
 }
@@ -458,7 +537,7 @@ class FakeElement {
   }
 
   click() {
-    this.listeners.get("click")?.({ target: this });
+    return this.listeners.get("click")?.({ target: this });
   }
 }
 
