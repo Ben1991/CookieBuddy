@@ -73,6 +73,23 @@ test("popup keeps core visible texts aligned with the active locale", async () =
   });
 });
 
+test("popup markup keeps status text ids unique", async () => {
+  const html = await readFile(new URL("../popup.html", import.meta.url), "utf8");
+  const ids = [...html.matchAll(/id="([^"]+)"/g)].map((match) => match[1]);
+  const duplicateIds = ids.filter((id, index) => ids.indexOf(id) !== index);
+
+  assert.deepEqual(duplicateIds, []);
+  assert.match(html, /id="scanStatusText"/);
+  assert.match(html, /id="statusCardText"/);
+});
+
+test("German locale includes empty cookie and storage state", () => {
+  assert.equal(
+    localeMessages.de.cookiesTrafficEmptyState.message,
+    "Für diese Seite wurden keine sichtbaren Cookies oder lokal gespeicherten Daten gefunden."
+  );
+});
+
 test("legend marks the active badge status", async () => {
   const document = createDocument();
   const window = { Node: class {}, HTMLElement: FakeElement, URL };
@@ -212,6 +229,7 @@ function createDocument() {
   const defs = [
     "statusPill",
     "scanStatusText",
+    "statusCardText",
     "popupIntro",
     "bannerResult",
     "categoryResult",
@@ -239,6 +257,7 @@ function createDocument() {
   elements.get("mockBannerSettings").textContent = "Cookie settings";
   elements.get("mockBannerSettings").setAttribute("aria-label", "Cookie settings");
   elements.get("scanStatusText").dataset.i18n = "scanStatusReady";
+  elements.get("statusCardText").dataset.i18n = "scanStatusReady";
   elements.get("popupIntro").dataset.i18n = "popupIntro";
   elements.get("legendGrid").innerHTML = "";
   elements.get("statusPill").dataset.i18n = "statusReady";

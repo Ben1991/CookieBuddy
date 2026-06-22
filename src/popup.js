@@ -14,6 +14,7 @@ const elements = {
   statusPill: document.querySelector("#statusPill"),
   statusCard: document.querySelector("#statusCard"),
   scanStatusText: document.querySelector("#scanStatusText"),
+  statusCardText: document.querySelector("#statusCardText"),
   overviewGrid: document.querySelector("#overviewGrid"),
   bannerResult: document.querySelector("#bannerResult"),
   categoryResult: document.querySelector("#categoryResult"),
@@ -182,8 +183,8 @@ function renderStatusCard() {
 
   elements.statusCard.dataset.status = badgeStatus;
   elements.statusCard.querySelector(".status-icon")?.setAttribute("data-status", badgeStatus);
-  if (elements.scanStatusText) {
-    elements.scanStatusText.innerHTML = `${escapeHtml(t("statusReady"))}: <strong>${escapeHtml(statusMeta.title)}</strong>`;
+  if (elements.statusCardText) {
+    elements.statusCardText.innerHTML = `${escapeHtml(t("statusReady"))}: <strong>${escapeHtml(statusMeta.title)}</strong>`;
   }
   const intro = elements.statusCard.querySelector(".hero-intro");
   if (intro) intro.textContent = statusMeta.body;
@@ -566,22 +567,26 @@ function setStatus(key, mode) {
   state.statusMode = mode;
   elements.statusPill.textContent = t(key);
   elements.statusPill.dataset.mode = mode;
+  const scanMessage = key === "statusReady"
+    ? t("scanStatusReady")
+    : key === "statusScanning"
+      ? t("scanStatusScanning")
+      : key === "statusNeedsAccess"
+        ? t("scanStatusNeedsAccess")
+        : key === "statusChecking"
+          ? t("scanStatusChecking")
+          : key === "statusDeltaFound"
+            ? t("scanStatusDeltaFound")
+            : key === "statusCheckFailed"
+              ? t("scanStatusFailed")
+              : t("scanStatusChecked");
   if (elements.scanStatusText) {
-    const scanMessage = key === "statusReady"
-      ? t("scanStatusReady")
-      : key === "statusScanning"
-        ? t("scanStatusScanning")
-        : key === "statusNeedsAccess"
-          ? t("scanStatusNeedsAccess")
-          : key === "statusChecking"
-            ? t("scanStatusChecking")
-            : key === "statusDeltaFound"
-              ? t("scanStatusDeltaFound")
-              : key === "statusCheckFailed"
-                ? t("scanStatusFailed")
-                : t("scanStatusChecked");
     elements.scanStatusText.textContent = scanMessage;
     elements.scanStatusText.dataset.mode = mode;
+  }
+  if (elements.statusCardText && key !== "statusReady") {
+    elements.statusCardText.textContent = scanMessage;
+    elements.statusCardText.dataset.mode = mode;
   }
 }
 
