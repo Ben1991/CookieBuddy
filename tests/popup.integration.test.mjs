@@ -279,6 +279,7 @@ function createDocument() {
     "statusPill",
     "scanStatusText",
     "popupIntro",
+    "overviewGrid",
     "bannerResult",
     "categoryResult",
     "cookieResult",
@@ -341,6 +342,8 @@ function setupDomGlobals({ document, window }) {
   globalThis.HTMLElement = window.HTMLElement;
   globalThis.URL = window.URL;
   globalThis.confirm = window.confirm || (() => true);
+  window.confirm = () => true;
+  globalThis.confirm = window.confirm;
   globalThis.fetch = async (url) => ({
     async json() {
       const text = String(url);
@@ -435,6 +438,45 @@ function setupChromeMockAnalysis() {
         note: "Fallback: Graurheindorfer Straße 153, 53117 Bonn, phone +49 (0)228-997799-0, email poststelle@bfdi.bund.de.",
         url: "https://www.bfdi.bund.de/SharedDocs/Kontaktdaten/DE/BfDI_Kontakt.html"
       }
+    }
+  };
+  globalThis.chrome = {
+    i18n: {
+      getUILanguage: () => locale
+    },
+    runtime: {
+      getURL: (value) => value,
+      sendMessage: async ({ type }) => {
+        if (type === "GET_TRAFFIC") return { traffic: [{ url: "https://tracker.example.net/pixel.js", type: "script" }] };
+        if (type === "CLEAR_TRAFFIC") return {};
+        return {};
+      }
+    },
+    storage: {
+      local: {
+        get: async () => ({ cookiebuddyLanguage: locale }),
+        set: async () => {}
+      }
+    },
+    tabs: {
+      query: async () => [{ id: 1, url: analysis.url, title: analysis.title }],
+      create: async () => {},
+      sendMessage: async (_, message) => {
+        globalThis.chrome.tabs.lastMessage = message;
+        if (message.type === "ANALYZE_PAGE") return analysis;
+        if (message.type === "TRY_DENY_ALL") return { clicked: true, label: "Reject all" };
+        if (message.type === "OPEN_BANNER_OVERVIEW") return { found: true, clicked: true, label: "Show settings" };
+        return {};
+      }
+    },
+    cookies: {
+      getAll: async () => [
+        { name: "session", domain: ".example.com", path: "/", secure: true, sameSite: "Lax" },
+        { name: "_ga", domain: ".example.com", path: "/", secure: false, sameSite: "Lax" }
+      ]
+    },
+    scripting: {
+      executeScript: async () => {}
     }
   };
 }
