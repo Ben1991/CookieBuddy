@@ -140,11 +140,15 @@ test("popup delta view separates non-essential findings from allowed infrastruct
     await import(`../src/popup.js?test=${Date.now()}-delta-split`);
     await flush();
 
-    document.getElement("deltaButton").click();
-    await flush();
-    await flush();
+    await document.getElement("deltaButton").click();
 
-    const deltaHtml = document.getElement("deltaResult").innerHTML;
+    let deltaHtml = "";
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      await flush();
+      deltaHtml = document.getElement("deltaResult").innerHTML;
+      if (/non-essential cookies still present/i.test(deltaHtml)) break;
+    }
+
     assert.match(deltaHtml, /non-essential cookies still present/i);
     assert.match(deltaHtml, /non-essential third-party traffic after opt-out/i);
     assert.match(deltaHtml, /essential third-party infrastructure/i);
@@ -376,6 +380,7 @@ function setupChromeMock(locale) {
     },
     tabs: {
       query: async () => [{ id: 1, url: analysis.url, title: analysis.title }],
+      create: async () => {},
       sendMessage: async (_, message) => {
         globalThis.chrome.tabs.lastMessage = message;
         if (message.type === "ANALYZE_PAGE") return analysis;
@@ -438,45 +443,6 @@ function setupChromeMockAnalysis() {
         note: "Fallback: Graurheindorfer Straße 153, 53117 Bonn, phone +49 (0)228-997799-0, email poststelle@bfdi.bund.de.",
         url: "https://www.bfdi.bund.de/SharedDocs/Kontaktdaten/DE/BfDI_Kontakt.html"
       }
-    }
-  };
-  globalThis.chrome = {
-    i18n: {
-      getUILanguage: () => locale
-    },
-    runtime: {
-      getURL: (value) => value,
-      sendMessage: async ({ type }) => {
-        if (type === "GET_TRAFFIC") return { traffic: [{ url: "https://tracker.example.net/pixel.js", type: "script" }] };
-        if (type === "CLEAR_TRAFFIC") return {};
-        return {};
-      }
-    },
-    storage: {
-      local: {
-        get: async () => ({ cookiebuddyLanguage: locale }),
-        set: async () => {}
-      }
-    },
-    tabs: {
-      query: async () => [{ id: 1, url: analysis.url, title: analysis.title }],
-      create: async () => {},
-      sendMessage: async (_, message) => {
-        globalThis.chrome.tabs.lastMessage = message;
-        if (message.type === "ANALYZE_PAGE") return analysis;
-        if (message.type === "TRY_DENY_ALL") return { clicked: true, label: "Reject all" };
-        if (message.type === "OPEN_BANNER_OVERVIEW") return { found: true, clicked: true, label: "Show settings" };
-        return {};
-      }
-    },
-    cookies: {
-      getAll: async () => [
-        { name: "session", domain: ".example.com", path: "/", secure: true, sameSite: "Lax" },
-        { name: "_ga", domain: ".example.com", path: "/", secure: false, sameSite: "Lax" }
-      ]
-    },
-    scripting: {
-      executeScript: async () => {}
     }
   };
 }
@@ -552,7 +518,7 @@ class FakeElement {
   }
 
   click() {
-    this.listeners.get("click")?.({ target: this });
+    return this.listeners.get("click")?.({ target: this });
   }
 }
 
