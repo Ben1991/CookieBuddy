@@ -19,6 +19,10 @@ Before opening a change:
 5. Describe what changed, why it changed, and any remaining limitations.
 6. Run the relevant local checks listed below.
 
+## Use Case and Documentation Sync
+
+The Gherkin scenarios in `features/cookiebuddy.feature`, their automated tests, the visual tests in `tests/visual.mjs`, the use-case table and screenshots in `README.md`, and this rule file are one product contract. Whenever a feature, user flow, or visible design changes, update every affected artifact in the same change. Regenerate the README screenshots with `COOKIEBUDDY_SCREENSHOT_DIR=docs/screenshots npm run test:visual` and review the images before committing. Do not merge a feature change with stale use cases, screenshots, or documentation.
+
 Good contribution areas include:
 
 * More cookie banner provider detections.

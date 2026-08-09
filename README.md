@@ -41,18 +41,38 @@ It is a review tool, not legal advice.
 
 If the banner does not expose a reject button, reject cookies manually and run the delta check again.
 
-## Main Use Cases
+## Use Cases
 
 The acceptance contract for CookieBuddy is written in Gherkin in [`features/cookiebuddy.feature`](features/cookiebuddy.feature). It covers these user journeys:
 
-- Scan the visited page and review the detected banner, cookies, storage, and third-party traffic.
-- Use the data protection officer contact found in the visited page's privacy policy, prioritizing privacy-policy links in the page footer over generic page contacts.
-- Run a delta check with an automatic reject action or after a manual opt-out.
-- Compare the all-opted-out cookies, local storage, and traffic against banner services, marking essential/allowed, successfully disabled, still active, and unclear or external signals.
-- Traffic from a browser extension or another source that is not listed in the banner is surfaced as an unclear external signal for manual review.
-- Flag non-essential cookies, storage, or third-party traffic that remains after opt-out as a review signal, not a legal verdict.
-- Open the detailed delta report and export it as HTML or a printable/PDF report.
-- Prepare a mail draft addressed to the detected privacy contact and copy the structured report for use in another email client.
+| ID | Given | When | Then |
+| --- | --- | --- | --- |
+| UC-01 Scan | The user is viewing a website in Chrome | CookieBuddy is opened | The banner, visible cookies, browser storage, third-party traffic, and local-only storage status are shown. |
+| UC-02 DPO contact | The footer links to a privacy policy containing a DPO email and another generic email exists | The page is scanned | The privacy-policy DPO email is used and its source URL is shown. |
+| UC-03 Automatic delta | A reject-all action is detected | The user confirms the delta check | Before/after cookies, storage, and traffic are compared. |
+| UC-04 Manual delta | No automatic reject-all action is found and the user opts out manually | The user confirms the delta check | The current post-opt-out state is compared and marked as manual opt-out. |
+| UC-05 Review signal | Non-essential activity remains after opt-out | The result is displayed | Remaining items are marked for review and explicitly not presented as legal advice. |
+| UC-06 All opted out | The banner lists essential and non-essential services | Cookies, local storage, and traffic are compared with the all-opted-out state | Essential services are allowed; disabled, active, unclear, and banner-listed states are shown per service. |
+| UC-07 External signal | A service or browser-extension traffic is not listed in the banner | The audit is rendered | The signal is marked `Unclear` and surfaced for manual review. |
+| UC-08 Export | A delta check has completed | The details view is opened | Findings can be downloaded as HTML or opened as a printable/PDF report. |
+| UC-09 Email | A privacy contact was found in the visited page's privacy policy | The details view is opened | A reviewed mail draft and copy-for-email report are offered. |
+
+The Gherkin file is the source of truth for acceptance behavior. A feature change must update the matching scenario, automated tests, visual tests, README use-case table, and screenshots in the same change.
+
+## Product Screenshots
+
+The screenshots below are generated from the same Playwright fixture used by the visual test suite. They document the primary product states without uploading real browsing data.
+
+| Scan overview | Delta audit and export |
+| --- | --- |
+| ![CookieBuddy scan overview](docs/screenshots/popup-overview.png) | ![CookieBuddy delta audit](docs/screenshots/delta-audit.png) |
+
+To regenerate them locally after a UI change:
+
+```sh
+$env:COOKIEBUDDY_SCREENSHOT_DIR = "docs/screenshots"
+npm run test:visual
+```
 
 Changes to these product flows must update the Gherkin scenarios, the matching automated tests, and this section in the same change.
 
@@ -87,7 +107,7 @@ npx playwright install chromium
 npm run test:visual
 ```
 
-GitHub Actions runs these checks on every push to every branch and on every pull request. The visual suite launches Chromium against the real popup and details pages, checks responsive layout, and verifies the delta report's mail-copy, HTML, and printable export actions. A feature change is not considered complete until the Gherkin contract, functional tests, visual tests, and this documentation are updated together.
+GitHub Actions runs these checks on every push to every branch and on every pull request. The visual suite launches Chromium against the real popup and details pages, checks responsive layout, verifies the delta report's mail-copy, HTML, and printable export actions, and can regenerate the README screenshots. A feature change is not considered complete until the Gherkin contract, functional tests, visual tests, README use cases, and matching screenshots are updated together.
 
 After changing extension files, reload the extension in `chrome://extensions`.
 

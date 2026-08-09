@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
-import { readFile } from "node:fs/promises";
+import { mkdir, readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
@@ -78,6 +78,13 @@ function chromeFixtureScript() {
   `;
 }
 
+async function captureDocumentationScreenshot(page, fileName, options = {}) {
+  const screenshotDir = process.env.COOKIEBUDDY_SCREENSHOT_DIR;
+  if (!screenshotDir) return;
+  await mkdir(screenshotDir, { recursive: true });
+  await page.screenshot({ path: join(screenshotDir, fileName), ...options });
+}
+
 await new Promise((resolve) => server.listen(port, "127.0.0.1", resolve));
 const browser = await chromium.launch({ headless: true });
 try {
@@ -90,6 +97,7 @@ try {
   assert.ok(await popup.locator("#heroScanButton").isVisible(), "primary scan action should be visible in the redesigned header");
   assert.ok(await popup.locator("#currentPageLabel").isVisible(), "current page context should be visible in the redesigned header");
   assert.ok((await popup.evaluate(() => document.documentElement.scrollWidth)) <= (await popup.evaluate(() => document.documentElement.clientWidth)) + 1, "popup should not overflow horizontally");
+  await captureDocumentationScreenshot(popup, "popup-overview.png", { fullPage: true });
 
   const details = await browser.newPage({ viewport: { width: 1200, height: 900 } });
   await details.addInitScript({ content: chromeFixtureScript() });
@@ -102,6 +110,7 @@ try {
   assert.ok(await details.getByText("Still active", { exact: true }).isVisible(), "active services should be labeled");
   assert.ok(await details.getByText("Unclear", { exact: true }).isVisible(), "unlisted signals should be labeled unclear");
   assert.ok(await details.getByText("Stored locally", { exact: true }).isVisible(), "local-only status should be visible in the redesigned details header");
+  await captureDocumentationScreenshot(details, "delta-audit.png", { fullPage: true });
 } finally {
   await browser.close();
   await new Promise((resolve) => server.close(resolve));
