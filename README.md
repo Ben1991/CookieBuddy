@@ -63,6 +63,8 @@ The Gherkin file is the source of truth for acceptance behavior. A feature chang
 
 The screenshots below are generated from the same Playwright fixture used by the visual test suite. They document the primary product states without uploading real browsing data.
 
+The popup overview intentionally stacks its metrics vertically so banner names, service counts, traffic findings, and local-storage details remain readable in the narrow extension window.
+
 | Scan overview | Delta audit and export |
 | --- | --- |
 | ![CookieBuddy scan overview](docs/screenshots/popup-overview.png) | ![CookieBuddy delta audit](docs/screenshots/delta-audit.png) |
