@@ -96,6 +96,7 @@ try {
   assert.ok(await popup.locator("#deltaButton").isVisible(), "delta action should be visible");
   assert.ok(await popup.locator("#heroScanButton").isVisible(), "primary scan action should be visible in the redesigned header");
   assert.ok(await popup.locator("#currentPageLabel").isVisible(), "current page context should be visible in the redesigned header");
+  assert.equal(await popup.locator("#overviewGrid").evaluate((node) => getComputedStyle(node).gridTemplateColumns.split(" ").length), 1, "overview metrics should stack vertically");
   assert.ok((await popup.evaluate(() => document.documentElement.scrollWidth)) <= (await popup.evaluate(() => document.documentElement.clientWidth)) + 1, "popup should not overflow horizontally");
   await captureDocumentationScreenshot(popup, "popup-overview.png", { fullPage: true });
 

@@ -1188,6 +1188,53 @@ body {
   }
 }
 
+/* Keep the overview readable in the narrow extension popup: one metric per row. */
+.overview-grid {
+  grid-template-columns: 1fr;
+}
+
+.overview-tile {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  justify-items: start;
+  min-height: 66px;
+  padding: 12px 14px;
+  border-right: 0;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+}
+
+.overview-tile:last-child {
+  border-bottom: 0;
+}
+
+.overview-tile > div {
+  min-width: 0;
+}
+
+.overview-tile span:not(.tile-icon) {
+  max-width: none;
+  font-size: 0.78rem;
+}
+
+.overview-tile strong {
+  margin-top: 2px;
+  font-size: 1.05rem;
+}
+
+.overview-tile strong.numeric {
+  font-size: 1.25rem;
+}
+
+.overview-tile small {
+  grid-column: 3;
+  grid-row: 1;
+  max-width: 110px;
+  margin: 0 0 0 10px;
+  text-align: right;
+}
+
 @media (max-width: 420px) {
   .hero {
     display: grid;
@@ -1653,4 +1700,20 @@ body {
     max-width: 100%;
     white-space: normal;
   }
+}
+
+/* Keep the overview stacked at every popup width, including narrow mobile previews. */
+.overview-grid {
+  grid-template-columns: 1fr;
+}
+
+.overview-tile {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  border-right: 0;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+}
+
+.overview-tile:last-child {
+  border-bottom: 0;
 }
