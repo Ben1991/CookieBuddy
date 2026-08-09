@@ -110,6 +110,7 @@ function renderDeltaMailActions() {
     <div class="contact-actions">
       <button id="downloadDeltaHtmlButton" class="ghost-button small" type="button" data-i18n="downloadDeltaHtmlButton">${escapeHtml(t("downloadDeltaHtmlButton"))}</button>
       <button id="downloadDeltaPdfButton" class="ghost-button small" type="button" data-i18n="downloadDeltaPdfButton">${escapeHtml(t("downloadDeltaPdfButton"))}</button>
+      <button id="copyDeltaReportButton" class="primary-button small" type="button" data-i18n="copyDeltaReportButton">${escapeHtml(t("copyDeltaReportButton"))}</button>
     </div>
   `;
 
@@ -119,8 +120,36 @@ function renderDeltaMailActions() {
 
   sendDeltaMailActions.querySelector("#downloadDeltaHtmlButton")?.addEventListener("click", downloadDeltaHtmlReport);
   sendDeltaMailActions.querySelector("#downloadDeltaPdfButton")?.addEventListener("click", openDeltaPdfView);
+  sendDeltaMailActions.querySelector("#copyDeltaReportButton")?.addEventListener("click", () => void copyDeltaReport());
 
   applyI18n(sendDeltaMailActions);
+}
+
+async function copyDeltaReport() {
+  const delta = detailsPayload?.cookiebuddyLastDelta;
+  const button = sendDeltaMailActions?.querySelector("#copyDeltaReportButton");
+  if (!delta || !button) return;
+
+  const report = buildDeltaMailBody(delta, "dpo");
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(report);
+    } else {
+      const textarea = document.createElement("textarea");
+      textarea.value = report;
+      textarea.setAttribute("readonly", "");
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      textarea.remove();
+    }
+    button.textContent = t("deltaReportCopied");
+    window.setTimeout(() => { button.textContent = t("copyDeltaReportButton"); }, 1800);
+  } catch {
+    button.textContent = t("deltaReportCopyFailed");
+  }
 }
 
 function renderMailCard({ tone, title, description, recipient, subject, buttonLabel, target }) {
@@ -188,6 +217,11 @@ function renderDelta(delta) {
             <h3>${escapeHtml(t("browserStorageAfterOptOutHeading"))}</h3>
             ${storageEntries.length ? renderStorageTable(storageEntries) : `<p class="empty-state">${escapeHtml(t("noStorageEntries"))}</p>`}
           </section>
+          <section>
+            <h3>${escapeHtml(t("serviceAuditHeading"))}</h3>
+            <p class="muted">${escapeHtml(t("serviceAuditIntro"))}</p>
+            ${delta.serviceAudit?.length ? delta.serviceAudit.map(renderServiceAudit).join("") : `<p class="empty-state">${escapeHtml(t("noServiceAudit"))}</p>`}
+          </section>
         </div>
         <aside class="delta-side-panel">
           <section>
@@ -203,6 +237,17 @@ function renderDelta(delta) {
       </div>
     </div>
   `;
+}
+
+function renderServiceAudit(service) {
+  const statusLabel = {
+    "allowed-essential": t("serviceStatusEssential"),
+    disabled: t("serviceStatusDisabled"),
+    active: t("serviceStatusActive"),
+    unclear: t("serviceStatusUnclear")
+  }[service.status] || t("serviceStatusUnclear");
+  const listedLabel = service.listedInBanner ? t("serviceListedInBanner") : t("serviceNotListedInBanner");
+  return `<div class="service-audit-row"><div><strong>${escapeHtml(service.name)}</strong><span>${escapeHtml(service.source || service.category)}</span></div><div><span class="audit-badge ${escapeHtml(service.status)}">${escapeHtml(statusLabel)}</span><small>${escapeHtml(listedLabel)}</small></div></div>`;
 }
 
 function openDeltaMailDraft(target = "dpo") {
@@ -225,6 +270,7 @@ function buildDeltaMailBody(delta, target = "dpo") {
     remainingCookies: formatMailList([...(delta.remainingCookies || []), ...(delta.newCookies || [])].map(formatCookieForMail), t("noneObserved")),
     thirdPartyHosts: formatMailList(delta.thirdPartyHosts || [], t("noneObserved")),
     storageEntries: formatMailList((delta.remainingStorageEntries || []).map(formatStorageForMail), t("noneObserved")),
+    serviceAudit: formatMailList((delta.serviceAudit || []).map(formatServiceAuditForMail), t("noneObserved")),
     bannerProvider: getBannerProvider(banner),
     bannerEvidence: formatMailList(formatBannerEvidence(banner), t("noBannerEvidence")),
     senderName: t("senderNamePlaceholder")
@@ -251,6 +297,9 @@ function buildDeltaMailBody(delta, target = "dpo") {
     `**${t("browserStorageEntriesHeading")}**`,
     values.storageEntries,
     "",
+    `**${t("deltaMailServiceAudit")}**`,
+    values.serviceAudit,
+    "",
     t("deltaMailBestEffort"),
     "",
     t("deltaMailQuestionsIntro"),
@@ -274,6 +323,17 @@ function buildDeltaMailBody(delta, target = "dpo") {
     t("mailClosing"),
     values.senderName
   ].join("\n");
+}
+
+function formatServiceAuditForMail(service) {
+  const statusKey = {
+    "allowed-essential": "serviceStatusEssential",
+    disabled: "serviceStatusDisabled",
+    active: "serviceStatusActive",
+    unclear: "serviceStatusUnclear"
+  }[service.status] || "serviceStatusUnclear";
+  const listed = service.listedInBanner ? t("serviceListedInBanner") : t("serviceNotListedInBanner");
+  return `${service.name}: ${t(statusKey)}; ${listed}; ${service.source || service.category}`;
 }
 
 async function downloadDeltaHtmlReport() {

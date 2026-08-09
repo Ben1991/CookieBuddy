@@ -41,6 +41,21 @@ It is a review tool, not legal advice.
 
 If the banner does not expose a reject button, reject cookies manually and run the delta check again.
 
+## Main Use Cases
+
+The acceptance contract for CookieBuddy is written in Gherkin in [`features/cookiebuddy.feature`](features/cookiebuddy.feature). It covers these user journeys:
+
+- Scan the visited page and review the detected banner, cookies, storage, and third-party traffic.
+- Use the data protection officer contact found in the visited page's privacy policy, prioritizing privacy-policy links in the page footer over generic page contacts.
+- Run a delta check with an automatic reject action or after a manual opt-out.
+- Compare the all-opted-out cookies, local storage, and traffic against banner services, marking essential/allowed, successfully disabled, still active, and unclear or external signals.
+- Traffic from a browser extension or another source that is not listed in the banner is surfaced as an unclear external signal for manual review.
+- Flag non-essential cookies, storage, or third-party traffic that remains after opt-out as a review signal, not a legal verdict.
+- Open the detailed delta report and export it as HTML or a printable/PDF report.
+- Prepare a mail draft addressed to the detected privacy contact and copy the structured report for use in another email client.
+
+Changes to these product flows must update the Gherkin scenarios, the matching automated tests, and this section in the same change.
+
 ## What The Delta Check Means
 
 CookieBuddy compares two states:
@@ -59,16 +74,20 @@ If cookies or third-party traffic still appear after the reject attempt, CookieB
 
 ## Development
 
-CookieBuddy has no build step and no package installation.
+CookieBuddy has no production build step. Development checks use the packages in `package.json`.
 
 Run these checks:
 
 ```sh
-node --test tests/core.test.mjs tests/popup.integration.test.mjs tests/details.integration.test.mjs
+node --test tests/core.test.mjs tests/popup.integration.test.mjs tests/details.integration.test.mjs tests/use-cases.test.mjs
 node --check src/popup.js && node --check src/content.js && node --check src/details.js
 node --check src/background.js && node --check src/i18n.js
 node -e "for (const file of ['manifest.json','_locales/en/messages.json','_locales/de/messages.json']) JSON.parse(require('fs').readFileSync(file,'utf8'))"
+npx playwright install chromium
+npm run test:visual
 ```
+
+GitHub Actions runs these checks on every push to every branch and on every pull request. The visual suite launches Chromium against the real popup and details pages, checks responsive layout, and verifies the delta report's mail-copy, HTML, and printable export actions. A feature change is not considered complete until the Gherkin contract, functional tests, visual tests, and this documentation are updated together.
 
 After changing extension files, reload the extension in `chrome://extensions`.
 

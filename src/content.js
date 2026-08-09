@@ -129,7 +129,7 @@ async function analyzePage() {
   const htmlSample = document.documentElement.outerHTML.slice(0, 250000).toLowerCase();
   const resources = collectResources();
   const banner = detectBanner({ htmlSample, pageText, resources });
-  const categories = detectCategories(pageText, htmlSample, resources);
+  const categories = detectCategories(pageText, htmlSample, resources, collectBannerText());
   const contacts = await detectContacts();
   const storage = collectStoredData({ banner, categories, pageText, htmlSample });
 
@@ -282,8 +282,9 @@ function detectGlobalCmpApis() {
     .filter((candidate) => candidate.evidence.length > 0);
 }
 
-function detectCategories(pageText, htmlSample, resources) {
+function detectCategories(pageText, htmlSample, resources, bannerText = "") {
   const lowerText = pageText.toLowerCase();
+  const lowerBannerText = bannerText.toLowerCase();
   const categories = Object.fromEntries(
     Object.keys(CATEGORY_KEYWORDS).map((category) => [category, { count: 0, services: [] }])
   );
@@ -294,7 +295,7 @@ function detectCategories(pageText, htmlSample, resources) {
       categories[category].count += 1;
       categories[category].services.push({
         name: `${capitalize(category)} services`,
-        source: "Banner text"
+        source: keywords.some((keyword) => lowerBannerText.includes(keyword)) ? "Banner text" : "Page text"
       });
     }
   }
@@ -368,11 +369,16 @@ function collectResources() {
 }
 
 async function detectContacts() {
-  const currentPageContacts = extractContactsFromText(document.body?.innerText || "");
+  const currentPageContacts = extractContactsFromText(document.body?.innerText || "", location.href, "Visited page");
   const links = Array.from(document.links)
-    .map((link) => ({ href: link.href, text: link.textContent.trim().toLowerCase() }))
+    .map((link) => ({
+      href: link.href,
+      text: link.textContent.trim().toLowerCase(),
+      inFooter: Boolean(link.closest("footer, [role='contentinfo'], .footer, #footer"))
+    }))
     .filter((link) => isContactCandidate(link.href, link.text))
-    .slice(0, 6);
+    .sort((a, b) => contactLinkPriority(b) - contactLinkPriority(a))
+    .slice(0, 8);
 
   const linkedContacts = [];
   for (const link of links) {
@@ -383,21 +389,29 @@ async function detectContacts() {
 
       const response = await fetch(link.href, { credentials: "include" });
       const text = await response.text();
-      linkedContacts.push(...extractContactsFromText(stripHtml(text)));
+      linkedContacts.push(...extractContactsFromText(
+        stripHtml(text),
+        link.href,
+        isPrivacyPolicyLink(link.href, link.text) ? "Privacy policy" : "Linked legal page"
+      ));
     } catch {
       // Some pages block extension-origin fetches. The current page scan still provides useful fallback data.
     }
   }
 
-  const contacts = dedupeContacts([...currentPageContacts, ...linkedContacts]);
+  const contacts = dedupeContacts([...linkedContacts, ...currentPageContacts]);
   return {
-    dpo: contacts.find((contact) => contact.kind === "dpo") || contacts.find((contact) => contact.email) || null,
+    dpo: contacts.find((contact) => contact.kind === "dpo" && contact.source === "Privacy policy")
+      || contacts.find((contact) => contact.source === "Privacy policy")
+      || contacts.find((contact) => contact.kind === "dpo")
+      || contacts.find((contact) => contact.email)
+      || null,
     candidates: contacts.slice(0, 8),
     authority: inferAuthority(location.hostname)
   };
 }
 
-function extractContactsFromText(text) {
+function extractContactsFromText(text, sourceUrl = location.href, source = "Visited page") {
   const emails = Array.from(new Set(text.match(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi) || []));
   const phoneMatches = Array.from(new Set(text.match(/(?:\+|00)\d[\d\s()./-]{6,}\d/g) || []));
   const lower = text.toLowerCase();
@@ -407,7 +421,8 @@ function extractContactsFromText(text) {
     kind,
     email,
     phone: phoneMatches[0] || "",
-    source: "Page or linked legal page"
+    source,
+    sourceUrl
   }));
 }
 
@@ -511,6 +526,33 @@ function collectDenyCandidates() {
 
 function isContactCandidate(href, text) {
   return /imprint|impressum|privacy|datenschutz|legal|contact|kontakt/i.test(`${href} ${text}`);
+}
+
+function collectBannerText() {
+  const selectors = [
+    "[id*='cookie' i]",
+    "[class*='cookie' i]",
+    "[id*='consent' i]",
+    "[class*='consent' i]",
+    "[role='dialog']"
+  ];
+  return selectors
+    .flatMap((selector) => Array.from(document.querySelectorAll(selector)).slice(0, 6))
+    .map((element) => element.innerText || element.textContent || "")
+    .join(" ")
+    .slice(0, 20000);
+}
+
+function isPrivacyPolicyLink(href, text) {
+  return /privacy|datenschutz/i.test(`${href} ${text}`);
+}
+
+function contactLinkPriority(link) {
+  const privacyPolicy = isPrivacyPolicyLink(link.href, link.text);
+  if (link.inFooter && privacyPolicy) return 4;
+  if (privacyPolicy) return 3;
+  if (link.inFooter) return 2;
+  return 1;
 }
 
 function isSafeContactLink(href) {

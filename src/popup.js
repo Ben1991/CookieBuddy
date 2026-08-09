@@ -15,6 +15,7 @@ const elements = {
   statusCard: document.querySelector("#statusCard"),
   scanStatusText: document.querySelector("#scanStatusText"),
   statusCardText: document.querySelector("#statusCardText"),
+  currentPageLabel: document.querySelector("#currentPageLabel"),
   overviewGrid: document.querySelector("#overviewGrid"),
   bannerResult: document.querySelector("#bannerResult"),
   categoryResult: document.querySelector("#categoryResult"),
@@ -35,6 +36,7 @@ const elements = {
 const deltaGuide = "1) Reloads the page without cache.\n2) Tries to find the banner and a reject option.\n3) If no reject option is found, reject cookies manually and run the check again.\n4) Opens the result in a new tab.";
 
 elements.refreshButton.addEventListener("click", () => scanCurrentTab());
+document.querySelector("#heroScanButton")?.addEventListener("click", () => scanCurrentTab());
 elements.deltaButton.addEventListener("click", () => runDeltaCheck());
 elements.bannerOverviewButton?.addEventListener("click", () => openBannerOverview());
 elements.helpButton.addEventListener("click", () => {
@@ -114,6 +116,7 @@ async function runDeltaCheck() {
       afterTraffic: afterDeny.thirdPartyTraffic,
       afterStorageEntries: afterDeny.analysis?.storage?.items || [],
       banner: afterDeny.analysis?.banner || before.analysis?.banner || null,
+      bannerCategories: afterDeny.analysis?.categories || before.analysis?.categories || {},
       denyClicked: denyResult?.clicked,
       denyLabel: denyResult?.label,
       manualConsentConfirmed: !denyResult?.found,
@@ -153,6 +156,7 @@ async function snapshot(label) {
 }
 
 function render() {
+  renderCurrentPage();
   renderStatusCard();
   renderOverview();
   renderBanner();
@@ -367,6 +371,9 @@ function renderContacts() {
   const authorityMail = authority.url;
   const authorityName = authority.key === "german" ? t("germanAuthorityName") : authority.key === "fallback" ? t("bfdiName") : authority.name;
   const authorityNote = authority.key === "german" ? t("germanAuthorityNote") : authority.key === "fallback" ? t("bfdiNote") : authority.note;
+  const dpoSourceLink = dpo?.sourceUrl && /^https?:$/.test(new URL(dpo.sourceUrl).protocol)
+    ? `<a class="text-link" id="contactSourcePage" href="${escapeHtml(dpo.sourceUrl)}" target="_blank" rel="noreferrer">${escapeHtml(dpo.source || t("privacyPolicySource"))}</a>`
+    : `<span class="muted" id="contactSourcePage">${escapeHtml(dpo?.source || t("privacyPolicySource"))}</span>`;
   const dpoName = dpo?.name || t("dpoLabel");
   const accessAria = dpoEmail ? `${t("accessRequestButton")} – ${dpoName}` : t("accessRequestButton");
   const correctionAria = dpoEmail ? `${t("correctionRequestButton")} – ${dpoName}` : t("correctionRequestButton");
@@ -383,6 +390,7 @@ function renderContacts() {
         ${deletionMail ? `<a class="ghost-button small" href="${deletionMail}" aria-label="${escapeHtml(deletionAria)}" title="${escapeHtml(deletionAria)}">${escapeHtml(t("deletionRequestButton"))}</a>` : ""}
       </div>
       <p class="muted" id="contactEditReminder">${escapeHtml(t("contactEditReminder"))}</p>
+      ${dpoSourceLink}
       <a class="text-link" id="contactSourceHint" href="https://www.bfdi.bund.de/DE/Buerger/Mustertexte/Zwischenordner-f%C3%BCr-Mustertexte/Mustertexte_Allgemein.html?nn=340980" target="_blank" rel="noreferrer" aria-label="${escapeHtml(`${t("bfdiSourceLink")} – BfDI`) }" title="${escapeHtml(t("bfdiSourceLink"))}">${escapeHtml(t("bfdiSourceLink"))}</a>
     </div>
     <div class="contact-item" aria-labelledby="contactAuthorityLabel" aria-describedby="contactAuthorityNote">
@@ -451,7 +459,26 @@ function renderDelta(delta) {
     ${cookieItems.length ? `<h3>${escapeHtml(t("nonEssentialCookiesStillPresent"))}</h3>${cookieItems.map((cookie) => `<p class="chip">${escapeHtml(cookie.name)} · ${escapeHtml(cookie.domain)} · ${escapeHtml(cookie.service)}</p>`).join("")}` : ""}
     ${delta.thirdPartyHosts.length ? `<h3>${escapeHtml(t("nonEssentialThirdPartyTrafficAfterOptOut"))}</h3>${delta.thirdPartyHosts.slice(0, 10).map((host) => `<p class="chip">${escapeHtml(host)}</p>`).join("")}` : ""}
     ${delta.essentialThirdPartyHosts?.length ? `<h3>${escapeHtml(t("essentialThirdPartyTrafficAllowed"))}</h3>${delta.essentialThirdPartyHosts.slice(0, 10).map((host) => `<p class="chip">${escapeHtml(host)}</p>`).join("")}` : ""}
+    ${delta.serviceAudit?.length ? `<section class="service-audit"><h3>${escapeHtml(t("serviceAuditHeading"))}</h3><p class="muted">${escapeHtml(t("serviceAuditIntro"))}</p>${delta.serviceAudit.map(renderServiceAudit).join("")}</section>` : ""}
   `;
+}
+
+function renderCurrentPage() {
+  if (!elements.currentPageLabel) return;
+  const pageUrl = state.tab?.url || state.analysis?.url || "";
+  elements.currentPageLabel.textContent = pageUrl ? `${t("currentPageLabel")}: ${pageUrl}` : "";
+  elements.currentPageLabel.title = pageUrl;
+}
+
+function renderServiceAudit(service) {
+  const statusLabel = {
+    "allowed-essential": t("serviceStatusEssential"),
+    disabled: t("serviceStatusDisabled"),
+    active: t("serviceStatusActive"),
+    unclear: t("serviceStatusUnclear")
+  }[service.status] || t("serviceStatusUnclear");
+  const listedLabel = service.listedInBanner ? t("serviceListedInBanner") : t("serviceNotListedInBanner");
+  return `<div class="service-audit-row"><div><strong>${escapeHtml(service.name)}</strong><span>${escapeHtml(service.source || service.category)}</span></div><div><span class="audit-badge ${escapeHtml(service.status)}">${escapeHtml(statusLabel)}</span><small>${escapeHtml(listedLabel)}</small></div></div>`;
 }
 
 function renderError(error) {
