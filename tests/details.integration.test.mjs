@@ -38,6 +38,9 @@ test("details page opens a mail draft from the delta report", async () => {
   assert.match(decodeURIComponent(window.location.lastAssignedUrl), /Detection evidence/);
   assert.match(decodeURIComponent(window.location.lastAssignedUrl), /Usercentrics/);
 
+  assert.match(decodeURIComponent(window.location.lastAssignedUrl), /Google Analytics: Still active/);
+  assert.match(decodeURIComponent(window.location.lastAssignedUrl), /Not listed in banner/);
+
   element(document, "sendDeltaMailActions").querySelector("#downloadDeltaHtmlButton").click();
   await flush();
   assert.equal(window.lastDownloadedName, "cookiebuddy-delta-report.html");
@@ -144,7 +147,11 @@ function buildDeltaFixture() {
       name: "Usercentrics",
       source: { host: "cdn.usercentrics.eu" },
       evidence: [{ source: "DOM marker", value: "#usercentrics-root" }]
-    }
+    },
+    serviceAudit: [
+      { name: "Google Analytics", source: "analytics.example.net", listedInBanner: false, status: "active" },
+      { name: "Essential services", source: "Banner text", listedInBanner: true, status: "allowed-essential" }
+    ]
   };
 }
 

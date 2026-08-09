@@ -299,6 +299,21 @@
   "bfdiSourceLink": {
     "message": "Source: BfDI sample texts"
   },
+  "startScanButton": {
+    "message": "Start scan"
+  },
+  "currentPageLabel": {
+    "message": "Current page"
+  },
+  "deltaReportKicker": {
+    "message": "Delta audit"
+  },
+  "localOnlyBadge": {
+    "message": "Stored locally"
+  },
+  "privacyPolicySource": {
+    "message": "Source: visited page privacy policy"
+  },
   "accessRequestButton": {
     "message": "Request access by email"
   },
@@ -434,6 +449,15 @@
   "downloadDeltaPdfButton": {
     "message": "Save as PDF"
   },
+  "copyDeltaReportButton": {
+    "message": "Copy report for email"
+  },
+  "deltaReportCopied": {
+    "message": "Report copied"
+  },
+  "deltaReportCopyFailed": {
+    "message": "Copy failed"
+  },
   "deltaReportDocumentTitle": {
     "message": "CookieBuddy delta report"
   },
@@ -508,6 +532,36 @@
   },
   "noStorageEntries": {
     "message": "No browser storage entries were observed after opt-out."
+  },
+  "serviceAuditHeading": {
+    "message": "Banner services after opt-out"
+  },
+  "serviceAuditIntro": {
+    "message": "Only essential services should remain. Other services are marked disabled, still active, or unclear."
+  },
+  "deltaMailServiceAudit": {
+    "message": "Service comparison after opt-out"
+  },
+  "serviceStatusEssential": {
+    "message": "Essential / allowed"
+  },
+  "serviceStatusDisabled": {
+    "message": "Successfully disabled"
+  },
+  "serviceStatusActive": {
+    "message": "Still active"
+  },
+  "serviceStatusUnclear": {
+    "message": "Unclear"
+  },
+  "serviceListedInBanner": {
+    "message": "Listed in banner"
+  },
+  "serviceNotListedInBanner": {
+    "message": "Not listed in banner / external signal"
+  },
+  "noServiceAudit": {
+    "message": "No banner service could be compared."
   },
   "cookieColumn": {
     "message": "Cookie"

@@ -858,6 +858,370 @@ h3 {
   font-weight: 800;
 }
 
+/* Product refresh: calmer hierarchy, softer surfaces, and a clearer action path. */
+body {
+  background:
+    radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--purple) 10%, transparent), transparent 32%),
+    linear-gradient(180deg, #f8fafc 0%, var(--bg) 72%);
+}
+
+.shell {
+  gap: 14px;
+  padding: 16px;
+}
+
+.hero,
+.card,
+.overview-grid {
+  border-radius: 18px;
+}
+
+.hero {
+  align-items: flex-start;
+  padding: 16px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--panel-strong) 86%, var(--purple) 8%), var(--panel));
+}
+
+.hero h1 {
+  font-size: 1.22rem;
+  letter-spacing: -0.02em;
+}
+
+.logo-mark {
+  width: 48px;
+  height: 48px;
+}
+
+.status-card {
+  border-radius: 18px;
+  padding: 16px;
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.1);
+}
+
+.status-icon {
+  width: 48px;
+  height: 48px;
+}
+
+.overview-grid {
+  gap: 1px;
+  border: 0;
+  background: var(--line);
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
+}
+
+.overview-tile {
+  min-height: 94px;
+  padding: 14px 8px;
+  background: var(--panel);
+}
+
+.card {
+  padding: 16px;
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.07);
+}
+
+.section-title {
+  margin-bottom: 12px;
+}
+
+.section-title h2,
+.section-heading-row h2 {
+  letter-spacing: -0.01em;
+}
+
+.accent {
+  border-color: color-mix(in srgb, var(--accent) 32%, var(--line));
+  background: linear-gradient(145deg, color-mix(in srgb, var(--accent) 11%, var(--panel)), var(--panel));
+}
+
+.delta-box {
+  gap: 12px;
+}
+
+.delta-summary-card,
+.delta-mini-grid span,
+.delta-template-card,
+.delta-report section,
+.delta-fact-grid {
+  border-radius: 14px;
+}
+
+.delta-summary-card {
+  padding: 14px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--panel-strong) 82%, var(--accent) 10%), var(--panel-strong));
+}
+
+.delta-mini-grid {
+  gap: 10px;
+}
+
+.delta-mini-grid span {
+  min-height: 68px;
+  padding: 12px;
+  background: var(--panel);
+}
+
+.delta-mini-grid strong {
+  font-size: 1.4rem;
+}
+
+.delta-mail-actions {
+  margin: -2px -2px 18px;
+  padding: 16px;
+  border: 1px solid color-mix(in srgb, var(--blue) 22%, var(--line));
+  border-radius: 18px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--blue) 8%, var(--panel)), var(--panel));
+}
+
+.delta-mail-copy h3 {
+  margin-top: 0;
+  font-size: 1rem;
+}
+
+.delta-template-card {
+  padding: 16px;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.05);
+}
+
+.primary-button,
+.ghost-button {
+  border-radius: 12px;
+  transition: transform 140ms ease, box-shadow 140ms ease, background 140ms ease;
+}
+
+.primary-button:hover,
+.ghost-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12);
+}
+
+.contact-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.contact-actions .small {
+  margin-top: 0;
+}
+
+.service-audit {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.service-audit-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel-strong);
+}
+
+.service-audit-row > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.service-audit-row > div:last-child {
+  justify-items: end;
+  text-align: right;
+}
+
+.service-audit-row span:not(.audit-badge),
+.service-audit-row small {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.audit-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 900;
+}
+
+.audit-badge.allowed-essential { color: #166534; background: #dcfce7; }
+.audit-badge.disabled { color: #1d4ed8; background: #dbeafe; }
+.audit-badge.active { color: #991b1b; background: #fee2e2; }
+.audit-badge.unclear { color: #92400e; background: #fef3c7; }
+
+/* Figma Make implementation: compact audit-first shell with a clearer primary action. */
+:root {
+  --bg: #f7f5f0;
+  --panel: rgba(255, 255, 255, 0.92);
+  --panel-strong: #ffffff;
+  --text: #17213b;
+  --muted: #5d6880;
+  --line: #dfe3ec;
+  --accent: #5865d9;
+  --accent-strong: #3f4bb8;
+  --blue: #5865d9;
+  --purple: #7658c9;
+  --orange: #d98a32;
+  --navy: #17213b;
+  --danger: #c95754;
+  --warning-bg: #fff3d9;
+  --shadow: 0 12px 30px rgba(23, 33, 59, 0.08);
+}
+
+body {
+  background:
+    radial-gradient(circle at 100% 0%, rgba(88, 101, 217, 0.1), transparent 30%),
+    linear-gradient(180deg, #fbfaf7 0%, var(--bg) 78%);
+}
+
+.hero {
+  position: relative;
+  overflow: hidden;
+  border-color: #d9ddec;
+  background: linear-gradient(135deg, #ffffff 0%, #f0f1ff 100%);
+}
+
+.hero::after {
+  position: absolute;
+  right: -40px;
+  bottom: -58px;
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  background: rgba(88, 101, 217, 0.09);
+  content: "";
+}
+
+.hero > * {
+  position: relative;
+  z-index: 1;
+}
+
+.current-page {
+  max-width: 34ch;
+  margin: 7px 0 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.7rem;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hero-actions {
+  align-items: end;
+}
+
+.hero-actions .primary-button.small {
+  width: auto;
+  margin-top: 0;
+}
+
+.details-section-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.details-section-heading h2 {
+  margin-bottom: 0;
+}
+
+.details-local-badge {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  min-height: 28px;
+  padding: 5px 10px;
+  border: 1px solid #bde6d6;
+  border-radius: 999px;
+  background: #e8faf2;
+  color: #1d7356;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.details-card {
+  padding: 20px;
+}
+
+.delta-report-header {
+  padding-bottom: 4px;
+}
+
+.delta-detected-box {
+  border-color: #f0ca7f;
+  background: linear-gradient(135deg, #fff8e8, #fffdf8);
+}
+
+.delta-findings section,
+.delta-side-panel section {
+  box-shadow: 0 6px 18px rgba(23, 33, 59, 0.04);
+}
+
+.service-audit {
+  gap: 10px;
+}
+
+.service-audit-row {
+  border-color: #e0e4ed;
+  background: #fbfcff;
+}
+
+@media (max-width: 420px) {
+  .hero-actions .primary-button.small {
+    width: auto;
+  }
+
+  .details-section-heading {
+    display: grid;
+  }
+}
+
+@media (max-width: 420px) {
+  .hero {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .hero-actions {
+    grid-column: 1 / -1;
+    grid-template-columns: 1fr auto;
+    justify-items: stretch;
+    align-items: end;
+  }
+
+  .hero-actions .language-toggle {
+    justify-self: start;
+  }
+
+  .hero-actions .pill {
+    justify-self: end;
+  }
+
+  .overview-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .overview-tile:nth-child(3) {
+    border-right: 0;
+  }
+
+  .overview-tile:nth-child(n + 4) {
+    border-top: 1px solid var(--line);
+  }
+}
+
 .delta-box {
   display: grid;
   gap: 8px;

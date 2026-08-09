@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   buildDelta,
+  buildServiceAudit,
   capitalize,
   cookieKey,
   formatCookie,
@@ -127,7 +128,7 @@ test("treats remaining storage entries as part of the delta", () => {
     beforeTraffic: [],
     afterTraffic: [],
     afterStorageEntries: [
-      { key: "consent_state", scope: "localStorage" }
+      { key: "marketing_state", scope: "localStorage" }
     ],
     denyClicked: true,
     denyLabel: "Reject all",
@@ -141,6 +142,31 @@ test("treats remaining storage entries as part of the delta", () => {
   assert.equal(delta.riskLevel, "high");
   assert.equal(delta.afterDenyCounts.storageEntries, 1);
   assert.equal(delta.afterStorageEntries.length, 1);
+});
+
+test("audits banner services against post-opt-out cookies, storage, and traffic", () => {
+  const audit = buildServiceAudit({
+    bannerCategories: {
+      essential: { services: [{ name: "Essential services", source: "Banner text" }] },
+      analytics: { services: [{ name: "Google Analytics", source: "www.google-analytics.com" }] },
+      marketing: { services: [{ name: "Marketing services", source: "Banner text" }] }
+    },
+    beforeCookies: [
+      { name: "_ga", domain: ".example.com", service: "Google Analytics" }
+    ],
+    afterCookies: [
+      { name: "session", domain: ".example.com", service: "Unknown service" }
+    ],
+    beforeTraffic: [{ host: "www.google-analytics.com" }],
+    afterTraffic: [{ host: "extension.example.net" }, { host: "abc123", protocol: "chrome-extension:", url: "chrome-extension://abc123/script.js" }],
+    afterStorageEntries: [{ key: "extension_state", scope: "localStorage" }]
+  });
+
+  assert.equal(audit.find((service) => service.name === "Essential services").status, "allowed-essential");
+  assert.equal(audit.find((service) => service.name === "Google Analytics").status, "disabled");
+  assert.equal(audit.find((service) => service.name === "Marketing services").status, "unclear");
+  assert.equal(audit.some((service) => service.name === "extension.example.net" && service.status === "unclear"), true);
+  assert.equal(audit.some((service) => service.name === "Browser extension abc123" && service.source === "Browser extension traffic"), true);
 });
 
 test("formats delta report as plain text", () => {

@@ -15,6 +15,7 @@
           <h1 data-i18n="popupTitle">Cookie review</h1>
           <p class="hero-intro" data-i18n="popupIntro">See what the page does before and after a reject attempt.</p>
           <p id="scanStatusText" class="hero-status" aria-live="polite" data-i18n="scanStatusReady">Last scan ready.</p>
+          <p id="currentPageLabel" class="current-page" aria-label="Current page"></p>
         </div>
         <div class="hero-actions">
           <label class="language-toggle">
@@ -25,6 +26,7 @@
             </select>
           </label>
           <span id="statusPill" class="pill" data-i18n="statusReady">Ready</span>
+          <button id="heroScanButton" class="primary-button small" type="button" data-i18n="startScanButton">Start scan</button>
         </div>
       </header>
 
@@ -65,7 +67,7 @@
             <span class="tile-icon purple" aria-hidden="true">✓</span>
             <h2 id="bannerHeading" data-i18n="bannerHeading">Banner</h2>
           </div>
-          <button id="refreshButton" class="ghost-button" type="button" data-i18n="refreshButton">Refresh</button>
+          <button id="refreshButton" class="ghost-button small" type="button" data-i18n="refreshButton">Refresh</button>
         </div>
         <div id="bannerResult" class="result-grid skeleton" role="region" aria-live="polite">
           <span data-i18n="scanningCurrentTab">Scanning current tab...</span>

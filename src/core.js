@@ -50,8 +50,9 @@ export function normalizeTraffic(traffic, firstPartyHost) {
       try {
         const url = new URL(item.url);
         return {
-          host: url.hostname,
+          host: url.hostname || url.protocol,
           url: url.href,
+          protocol: url.protocol,
           type: item.type,
           thirdParty: getBaseDomain(url.hostname) !== firstPartyBase
         };
@@ -63,6 +64,94 @@ export function normalizeTraffic(traffic, firstPartyHost) {
     .filter((item) => item.thirdParty);
 }
 
+export function buildServiceAudit({
+  bannerCategories = {},
+  beforeCookies = [],
+  afterCookies = [],
+  beforeTraffic = [],
+  afterTraffic = [],
+  afterStorageEntries = []
+}) {
+  const bannerServices = Object.entries(bannerCategories).flatMap(([category, data]) =>
+    (data?.services || []).map((service) => ({
+      name: service.name,
+      category,
+      source: service.source || "Banner text",
+      listedInBanner: service.source === "Banner text" || Boolean(service.listedInBanner),
+      essential: category === "essential" || /essential|necessary|required/i.test(`${category} ${service.name}`)
+    }))
+  );
+  const before = { cookies: beforeCookies, traffic: beforeTraffic, storage: [] };
+  const after = { cookies: afterCookies, traffic: afterTraffic, storage: afterStorageEntries };
+  const audit = bannerServices.map((service) => {
+    const observedBefore = serviceHasEvidence(service, before);
+    const observedAfter = serviceHasEvidence(service, after);
+    return {
+      ...service,
+      observedBefore,
+      observedAfter,
+      status: service.essential ? "allowed-essential" : observedAfter ? "active" : observedBefore ? "disabled" : "unclear"
+    };
+  });
+
+  const knownNames = new Set(audit.map((service) => service.name.toLowerCase()));
+  const unlisted = [
+    ...dedupeServices(afterTraffic
+      .filter((item) => !isEssentialHost(item.host) && !matchesKnownService(`${item.host || ""} ${item.url || ""}`, audit))
+      .map((item) => ({
+        name: /^(chrome-extension|moz-extension):/i.test(item.protocol || item.url || "") ? `Browser extension ${item.host || "unknown"}` : item.host,
+        category: "unlisted",
+        source: /^(chrome-extension|moz-extension):/i.test(item.protocol || item.url || "") ? "Browser extension traffic" : "Third-party traffic",
+        listedInBanner: false,
+        essential: false,
+        observedBefore: false,
+        observedAfter: true,
+        status: "unclear"
+      }))),
+    ...afterCookies
+      .map((cookie) => ({ ...cookie, service: cookie.service || serviceForCookie(cookie) }))
+      .filter((cookie) => !isEssentialCookie(cookie) && !knownNames.has(cookie.service.toLowerCase()))
+      .map((cookie) => ({ name: cookie.service, category: "unlisted", source: `Cookie: ${cookie.name}`, listedInBanner: false, essential: false, observedBefore: false, observedAfter: true, status: "unclear" })),
+    ...afterStorageEntries
+      .filter((entry) => !isEssentialStorageEntry(entry) && !entry.inBanner)
+      .map((entry) => ({ name: entry.key, category: "unlisted", source: entry.scope || "Browser storage", listedInBanner: false, essential: false, observedBefore: false, observedAfter: true, status: "unclear" }))
+  ];
+
+  return [...audit, ...dedupeServices(unlisted)];
+}
+
+export function isEssentialStorageEntry(entry = {}) {
+  return Boolean(entry.inBanner) || /consent|session|csrf|xsrf|auth|necessary|essential|privacy|security|required/i.test(entry.key || "");
+}
+
+function serviceHasEvidence(service, state) {
+  return state.cookies.some((cookie) => {
+    const cookieService = cookie.service || serviceForCookie(cookie);
+    return cookieService === service.name || matchesServiceText(service, `${cookie.name} ${cookie.domain} ${cookieService}`);
+  }) || state.traffic.some((item) => matchesServiceText(service, `${item.host || ""} ${item.url || ""}`)) || state.storage.some((entry) => matchesServiceText(service, `${entry.key || ""} ${entry.valuePreview || ""}`));
+}
+
+function matchesServiceText(service, value) {
+  const haystack = value.toLowerCase();
+  const nameTokens = service.name.toLowerCase().split(/[^a-z0-9]+/).filter((token) => token.length > 2);
+  const source = String(service.source || "").toLowerCase();
+  return (source && haystack.includes(source)) || nameTokens.some((token) => haystack.includes(token));
+}
+
+function matchesKnownService(value, services) {
+  return services.some((service) => matchesServiceText(service, value));
+}
+
+function dedupeServices(services) {
+  const seen = new Set();
+  return services.filter((service) => {
+    const key = `${service.name}:${service.source}`.toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 export function buildDelta({
   beforeCookies,
   afterCookies,
@@ -70,6 +159,7 @@ export function buildDelta({
   afterTraffic,
   afterStorageEntries = [],
   banner = null,
+  bannerCategories = {},
   denyClicked,
   denyLabel,
   manualConsentConfirmed,
@@ -84,8 +174,11 @@ export function buildDelta({
   const thirdPartyHosts = allThirdPartyHosts.filter((host) => !isEssentialHost(host));
   const essentialThirdPartyHosts = allThirdPartyHosts.filter((host) => isEssentialHost(host));
   const remainingStorageEntries = afterStorageEntries.filter(Boolean);
+  const nonEssentialStorageEntries = remainingStorageEntries.filter((entry) => !isEssentialStorageEntry(entry));
+  const essentialStorageEntries = remainingStorageEntries.filter(isEssentialStorageEntry);
+  const serviceAudit = buildServiceAudit({ bannerCategories, beforeCookies, afterCookies, beforeTraffic, afterTraffic, afterStorageEntries: remainingStorageEntries });
   const suspiciousCookies = remainingCookies.filter((cookie) => !isEssentialCookie(cookie));
-  const hasDelta = suspiciousCookies.length > 0 || newCookies.length > 0 || thirdPartyHosts.length > 0 || remainingStorageEntries.length > 0 || (!denyClicked && !manualConsentConfirmed);
+  const hasDelta = suspiciousCookies.length > 0 || newCookies.length > 0 || thirdPartyHosts.length > 0 || nonEssentialStorageEntries.length > 0 || serviceAudit.some((service) => service.status === "active") || (!denyClicked && !manualConsentConfirmed);
 
   return {
     checkedAt: new Date().toISOString(),
@@ -105,6 +198,9 @@ export function buildDelta({
     banner,
     afterStorageEntries: remainingStorageEntries,
     remainingStorageEntries,
+    nonEssentialStorageEntries,
+    essentialStorageEntries,
+    serviceAudit,
     beforeCounts: {
       cookies: beforeCookies.length,
       thirdPartyHosts: Array.from(new Set(beforeTraffic.map((item) => item.host))).length
@@ -211,6 +307,16 @@ export function formatDeltaReport(delta, url = "") {
   }
 
   report += "═════════════════════════════════════════\n";
+  if (delta.serviceAudit?.length) {
+    report += "BANNER SERVICE AUDIT:\n";
+    delta.serviceAudit.forEach((service) => {
+      const listed = service.listedInBanner ? "listed in banner" : "not listed in banner / external signal";
+      const status = service.status === "allowed-essential" ? "essential / allowed" : service.status === "disabled" ? "successfully disabled" : service.status === "active" ? "still active" : "unclear";
+      report += `  - ${service.name}: ${status}; ${listed}; source: ${service.source || service.category}\n`;
+    });
+    report += "\n";
+  }
+
   report += "RECOMMENDATION\n";
   report += "═════════════════════════════════════════\n\n";
 
