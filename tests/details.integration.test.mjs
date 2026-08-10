@@ -82,7 +82,7 @@ test("details page offers authority mail when available", async () => {
   assert.match(decodeURIComponent(window.location.lastAssignedUrl), /Bitte um Prüfung: mögliche Cookies und Drittanbieter-Requests nach Opt-out/);
   assert.match(decodeURIComponent(window.location.lastAssignedUrl), /Nach Auswahl von "Alle ablehnen", "Ablehnen"/);
   assert.match(decodeURIComponent(window.location.lastAssignedUrl), /Browser-Speicher-Einträge/);
-  assert.match(decodeURIComponent(window.location.lastAssignedUrl), /Bitte behandeln Sie diese Nachricht als Bitte um Klärung/);
+  assert.match(decodeURIComponent(window.location.lastAssignedUrl), /Bitte verstehen Sie diese Nachricht als Bitte um Klärung/);
 });
 
 test("details page hides mail drafting outside the delta view", async () => {

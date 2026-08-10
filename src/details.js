@@ -483,7 +483,7 @@ function formatBannerEvidence(banner) {
 
 function formatDate(value) {
   if (!value) return t("unknownDate");
-  return new Date(value).toLocaleString();
+  return new Date(value).toLocaleString(getLanguage() === "de" ? "de-DE" : "en-US");
 }
 
 function triggerDownload(blob, filename) {

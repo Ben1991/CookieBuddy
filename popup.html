@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>CookieBuddy</title>
+    <title data-i18n="popupDocumentTitle">CookieBuddy – Cookie review</title>
     <link rel="stylesheet" href="src/styles.css">
   </head>
   <body>
@@ -15,12 +15,12 @@
           <h1 data-i18n="popupTitle">Cookie review</h1>
           <p class="hero-intro" data-i18n="popupIntro">See what the page does before and after a reject attempt.</p>
           <p id="scanStatusText" class="hero-status" aria-live="polite" data-i18n="scanStatusReady">Last scan ready.</p>
-          <p id="currentPageLabel" class="current-page" aria-label="Current page"></p>
+          <p id="currentPageLabel" class="current-page" data-i18n-aria-label="currentPageAriaLabel"></p>
         </div>
         <div class="hero-actions">
           <label class="language-toggle">
             <span data-i18n="languageLabel">Language</span>
-            <select id="languageSelect" aria-label="Language">
+            <select id="languageSelect" data-i18n-aria-label="languageAriaLabel">
               <option value="en">English</option>
               <option value="de">Deutsch</option>
             </select>
@@ -41,7 +41,7 @@
         <span class="status-chevron" aria-hidden="true">›</span>
       </section>
 
-      <section id="overviewGrid" class="overview-grid" aria-label="Scan overview"></section>
+      <section id="overviewGrid" class="overview-grid" data-i18n-aria-label="scanOverviewAriaLabel"></section>
 
       <section class="card utility-card">
         <div class="section-title">
@@ -113,7 +113,7 @@
             <h2 id="servicesByCategoryHeading" data-i18n="servicesByCategoryHeading">Services by category</h2>
           </div>
           <div class="section-actions">
-            <button id="bannerOverviewButton" class="ghost-button small" type="button" data-i18n="bannerOverviewButton" title="Show the banner preferences or second level of the cookie banner">Übersicht aus dem Cookie Banner zeigen</button>
+            <button id="bannerOverviewButton" class="ghost-button small" type="button" data-i18n="bannerOverviewButton" data-i18n-title="bannerOverviewTitle">Show banner preferences</button>
             <span id="bannerOverviewStatus" class="muted status-inline" aria-live="polite"></span>
             <a id="detailsLink" class="text-link" href="details.html" target="_blank" rel="noreferrer" data-i18n="detailsLink">Details</a>
           </div>
@@ -195,8 +195,8 @@
 
       <footer class="support-footer">
         <div>
-          <strong>Like CookieBuddy?</strong>
-          <span>Support development with a coffee</span>
+          <strong data-i18n="supportPrompt">Like CookieBuddy?</strong>
+          <span data-i18n="supportDescription">Support development with a coffee</span>
         </div>
         <a class="donate-button" href="https://buymeacoffee.com/thenext1991" target="_blank" rel="noreferrer">
           <span data-i18n="donateButton">Support me and donate</span>
