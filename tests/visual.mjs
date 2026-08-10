@@ -98,6 +98,13 @@ try {
   assert.ok(await popup.locator("#currentPageLabel").isVisible(), "current page context should be visible in the redesigned header");
   assert.equal(await popup.locator("#overviewGrid").evaluate((node) => getComputedStyle(node).gridTemplateColumns.split(" ").length), 1, "overview metrics should stack vertically");
   assert.ok((await popup.evaluate(() => document.documentElement.scrollWidth)) <= (await popup.evaluate(() => document.documentElement.clientWidth)) + 1, "popup should not overflow horizontally");
+  await popup.locator("#languageSelect").selectOption("de");
+  await popup.getByText("Consent-Delta prüfen", { exact: true }).waitFor({ state: "visible", timeoutMs: 10000 });
+  assert.equal(await popup.locator("html").getAttribute("lang"), "de", "popup should switch the document language to German");
+  assert.equal(await popup.locator("#bannerOverviewButton").getAttribute("title"), "Banner-Einstellungen oder die zweite Ebene des Cookie-Banners anzeigen");
+  assert.ok(await popup.getByText("Gefällt dir CookieBuddy?", { exact: true }).isVisible(), "support prompt should be localized");
+  assert.doesNotMatch(await popup.locator("body").innerText(), /pr\?ft|Ã|Â/, "German popup should not contain corrupted copy");
+  await popup.locator("#languageSelect").selectOption("en");
   await captureDocumentationScreenshot(popup, "popup-overview.png", { fullPage: true });
 
   const details = await browser.newPage({ viewport: { width: 1200, height: 900 } });
@@ -111,6 +118,12 @@ try {
   assert.ok(await details.getByText("Still active", { exact: true }).isVisible(), "active services should be labeled");
   assert.ok(await details.getByText("Unclear", { exact: true }).isVisible(), "unlisted signals should be labeled unclear");
   assert.ok(await details.getByText("Stored locally", { exact: true }).isVisible(), "local-only status should be visible in the redesigned details header");
+  await details.locator("#languageSelect").selectOption("de");
+  await details.getByText("CookieBuddy-Delta-Bericht", { exact: true }).waitFor({ state: "visible", timeoutMs: 10000 });
+  assert.equal(await details.locator("html").getAttribute("lang"), "de", "details should switch the document language to German");
+  assert.ok(await details.getByText("Bericht für E-Mail kopieren", { exact: true }).isVisible(), "details actions should be localized");
+  assert.doesNotMatch(await details.locator("body").innerText(), /pr\?ft|Ã|Â/, "German details should not contain corrupted copy");
+  await details.locator("#languageSelect").selectOption("en");
   await captureDocumentationScreenshot(details, "delta-audit.png", { fullPage: true });
 } finally {
   await browser.close();

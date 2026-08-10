@@ -688,5 +688,29 @@
   },
   "deltaReportMailBody": {
     "message": "Hello,\n\nattached is the CookieBuddy audit report for our review of the cookie consent implementation on $1.\n\nThis report documents the results of our automated check. Please refer to the audit findings below for details about cookies and third-party traffic detected after consent was withdrawn.\n\nPlease provide clarification on the findings and the legal basis for any processing that was detected as continuing after consent was withdrawn.\n\nKind regards"
+  },
+  "popupDocumentTitle": {
+    "message": "CookieBuddy – Cookie review"
+  },
+  "detailsDocumentTitle": {
+    "message": "CookieBuddy – Scan details"
+  },
+  "currentPageAriaLabel": {
+    "message": "Current page"
+  },
+  "languageAriaLabel": {
+    "message": "Select language"
+  },
+  "scanOverviewAriaLabel": {
+    "message": "Scan overview"
+  },
+  "bannerOverviewTitle": {
+    "message": "Show the banner preferences or second level of the cookie banner"
+  },
+  "supportPrompt": {
+    "message": "Like CookieBuddy?"
+  },
+  "supportDescription": {
+    "message": "Support development with a coffee"
   }
 }

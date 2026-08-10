@@ -644,5 +644,5 @@ function wait(ms) {
 function applyLocalizedText() {
   elements.languageSelect.value = getLanguage();
   applyI18n();
-  document.querySelector("#languageSelect").setAttribute("aria-label", t("languageLabel"));
+  document.querySelector("#languageSelect").setAttribute("aria-label", t("languageAriaLabel"));
 }

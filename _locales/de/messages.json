@@ -153,7 +153,7 @@
     "message": "So funktioniert es"
   },
   "helpIntro": {
-    "message": "CookieBuddy schaut sich die aktuelle Seite an und pr?ft, ob nach ?Alle ablehnen? weiterhin Cookies oder Drittanbieter-Anfragen passieren."
+    "message": "CookieBuddy prüft die aktuelle Seite darauf, ob nach dem Klick auf „Alle ablehnen“ weiterhin Cookies oder Drittanbieter-Anfragen auftreten."
   },
   "helpStepBanner": {
     "message": "Es versucht, den Cookie-Banner-Anbieter zu erkennen."
@@ -222,7 +222,7 @@
     "message": "Keine Consent-Quelle erkannt"
   },
   "categoryEssential": {
-    "message": "Essentiell"
+    "message": "Essenziell"
   },
   "categoryMarketing": {
     "message": "Marketing"
@@ -246,10 +246,10 @@
     "message": "Für diese Seite wurden keine sichtbaren Cookies oder lokal gespeicherten Daten gefunden."
   },
   "deltaCheckingDescription": {
-    "message": "CookieBuddy versucht eine Alle-ablehnen-Aktion und prüft danach, welche Cookies und Netzwerkanfragen weiterhin passieren. Essenzielle Infrastruktur wird von auffälligem Drittanbieter-Traffic getrennt."
+    "message": "CookieBuddy versucht, „Alle ablehnen“ auszuführen, und prüft danach, welche Cookies und Netzwerkanfragen weiterhin auftreten. Notwendige Infrastruktur wird von auffälligem Drittanbieter-Traffic getrennt."
   },
   "deltaConsentPrompt": {
-    "message": "CookieBuddy versucht, Alle ablehnen anzuklicken. Wenn du bereits manuell abgelehnt hast, wird der aktuelle Post-Opt-out-Zustand geprüft. Fortfahren?"
+    "message": "CookieBuddy versucht, „Alle ablehnen“ anzuklicken. Wenn du bereits manuell abgelehnt hast, wird der aktuelle Zustand nach dem Opt-out geprüft. Fortfahren?"
   },
   "deltaConsentCancelled": {
     "message": "Delta-Prüfung abgebrochen. Es wurden keine Änderungen vorgenommen."
@@ -258,7 +258,7 @@
     "message": "Für diese Seite fehlt der Zugriff für die Delta-Prüfung. Öffne eine normale Webseite und starte den Test dort erneut."
   },
   "deltaNeedsManualConsent": {
-    "message": "Ich konnte keinen sichtbaren Banner oder Ablehnen-Button finden. Bitte lehne zuerst alle Cookies manuell ab und starte die Delta-Prüfung dann erneut."
+    "message": "Ich konnte keinen sichtbaren Banner und keinen Ablehnen-Button finden. Lehne bitte zuerst alle Cookies manuell ab und starte die Delta-Prüfung anschließend erneut."
   },
   "deltaCheckFailed": {
     "message": "Die Delta-Prüfung konnte nicht abgeschlossen werden."
@@ -462,7 +462,7 @@
     "message": "CookieBuddy-Delta-Bericht"
   },
   "deltaPdfHint": {
-    "message": "Öffne den Druckdialog des Browsers und wähle dann Als PDF speichern."
+    "message": "Öffne den Druckdialog des Browsers und wähle anschließend „Als PDF speichern“."
   },
   "reviewRecommended": {
     "message": "Prüfung empfohlen"
@@ -675,7 +675,7 @@
     "message": "Erkennungsnachweise"
   },
   "deltaMailNoLegalClaim": {
-    "message": "Bitte behandeln Sie diese Nachricht als Bitte um Klärung. Sie ist nicht als formeller rechtlicher Anspruch gemeint."
+    "message": "Bitte verstehen Sie diese Nachricht als Bitte um Klärung. Sie ist nicht als formeller rechtlicher Anspruch gemeint."
   },
   "senderNamePlaceholder": {
     "message": "{{sender_name}}"
@@ -688,5 +688,29 @@
   },
   "deltaReportMailBody": {
     "message": "Sehr geehrte Damen und Herren,\n\nanbei erhalten Sie den CookieBuddy-Auditbericht für unsere Überprüfung der Cookie-Einwilligungsimplementierung unter $1.\n\nDieser Bericht dokumentiert die Ergebnisse unserer automatisierten Prüfung. Bitte beachten Sie die beigefügten Audit-Ergebnisse für detaillierte Informationen über Cookies und Drittanbieter-Traffic, die nach dem Widerruf der Einwilligung erkannt wurden.\n\nWir würden eine Erläuterung zu den Ergebnissen und zur Rechtsgrundlage für jede Datenverarbeitung schätzen, die als fortlaufend nach dem Widerruf der Einwilligung erkannt wurde.\n\nMit freundlichen Grüßen"
+  },
+  "popupDocumentTitle": {
+    "message": "CookieBuddy – Cookie-Prüfung"
+  },
+  "detailsDocumentTitle": {
+    "message": "CookieBuddy – Scan-Details"
+  },
+  "currentPageAriaLabel": {
+    "message": "Aktuelle Seite"
+  },
+  "languageAriaLabel": {
+    "message": "Sprache auswählen"
+  },
+  "scanOverviewAriaLabel": {
+    "message": "Scan-Übersicht"
+  },
+  "bannerOverviewTitle": {
+    "message": "Banner-Einstellungen oder die zweite Ebene des Cookie-Banners anzeigen"
+  },
+  "supportPrompt": {
+    "message": "Gefällt dir CookieBuddy?"
+  },
+  "supportDescription": {
+    "message": "Unterstütze die Entwicklung mit einem Kaffee"
   }
 }
