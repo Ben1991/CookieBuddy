@@ -17,6 +17,14 @@ Feature: Review cookie consent and tracking behavior
     And CookieBuddy does not use the generic contact email instead
     And CookieBuddy shows the privacy-policy URL as the contact source
 
+  Scenario: Prefer a labeled DPO contact from the site's imprint
+    Given the footer privacy link contains only a generic contact email
+    And the same site has an imprint containing a data protection officer email address
+    When CookieBuddy scans the page
+    Then CookieBuddy uses the labeled DPO email from the imprint
+    And CookieBuddy does not use the generic privacy contact instead
+    And CookieBuddy shows the imprint URL as the contact source
+
   Scenario: Run a delta check with an automatic opt-out
     Given a cookie banner with a reject-all option is detected
     When the user confirms the delta check
