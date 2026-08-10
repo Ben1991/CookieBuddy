@@ -49,6 +49,7 @@ The acceptance contract for CookieBuddy is written in Gherkin in [`features/cook
 | --- | --- | --- | --- |
 | UC-01 Scan | The user is viewing a website in Chrome | CookieBuddy is opened | The banner, visible cookies, browser storage, third-party traffic, and local-only storage status are shown. |
 | UC-02 DPO contact | The footer links to a privacy policy containing a DPO email and another generic email exists | The page is scanned | The privacy-policy DPO email is used and its source URL is shown. |
+| UC-02b Imprint fallback | The privacy page contains only a generic contact and the imprint contains a labeled DPO email | The page is scanned | The labeled imprint DPO email is used and its source URL is shown. |
 | UC-03 Automatic delta | A reject-all action is detected | The user confirms the delta check | Before/after cookies, storage, and traffic are compared. |
 | UC-04 Manual delta | No automatic reject-all action is found and the user opts out manually | The user confirms the delta check | The current post-opt-out state is compared and marked as manual opt-out. |
 | UC-05 Review signal | Non-essential activity remains after opt-out | The result is displayed | Remaining items are marked for review and explicitly not presented as legal advice. |

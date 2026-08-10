@@ -1,3 +1,12 @@
+import {
+  classifyPageSource,
+  contactLinkPriority,
+  dedupeContacts,
+  extractContactsFromText,
+  getContactLinkMetadata,
+  rankContacts
+} from "./contact-discovery.js";
+
 // Fallback embedded CMP signatures for when external fetch unavailable
 // Reviewed against common operational CMPs and IAB Europe TCF resources in June 2026.
 const FALLBACK_CMP_SIGNATURES = [
@@ -369,16 +378,23 @@ function collectResources() {
 }
 
 async function detectContacts() {
-  const currentPageContacts = extractContactsFromText(document.body?.innerText || "", location.href, "Visited page");
+  const currentPageSource = classifyPageSource(location.href, document.title);
+  const currentPageContacts = extractContactsFromText(
+    document.body?.innerText || "",
+    location.href,
+    currentPageSource.source,
+    currentPageSource.sourceType
+  );
   const links = Array.from(document.links)
-    .map((link) => ({
-      href: link.href,
-      text: link.textContent.trim().toLowerCase(),
-      inFooter: Boolean(link.closest("footer, [role='contentinfo'], .footer, #footer"))
-    }))
-    .filter((link) => isContactCandidate(link.href, link.text))
+    .map((link) => getContactLinkMetadata(
+        link.href,
+        link.textContent,
+        Boolean(link.closest("footer, [role='contentinfo'], .footer, #footer"))
+      ))
+    .filter(Boolean)
     .sort((a, b) => contactLinkPriority(b) - contactLinkPriority(a))
-    .slice(0, 8);
+    .filter((link, index, list) => list.findIndex((candidate) => candidate.href === link.href) === index)
+    .slice(0, 12);
 
   const linkedContacts = [];
   for (const link of links) {
@@ -388,42 +404,25 @@ async function detectContacts() {
       }
 
       const response = await fetch(link.href, { credentials: "include" });
+      if (!response.ok) continue;
       const text = await response.text();
       linkedContacts.push(...extractContactsFromText(
         stripHtml(text),
         link.href,
-        isPrivacyPolicyLink(link.href, link.text) ? "Privacy policy" : "Linked legal page"
+        link.source,
+        link.sourceType
       ));
     } catch {
       // Some pages block extension-origin fetches. The current page scan still provides useful fallback data.
     }
   }
 
-  const contacts = dedupeContacts([...linkedContacts, ...currentPageContacts]);
+  const contacts = rankContacts(dedupeContacts([...linkedContacts, ...currentPageContacts]));
   return {
-    dpo: contacts.find((contact) => contact.kind === "dpo" && contact.source === "Privacy policy")
-      || contacts.find((contact) => contact.source === "Privacy policy")
-      || contacts.find((contact) => contact.kind === "dpo")
-      || contacts.find((contact) => contact.email)
-      || null,
+    dpo: contacts[0] || null,
     candidates: contacts.slice(0, 8),
     authority: inferAuthority(location.hostname)
   };
-}
-
-function extractContactsFromText(text, sourceUrl = location.href, source = "Visited page") {
-  const emails = Array.from(new Set(text.match(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi) || []));
-  const phoneMatches = Array.from(new Set(text.match(/(?:\+|00)\d[\d\s()./-]{6,}\d/g) || []));
-  const lower = text.toLowerCase();
-  const kind = /data protection officer|datenschutzbeauftrag|dpo/.test(lower) ? "dpo" : "contact";
-
-  return emails.map((email) => ({
-    kind,
-    email,
-    phone: phoneMatches[0] || "",
-    source,
-    sourceUrl
-  }));
 }
 
 async function tryDenyAll() {
@@ -524,10 +523,6 @@ function collectDenyCandidates() {
     });
 }
 
-function isContactCandidate(href, text) {
-  return /imprint|impressum|privacy|datenschutz|legal|contact|kontakt/i.test(`${href} ${text}`);
-}
-
 function collectBannerText() {
   const selectors = [
     "[id*='cookie' i]",
@@ -541,18 +536,6 @@ function collectBannerText() {
     .map((element) => element.innerText || element.textContent || "")
     .join(" ")
     .slice(0, 20000);
-}
-
-function isPrivacyPolicyLink(href, text) {
-  return /privacy|datenschutz/i.test(`${href} ${text}`);
-}
-
-function contactLinkPriority(link) {
-  const privacyPolicy = isPrivacyPolicyLink(link.href, link.text);
-  if (link.inFooter && privacyPolicy) return 4;
-  if (privacyPolicy) return 3;
-  if (link.inFooter) return 2;
-  return 1;
 }
 
 function isSafeContactLink(href) {
@@ -608,16 +591,6 @@ function previewStorageValue(value) {
   if (!value) return "Empty";
   const trimmed = value.trim();
   return trimmed.length > 48 ? `${trimmed.slice(0, 45)}...` : trimmed;
-}
-
-function dedupeContacts(contacts) {
-  const seen = new Set();
-  return contacts.filter((contact) => {
-    const key = `${contact.kind}:${contact.email}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
 }
 
 function capitalize(value) {
