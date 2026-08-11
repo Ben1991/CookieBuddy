@@ -188,7 +188,11 @@ function renderStatusCard() {
   elements.statusCard.dataset.status = badgeStatus;
   elements.statusCard.querySelector(".status-icon")?.setAttribute("data-status", badgeStatus);
   if (elements.statusCardText) {
-    elements.statusCardText.innerHTML = `${escapeHtml(t("statusReady"))}: <strong>${escapeHtml(statusMeta.title)}</strong>`;
+  elements.statusCardText.innerHTML = `${escapeHtml(t("statusReady"))}: <strong>${escapeHtml(statusMeta.title)}</strong>`;
+    const banner = state.analysis?.banner;
+    if (banner) {
+      elements.statusCardText.textContent = `${t("detectedLabel")}: ${banner.name} · ${t("confidenceLabel")}: ${banner.confidence}`;
+    }
   }
   const intro = elements.statusCard.querySelector(".hero-intro");
   if (intro) intro.textContent = statusMeta.body;
@@ -466,7 +470,7 @@ function renderDelta(delta) {
 function renderCurrentPage() {
   if (!elements.currentPageLabel) return;
   const pageUrl = state.tab?.url || state.analysis?.url || "";
-  elements.currentPageLabel.textContent = pageUrl ? `${t("currentPageLabel")}: ${pageUrl}` : "";
+  elements.currentPageLabel.textContent = pageUrl ? new URL(pageUrl).hostname : "";
   elements.currentPageLabel.title = pageUrl;
 }
 

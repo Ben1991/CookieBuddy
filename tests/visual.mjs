@@ -91,12 +91,12 @@ try {
   const popup = await browser.newPage({ viewport: { width: 460, height: 900 } });
   await popup.addInitScript({ content: chromeFixtureScript() });
   await popup.goto(`http://127.0.0.1:${port}/popup.html`);
-  await popup.getByText("Detected", { exact: false }).first().waitFor({ state: "visible", timeoutMs: 10000 });
+  await popup.getByText("example.com", { exact: false }).first().waitFor({ state: "visible", timeoutMs: 10000 });
   assert.ok((await popup.screenshot()).length > 10000, "popup screenshot should contain rendered UI");
   assert.ok(await popup.locator("#deltaButton").isVisible(), "delta action should be visible");
   assert.ok(await popup.locator("#heroScanButton").isVisible(), "primary scan action should be visible in the redesigned header");
   assert.ok(await popup.locator("#currentPageLabel").isVisible(), "current page context should be visible in the redesigned header");
-  assert.equal(await popup.locator("#overviewGrid").evaluate((node) => getComputedStyle(node).gridTemplateColumns.split(" ").length), 1, "overview metrics should stack vertically");
+  assert.equal(await popup.locator("#overviewGrid").evaluate((node) => getComputedStyle(node).gridTemplateColumns.split(" ").length), 3, "overview metrics should use the three-column Figma layout");
   assert.ok((await popup.evaluate(() => document.documentElement.scrollWidth)) <= (await popup.evaluate(() => document.documentElement.clientWidth)) + 1, "popup should not overflow horizontally");
   await popup.locator("#languageSelect").selectOption("de");
   await popup.getByText("Consent-Delta prüfen", { exact: true }).waitFor({ state: "visible", timeoutMs: 10000 });
@@ -110,7 +110,7 @@ try {
   const details = await browser.newPage({ viewport: { width: 1200, height: 900 } });
   await details.addInitScript({ content: chromeFixtureScript() });
   await details.goto(`http://127.0.0.1:${port}/details.html?view=delta`);
-  await details.getByText("CookieBuddy delta report", { exact: false }).waitFor({ state: "visible", timeoutMs: 10000 });
+  await details.getByText("Technische Details", { exact: true }).waitFor({ state: "visible", timeoutMs: 10000 });
   assert.ok((await details.screenshot()).length > 10000, "details screenshot should contain rendered UI");
   assert.ok(await details.locator("#copyDeltaReportButton").isVisible(), "copy-for-email action should be visible");
   assert.ok(await details.locator("#downloadDeltaHtmlButton").isVisible(), "HTML export action should be visible");
@@ -119,7 +119,7 @@ try {
   assert.ok(await details.getByText("Unclear", { exact: true }).isVisible(), "unlisted signals should be labeled unclear");
   assert.ok(await details.getByText("Stored locally", { exact: true }).isVisible(), "local-only status should be visible in the redesigned details header");
   await details.locator("#languageSelect").selectOption("de");
-  await details.getByText("CookieBuddy-Delta-Bericht", { exact: true }).waitFor({ state: "visible", timeoutMs: 10000 });
+  await details.getByText("Technische Details", { exact: true }).waitFor({ state: "visible", timeoutMs: 10000 });
   assert.equal(await details.locator("html").getAttribute("lang"), "de", "details should switch the document language to German");
   assert.ok(await details.getByText("Bericht für E-Mail kopieren", { exact: true }).isVisible(), "details actions should be localized");
   assert.doesNotMatch(await details.locator("body").innerText(), /pr\?ft|Ã|Â/, "German details should not contain corrupted copy");

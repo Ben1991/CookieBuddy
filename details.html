@@ -7,40 +7,27 @@
     <link rel="stylesheet" href="src/styles.css">
   </head>
   <body class="details-page">
-    <main class="details-shell">
-      <header class="hero wide">
+    <main class="details-shell cb-details">
+      <header class="cb-details-header">
         <div>
-          <p class="eyebrow">CookieBuddy</p>
-          <h1 data-i18n="detailsTitle">Scan details</h1>
-          <p class="muted" data-i18n="detailsIntro">This page shows the last analysis stored locally by the extension.</p>
+          <h1>Technische Details</h1>
+          <p class="cb-muted" data-i18n="detailsIntro">Auffällige Ergebnisse zuerst · Scan lokal gespeichert</p>
         </div>
-        <label class="language-toggle">
-          <span data-i18n="languageLabel">Language</span>
+        <span class="cb-badge local" data-i18n="localOnlyBadge">Stored locally</span>
+        <label class="cb-language">
+          <span class="sr-only" data-i18n="languageLabel">Language</span>
           <select id="languageSelect" data-i18n-aria-label="languageAriaLabel">
-            <option value="en">English</option>
-            <option value="de">Deutsch</option>
+            <option value="en">EN</option>
+            <option value="de">DE</option>
           </select>
         </label>
       </header>
-
-      <section class="card details-card">
-        <div class="details-section-heading">
-          <div>
-            <p class="eyebrow" data-i18n="deltaReportKicker">Delta audit</p>
-            <h2 data-i18n="summaryHeading">Summary</h2>
-          </div>
-          <span class="details-local-badge" data-i18n="localOnlyBadge">Stored locally</span>
-        </div>
-        <div id="sendDeltaMailActions" class="delta-mail-actions" aria-labelledby="sendDeltaMailHeading" aria-describedby="sendDeltaMailHint" hidden>
-          <div>
-            <h3 id="sendDeltaMailHeading" data-i18n="sendDeltaMailHeading">Send delta by email</h3>
-            <p id="sendDeltaMailHint" class="muted" data-i18n="sendDeltaMailHint">A mail draft opens with the audit report. Please review and adjust the text before sending.</p>
-          </div>
-        </div>
-        <div id="detailsOutput" class="json-output">Loading...</div>
+      <section id="detailsOutput" class="cb-details-output" aria-live="polite">Loading...</section>
+      <section id="sendDeltaMailActions" class="cb-card cb-mail-actions" aria-labelledby="sendDeltaMailHeading" aria-describedby="sendDeltaMailHint" hidden>
+        <h2 id="sendDeltaMailHeading" data-i18n="sendDeltaMailHeading">Send delta by email</h2>
+        <p id="sendDeltaMailHint" class="cb-muted" data-i18n="sendDeltaMailHint">A mail draft opens with the audit report. Please review and adjust the text before sending.</p>
       </section>
     </main>
-
     <script src="src/details.js" type="module"></script>
   </body>
 </html>
