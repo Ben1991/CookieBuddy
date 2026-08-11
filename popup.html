@@ -7,203 +7,71 @@
     <link rel="stylesheet" href="src/styles.css">
   </head>
   <body>
-    <main class="shell" aria-live="polite">
-      <header class="hero">
-        <img class="logo-mark" src="assets/logo.svg" alt="" aria-hidden="true">
-        <div>
-          <p class="eyebrow">CookieBuddy</p>
-          <h1 data-i18n="popupTitle">Cookie review</h1>
-          <p class="hero-intro" data-i18n="popupIntro">See what the page does before and after a reject attempt.</p>
-          <p id="scanStatusText" class="hero-status" aria-live="polite" data-i18n="scanStatusReady">Last scan ready.</p>
-          <p id="currentPageLabel" class="current-page" data-i18n-aria-label="currentPageAriaLabel"></p>
+    <main class="shell cb-popup" aria-live="polite">
+      <header class="cb-header">
+        <div class="cb-brand">
+          <span class="cb-logo" aria-hidden="true">C</span>
+          <div>
+            <strong>CookieBuddy</strong>
+            <span data-i18n="popupTitle">Lokaler Privacy-Check</span>
+          </div>
         </div>
-        <div class="hero-actions">
-          <label class="language-toggle">
-            <span data-i18n="languageLabel">Language</span>
-            <select id="languageSelect" data-i18n-aria-label="languageAriaLabel">
-              <option value="en">English</option>
-              <option value="de">Deutsch</option>
-            </select>
-          </label>
-          <span id="statusPill" class="pill" data-i18n="statusReady">Ready</span>
-          <button id="heroScanButton" class="primary-button small" type="button" data-i18n="startScanButton">Start scan</button>
-        </div>
+        <label class="cb-language">
+          <span class="sr-only" data-i18n="languageLabel">Language</span>
+          <select id="languageSelect" data-i18n-aria-label="languageAriaLabel">
+            <option value="en">EN</option>
+            <option value="de">DE</option>
+          </select>
+        </label>
       </header>
 
-      <section id="statusCard" class="status-card" aria-live="polite">
-        <div class="status-icon" data-status="yellow" aria-hidden="true">
-          <img src="assets/logo.svg" alt="">
+      <section id="statusCard" class="cb-card cb-site-summary" aria-live="polite">
+        <div class="cb-summary-top">
+          <strong id="currentPageLabel" class="cb-site-name" data-i18n-aria-label="currentPageAriaLabel"></strong>
+          <span id="statusPill" class="cb-badge good" data-i18n="statusReady">Ready</span>
         </div>
-        <div>
-          <p id="statusCardText" class="hero-status" data-i18n="scanStatusReady">Last scan ready.</p>
-          <p class="hero-intro" data-i18n="popupIntro">See what the page really does before and after consent, and spot the difference in one glance.</p>
+        <p id="statusCardText" class="cb-muted" data-i18n="scanStatusReady">Last scan ready.</p>
+        <div class="cb-local-row">
+          <span class="cb-badge local" data-i18n="localOnlyBadge">LOKAL</span>
+          <span class="cb-local-copy" data-i18n="privacyLocalOnly">Analyse bleibt in deinem Browser</span>
         </div>
-        <span class="status-chevron" aria-hidden="true">›</span>
+        <p class="hero-intro sr-only" data-i18n="popupIntro">See what the page does before and after a reject attempt.</p>
       </section>
 
-      <section id="overviewGrid" class="overview-grid" data-i18n-aria-label="scanOverviewAriaLabel"></section>
+      <section id="overviewGrid" class="cb-metrics" data-i18n-aria-label="scanOverviewAriaLabel"></section>
 
-      <section class="card utility-card">
-        <div class="section-title">
-          <h2 data-i18n="helpHeading">Help</h2>
-          <button id="helpButton" class="ghost-button" type="button" aria-expanded="false" aria-controls="helpPanel" data-i18n="helpButton">How it works</button>
+      <section class="cb-card cb-signal" aria-labelledby="signalHeading">
+        <div class="cb-row">
+          <h2 id="signalHeading">Technisches Review-Signal</h2>
+          <span class="cb-badge warning" data-i18n="reviewRecommended">ZU PRÜFEN</span>
         </div>
-        <div id="helpPanel" class="help-panel" hidden>
-          <p data-i18n="helpIntro">
-            CookieBuddy checks whether cookies or third-party requests still appear after you reject cookies.
-          </p>
-          <ul>
-            <li data-i18n="helpStepBanner">It tries to recognize the cookie banner provider.</li>
-            <li data-i18n="helpStepCookies">It lists visible cookies and likely services.</li>
-            <li data-i18n="helpStepDelta">It compares what happens before and after opt-out.</li>
-            <li data-i18n="helpStepReview">If something remains, treat it as a review signal, not as a final legal finding.</li>
-          </ul>
-        </div>
+        <span class="cb-signal-label" data-i18n="deltaHeading">Delta check</span>
+        <p id="scanStatusText" class="cb-muted" data-i18n="scanStatusReady">Last scan ready.</p>
       </section>
 
-      <section class="card list-card" id="bannerSection" aria-labelledby="bannerHeading">
-        <div class="section-title">
-          <div class="section-heading-row">
-            <span class="tile-icon purple" aria-hidden="true">✓</span>
-            <h2 id="bannerHeading" data-i18n="bannerHeading">Banner</h2>
-          </div>
-          <button id="refreshButton" class="ghost-button small" type="button" data-i18n="refreshButton">Refresh</button>
-        </div>
-        <div id="bannerResult" class="result-grid skeleton" role="region" aria-live="polite">
-          <span data-i18n="scanningCurrentTab">Scanning current tab...</span>
-        </div>
+      <section class="cb-card cb-categories" aria-labelledby="categoriesHeading">
+        <h2 id="categoriesHeading" data-i18n="servicesByCategoryHeading">Erkannte Kategorien</h2>
+        <div id="categoryResult" class="cb-category-list"></div>
       </section>
 
-      <section class="card legend-card list-card" aria-labelledby="legendHeading">
-        <div class="section-title">
-          <div class="section-heading-row">
-            <span class="tile-icon green" aria-hidden="true">i</span>
-            <h2 id="legendHeading" data-i18n="legendHeading">Legend</h2>
-          </div>
-        </div>
-        <div id="legendGrid" class="legend-grid">
-          <div class="legend-item">
-            <span class="legend-dot green" aria-hidden="true"></span>
-            <div>
-              <strong data-i18n="legendGreenTitle">Green</strong>
-              <p class="muted" data-i18n="legendGreenBody">All cookies appear covered by consent.</p>
-            </div>
-          </div>
-          <div class="legend-item">
-            <span class="legend-dot yellow" aria-hidden="true"></span>
-            <div>
-              <strong data-i18n="legendYellowTitle">Yellow</strong>
-              <p class="muted" data-i18n="legendYellowBody">The situation is unclear or mixed.</p>
-            </div>
-          </div>
-          <div class="legend-item">
-            <span class="legend-dot red" aria-hidden="true"></span>
-            <div>
-              <strong data-i18n="legendRedTitle">Red</strong>
-              <p class="muted" data-i18n="legendRedBody">A non-essential tracker appears to run without consent.</p>
-            </div>
-          </div>
-        </div>
-      </section>
+      <div class="cb-actions">
+        <button id="heroScanButton" class="ghost-button" type="button" data-i18n="refreshButton">Neu scannen</button>
+        <button id="deltaButton" class="primary-button" type="button" data-i18n="runDeltaButton">Delta-Check starten</button>
+      </div>
+      <p class="cb-disclaimer" data-i18n="legalDisclaimer">CookieBuddy liefert technische Review-Signale – keine rechtliche Bewertung.</p>
+      <span class="cb-support-copy" data-i18n="supportPrompt">Like CookieBuddy?</span>
+      <span class="sr-only" data-i18n="supportDescription">Support development with a coffee</span>
 
-      <section class="card list-card" aria-labelledby="servicesByCategoryHeading">
-        <div class="section-title">
-          <div class="section-heading-row">
-            <span class="tile-icon blue" aria-hidden="true">≡</span>
-            <h2 id="servicesByCategoryHeading" data-i18n="servicesByCategoryHeading">Services by category</h2>
-          </div>
-          <div class="section-actions">
-            <button id="bannerOverviewButton" class="ghost-button small" type="button" data-i18n="bannerOverviewButton" data-i18n-title="bannerOverviewTitle">Show banner preferences</button>
-            <span id="bannerOverviewStatus" class="muted status-inline" aria-live="polite"></span>
-            <a id="detailsLink" class="text-link" href="details.html" target="_blank" rel="noreferrer" data-i18n="detailsLink">Details</a>
-          </div>
-        </div>
-        <div id="categoryResult" class="category-grid"></div>
-      </section>
-
-      <section class="card list-card" aria-labelledby="cookiesTrafficHeading">
-        <div class="section-title">
-          <div class="section-heading-row">
-            <span class="tile-icon orange" aria-hidden="true">●</span>
-            <h2 id="cookiesTrafficHeading" data-i18n="cookiesTrafficHeading">Cookies and traffic</h2>
-          </div>
-          <div>
-            <p class="muted section-note" data-i18n="cookiesTrafficIntro">The overview groups visible cookies and locally stored browser data. The list updates after each scan.</p>
-          </div>
-          <span id="cookieCount" class="muted">0 cookies</span>
-        </div>
-        <div id="cookieResult" class="compact-list" aria-live="polite" aria-busy="false"></div>
-      </section>
-
-      <section class="card accent list-card">
-        <div class="section-heading-row">
-          <span class="tile-icon green" aria-hidden="true">△</span>
-          <h2 data-i18n="deltaHeading">Delta check</h2>
-        </div>
-        <p class="muted" data-i18n="deltaIntro">
-          Compares the current state with a best-effort "deny all" state. CookieBuddy flags cookies and third-party requests that remain after opt-out.
-        </p>
-        <button id="deltaButton" class="primary-button" type="button" data-i18n="runDeltaButton">Run delta check</button>
-        <div id="deltaResult" class="delta-box"></div>
-      </section>
-
-      <section class="card list-card">
-        <div class="section-title">
-          <div class="section-heading-row">
-            <span class="tile-icon blue" aria-hidden="true">✉</span>
-            <h2 data-i18n="contactHeading">Contact</h2>
-          </div>
-          <span class="muted" data-i18n="contactSubheading">DPO / authority</span>
-        </div>
-        <div id="contactResult" class="contact-box"></div>
-      </section>
-
-      <section class="card privacy-card list-card">
-        <div class="section-heading-row">
-          <span class="tile-icon purple" aria-hidden="true">▣</span>
-          <h2 data-i18n="privacyHeading">Privacy</h2>
-        </div>
-        <p class="muted" data-i18n="privacyIntro">
-          CookieBuddy does not track you and does not send scan results to the creator or to any analytics service.
-        </p>
-        <ul class="privacy-list">
-          <li data-i18n="privacyLocalOnly">Scans run locally in your browser.</li>
-          <li data-i18n="privacyStorage">The last scan is stored only in Chrome local extension storage on your device.</li>
-          <li data-i18n="privacyNoAnalytics">There is no analytics, tracking pixel, remote logging, or account system.</li>
-          <li data-i18n="privacyExternalLinks">External links and drafted emails only open when you click them; those external services have their own privacy rules.</li>
-        </ul>
-      </section>
-
-      <section class="card open-source-card list-card">
-        <div class="section-heading-row">
-          <span class="tile-icon neutral" aria-hidden="true">{ }</span>
-          <h2 data-i18n="openSourceHeading">Open source</h2>
-        </div>
-        <p class="muted" data-i18n="openSourceIntro">
-          CookieBuddy is intended to be open source. Contributions, bug reports, and banner-detection improvements are welcome.
-        </p>
-        <a class="ghost-button small" href="https://github.com/Ben1991/CookieBuddy" target="_blank" rel="noreferrer" data-i18n="githubLink">
-          View GitHub repository
-        </a>
-      </section>
-
-      <section class="card disclaimer-card">
-        <p class="disclaimer" data-i18n="legalDisclaimer">
-          Dies ist keine Rechtsberatung. Bitte prüfe die Inhalte weiterhin selbst. Der Ersteller übernimmt keine Haftung für die Ergebnisse.
-        </p>
-      </section>
-
-      <footer class="support-footer">
-        <div>
-          <strong data-i18n="supportPrompt">Like CookieBuddy?</strong>
-          <span data-i18n="supportDescription">Support development with a coffee</span>
-        </div>
-        <a class="donate-button" href="https://buymeacoffee.com/thenext1991" target="_blank" rel="noreferrer">
-          <span data-i18n="donateButton">Support me and donate</span>
-        </a>
-      </footer>
+      <div class="cb-functional-sections" aria-hidden="true">
+        <section class="card" id="bannerSection"><div id="bannerResult"></div><button id="refreshButton" type="button"></button><button id="bannerOverviewButton" type="button" data-i18n-title="bannerOverviewTitle"></button><span id="bannerOverviewStatus"></span></section>
+        <section class="card"><div id="legendGrid"></div></section>
+        <section class="card"><a id="detailsLink" href="details.html"></a><div id="cookieResult"></div><span id="cookieCount"></span></section>
+        <section class="card"><div id="deltaResult"></div></section>
+        <section class="card"><div id="contactResult"></div></section>
+        <button id="helpButton" type="button"></button><div id="helpPanel" hidden></div>
+        <span id="statusCardTextLegacy"></span><span id="scanStatusTextLegacy"></span>
+      </div>
     </main>
-
     <script src="src/popup.js" type="module"></script>
   </body>
 </html>
