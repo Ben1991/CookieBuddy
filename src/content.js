@@ -1,12 +1,3 @@
-import {
-  classifyPageSource,
-  contactLinkPriority,
-  dedupeContacts,
-  extractContactsFromText,
-  getContactLinkMetadata,
-  rankContacts
-} from "./contact-discovery.js";
-
 // Fallback embedded CMP signatures for when external fetch unavailable
 // Reviewed against common operational CMPs and IAB Europe TCF resources in June 2026.
 const FALLBACK_CMP_SIGNATURES = [

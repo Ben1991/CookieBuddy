@@ -496,7 +496,7 @@ async function ensureContentScript(tabId) {
   } catch {
     await chrome.scripting.executeScript({
       target: { tabId },
-      files: ["src/content.js"]
+      files: ["src/contact-discovery-content.js", "src/content.js"]
     });
   }
 }
