@@ -1841,6 +1841,38 @@ body {
   text-align: left;
 }
 
+/* Keep audit tables readable: reserve space for each column and avoid
+   breaking short labels such as "Cookie" in the middle of the word. */
+.cb-details-output .delta-table {
+  table-layout: fixed;
+  font-size: 0.76rem;
+}
+
+.cb-details-output .delta-table th,
+.cb-details-output .delta-table td {
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+
+.cb-details-output .delta-table th:nth-child(1),
+.cb-details-output .delta-table td:nth-child(1) { width: 18%; }
+
+.cb-details-output .delta-table th:nth-child(2),
+.cb-details-output .delta-table td:nth-child(2) { width: 18%; }
+
+.cb-details-output .delta-table th:nth-child(3),
+.cb-details-output .delta-table td:nth-child(3) { width: 24%; }
+
+.cb-details-output .delta-table th:nth-child(4),
+.cb-details-output .delta-table td:nth-child(4) { width: 40%; }
+
+.cb-details-output .delta-table td:nth-child(1),
+.cb-details-output .delta-table td:nth-child(2) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .overview-tile:last-child {
   border-bottom: 0;
 }
