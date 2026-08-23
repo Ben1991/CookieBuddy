@@ -68,6 +68,7 @@ The source of truth for product acceptance behavior is [`features/cookiebuddy.fe
 | UC-24 | Explain limits for fingerprinting, server-side tagging, backend enrichment, first-party proxies, and other opaque techniques. |
 | UC-25 | Keep CookieBuddy itself private and performant: justified permissions, on-demand page access, local processing, deletion, bounded retention and overhead. |
 | UC-26 | Keep Gherkin, implementation tests, README, visual tests, and screenshots synchronized for every affected product task. |
+| UC-27 | Maintain a deterministic real-world CMP and tracker regression corpus with reviewed verdict expectations; live-site smoke checks remain optional. |
 
 `tests/use-cases.test.mjs` checks that every Gherkin use-case ID is represented in this README and that key safety invariants remain present. This is only contract hygiene: each implemented scenario also requires functional/unit/integration coverage of the real behavior.
 
@@ -198,6 +199,12 @@ Important limitations include:
 
 Reports and verdicts must distinguish **not observed** (no signal appeared in this audit), **not detected** (CookieBuddy has no reliable detector for the technique), and **not technically inspectable** (the technique can run outside observable browser evidence). Confirmed cookies, browser storage, network requests, and consent-surface evidence are listed separately from low-confidence heuristic indicators. These states describe the audit's evidence scope; they never claim complete tracking detection.
 
+## Regression corpus
+
+The deterministic corpus in [`tests/fixtures/cmp-regression-corpus.mjs`](tests/fixtures/cmp-regression-corpus.mjs) covers representative local implementations for OneTrust, Usercentrics, Cookiebot, Didomi, Sourcepoint, Consentmanager, Google Funding Choices, custom banners, and no-banner pages. It records expected CMP evidence and verdict outcomes for verified rejection, pre-consent traffic, trackers that remain after rejection, delayed trackers, reload/navigation, contradictory consent signals, and incomplete or unknown states. CI treats these expected verdicts as reviewed contracts, so a changed result fails the test until the fixture expectation is intentionally updated.
+
+Live-site checks are optional smoke tests only. They are not part of CI because vendor configurations, consent text, network behavior, and regional rules can change without notice.
+
 ## Development Contract
 
 For every task that changes product behavior, detection, classification, verdicts, evidence, privacy behavior, user flow, or visible UI:
@@ -245,6 +252,7 @@ GitHub Actions should run the automated checks on pushes and pull requests. A fe
 - `src/details.js`: details view and report export
 - `src/i18n.js`: English/German text handling
 - `tests/use-cases.test.mjs`: contract/README synchronization guard
+- `tests/fixtures/cmp-regression-corpus.mjs`: deterministic CMP and tracker regression expectations
 - `tests/`: functional, integration, unit, and visual tests
 
 ## Links
