@@ -134,6 +134,17 @@ async function captureStoreScreenshot(page, fileName, { centerPopup = false } = 
   await page.screenshot({ path: join(storeAssetDir, fileName), fullPage: false });
 }
 
+async function assertNoOverlap(page, firstSelector, secondSelector, label) {
+  const first = await page.locator(firstSelector).boundingBox();
+  const second = await page.locator(secondSelector).boundingBox();
+  assert.ok(first && second, `${label} should be visible for the overlap check`);
+  const separated = first.x + first.width <= second.x + 1
+    || second.x + second.width <= first.x + 1
+    || first.y + first.height <= second.y + 1
+    || second.y + second.height <= first.y + 1;
+  assert.ok(separated, `${label} must not overlap`);
+}
+
 await new Promise((resolve) => server.listen(port, "127.0.0.1", resolve));
 const browser = await chromium.launch({ headless: true });
 try {
@@ -166,6 +177,7 @@ try {
   assert.ok(await popup.locator('[data-complaint-action="true"]').isVisible(), "supported negative findings should expose a complaint action");
   assert.ok(await popup.locator('[data-authority-complaint-action="true"]').isVisible(), "negative findings should expose the authority preparation action");
   assert.equal(await popup.locator('#auditSteps [data-state="complete"]').count(), 8, "completed audit should mark every progress step complete");
+  await assertNoOverlap(popup, '[data-verdict="negative"] .audit-verdict-heading > div:first-child', '[data-verdict="negative"] .audit-verdict-meta', "negative verdict heading and metadata");
   await captureDocumentationScreenshot(popup, "popup-overview.png", { fullPage: true });
 
   const storeDetails = await browser.newPage({ viewport: { width: 1280, height: 800 } });
@@ -185,8 +197,19 @@ try {
   assert.ok(await reviewPopup.locator('[data-verdict="review"]').isVisible(), "ambiguous complete findings should use the review verdict");
   assert.ok(await reviewPopup.getByText("Unresolved signals", { exact: true }).isVisible(), "review verdict should expose unresolved signals");
   assert.match(await reviewPopup.locator('[data-verdict="review"] a').first().getAttribute("href"), /details\.html\?view=delta/);
+  await assertNoOverlap(reviewPopup, '[data-verdict="review"] .audit-verdict-heading > div:first-child', '[data-verdict="review"] .audit-verdict-meta', "review verdict heading and metadata");
   await captureDocumentationScreenshot(reviewPopup, "popup-review.png", { fullPage: true });
   await reviewPopup.close();
+
+  const narrowPopup = await browser.newPage({ viewport: { width: 360, height: 900 } });
+  await narrowPopup.addInitScript({ content: chromeFixtureScript() });
+  await narrowPopup.goto(`http://127.0.0.1:${port}/popup.html`);
+  await narrowPopup.locator("#deltaButton").waitFor({ state: "visible", timeoutMs: 10000 });
+  await narrowPopup.locator("#deltaButton").click();
+  await narrowPopup.getByRole("heading", { name: "Likely incorrectly implemented", exact: true }).waitFor({ state: "visible", timeoutMs: 10000 });
+  await assertNoOverlap(narrowPopup, '[data-verdict="negative"] .audit-verdict-heading > div:first-child', '[data-verdict="negative"] .audit-verdict-meta', "narrow negative verdict heading and metadata");
+  assert.ok((await narrowPopup.evaluate(() => document.documentElement.scrollWidth)) <= (await narrowPopup.evaluate(() => document.documentElement.clientWidth)) + 1, "narrow popup should not overflow horizontally after the audit");
+  await narrowPopup.close();
 
   const details = await browser.newPage({ viewport: { width: 1200, height: 900 } });
   await details.addInitScript({ content: chromeFixtureScript() });
