@@ -199,6 +199,8 @@ async function runDeltaCheck() {
       denyLabel: denyResult?.label,
       denyVerification: denyResult?.verification,
       inaccessibleConsentSurfaces: afterDeny.analysis?.inaccessibleConsentSurfaces || before.analysis?.inaccessibleConsentSurfaces || [],
+      beforeAnalysis: before.analysis,
+      blockedRequests: [...(before.blockedRequests || []), ...(afterDeny.blockedRequests || [])],
       manualConsentConfirmed: !denyResult?.found,
       labels: {
         deltaFoundSummary: t("deltaFoundSummary"),
@@ -326,6 +328,7 @@ function createIncompleteAuditDelta(outcome, lifecycleState, summary) {
     nonEssentialStorageEntries: [],
     serviceAudit: [],
     banner: state.analysis?.banner || null,
+    integrity: { status: "unknown", uncertain: true, knownStartingState: "unknown", limitations: ["integrity-not-recorded"], evidence: [], recommendation: "rerun-clean-environment" },
     beforeCounts: null,
     afterDenyCounts: null,
     auditLifecycle: { ...(lifecycleState || {}), status: outcome.status, reason: outcome.reason, events: lifecycleState?.events || [] }
@@ -338,12 +341,14 @@ async function snapshot(label) {
     getCookiesForTab(state.tab),
     chrome.runtime.sendMessage({ target: "cookiebuddy-background", type: "GET_TRAFFIC", tabId: state.tab.id })
   ]);
+  const normalizedTraffic = normalizeTraffic([...(trafficResponse?.traffic || []), ...(analysis.resources || [])], analysis.host);
 
   return {
     label,
     analysis,
     cookies,
-    thirdPartyTraffic: normalizeTraffic([...(trafficResponse?.traffic || []), ...(analysis.resources || [])], analysis.host)
+    thirdPartyTraffic: normalizedTraffic,
+    blockedRequests: normalizedTraffic.filter((item) => item.blocked)
   };
 }
 
@@ -654,6 +659,7 @@ function renderAuditVerdict(delta, verdict) {
     "rejection-verification": t("auditCoverageReject"),
     "consent-surface": t("auditCoverageConsent"),
     "consent-surface-inaccessible": t("auditCoverageConsentInaccessible"),
+    "audit-integrity": t("auditCoverageIntegrity"),
     "before-after-observation": t("auditCoverageObservation"),
     "page-analysis": t("auditCoverageAnalysis"),
     "audit-lifecycle": t("auditCoverageLifecycle"),
@@ -694,6 +700,7 @@ function renderAuditVerdict(delta, verdict) {
         <p class="muted">${escapeHtml(delta.denyAction?.clicked ? t("clickedDenyControl", delta.denyAction.label || t("detectedButton")) : t("manualDenyAssumed"))}</p>
         ${renderRejectVerification(delta.denyAction)}
         ${renderConsentSurfaceLimitations(delta)}
+        ${renderAuditIntegrity(delta)}
         ${cookieItems.length ? `<h3>${escapeHtml(t("nonEssentialCookiesStillPresent"))}</h3>${cookieItems.map((cookie) => `<p class="chip">${escapeHtml(cookie.name)} · ${escapeHtml(cookie.domain)} · ${escapeHtml(cookie.service)}</p>`).join("")}` : ""}
         ${delta.thirdPartyHosts?.length ? `<h3>${escapeHtml(t("nonEssentialThirdPartyTrafficAfterOptOut"))}</h3>${delta.thirdPartyHosts.slice(0, 10).map((host) => `<p class="chip">${escapeHtml(host)}</p>`).join("")}` : ""}
         ${delta.essentialThirdPartyHosts?.length ? `<h3>${escapeHtml(t("essentialThirdPartyTrafficAllowed"))}</h3>${delta.essentialThirdPartyHosts.slice(0, 10).map((host) => `<p class="chip">${escapeHtml(host)}</p>`).join("")}` : ""}
@@ -745,6 +752,7 @@ function renderCoverageSummary(coverage) {
     "browser-storage": t("coverageTechniqueStorage"),
     "network-requests": t("coverageTechniqueTraffic"),
     "consent-surface": t("coverageTechniqueConsent"),
+    "audit-integrity": t("coverageTechniqueIntegrity"),
     fingerprinting: t("coverageTechniqueFingerprinting"),
     "server-side-tagging": t("coverageTechniqueServerSide"),
     "backend-enrichment": t("coverageTechniqueBackend"),
@@ -762,6 +770,22 @@ function renderConsentSurfaceLimitations(delta) {
   if (!surfaces.length) return "";
   const items = surfaces.slice(0, 8).map((surface) => `<li>${escapeHtml(t("inaccessibleConsentSurface", [surface.frameUrl || t("unknownWebsite"), surface.frameOrigin || "unknown", surface.domContext || t("unknownDomContext")] ))}</li>`).join("");
   return `<section class="consent-surface-limitations"><h3>${escapeHtml(t("inaccessibleConsentHeading"))}</h3><p class="muted">${escapeHtml(t("inaccessibleConsentIntro"))}</p><ul class="coverage-list">${items}</ul></section>`;
+}
+
+function renderAuditIntegrity(delta) {
+  const integrity = delta.integrity || { status: "unknown", knownStartingState: "unknown", uncertain: true, limitations: ["integrity-not-recorded"], evidence: [], recommendation: "rerun-clean-environment" };
+  const statusKey = integrity.status === "clean" ? "auditIntegrityStatusClean" : integrity.status === "contaminated" ? "auditIntegrityStatusContaminated" : "auditIntegrityStatusUnknown";
+  const stateKey = integrity.knownStartingState === "prior-consent" ? "auditIntegrityStatePriorConsent" : integrity.knownStartingState === "prior-opt-out" ? "auditIntegrityStatePriorOptOut" : integrity.knownStartingState === "clean" ? "auditIntegrityStateClean" : "auditIntegrityStateUnknown";
+  const limitationLabels = {
+    "prior-consent": t("auditIntegrityLimitationPriorConsent"),
+    "prior-opt-out": t("auditIntegrityLimitationPriorOptOut"),
+    "blocked-tracker-request": t("auditIntegrityLimitationBlockedRequest"),
+    "starting-consent-state-unknown": t("auditIntegrityLimitationUnknownState"),
+    "integrity-not-recorded": t("auditIntegrityLimitationNotRecorded")
+  };
+  const limitations = (integrity.limitations || []).map((item) => `<li>${escapeHtml(limitationLabels[item] || item)}</li>`).join("");
+  const evidence = (integrity.evidence || []).slice(0, 8).map((item) => `<li>${escapeHtml([item.type || "integrity-signal", item.scope || "", item.name || item.key || item.host || item.url || "", item.error || ""].filter(Boolean).join(" · "))}</li>`).join("");
+  return `<section class="audit-integrity"><h3>${escapeHtml(t("auditIntegrityHeading"))}</h3><p class="muted">${escapeHtml(t("auditIntegrityIntro"))}</p><p class="muted"><strong>${escapeHtml(t("auditIntegrityStatusLabel"))}:</strong> ${escapeHtml(t(statusKey))} · <strong>${escapeHtml(t("auditIntegrityStartingStateLabel"))}:</strong> ${escapeHtml(t(stateKey))}</p>${limitations ? `<h4>${escapeHtml(t("auditIntegrityLimitationsHeading"))}</h4><ul class="coverage-list">${limitations}</ul>` : ""}${evidence ? `<h4>${escapeHtml(t("auditIntegrityEvidenceHeading"))}</h4><ul class="coverage-list">${evidence}</ul>` : ""}${integrity.recommendation !== "none" ? `<p class="muted">${escapeHtml(t("auditIntegrityRecommendation"))}</p>` : ""}</section>`;
 }
 
 function renderVisualEvidenceSummary(delta) {

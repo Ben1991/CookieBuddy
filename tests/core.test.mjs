@@ -42,7 +42,7 @@ test("keeps observable evidence, scope limitations, and heuristic signals separa
   });
 
   assert.equal(coverage.auditComplete, true);
-  assert.deepEqual(coverage.observed.map((item) => item.state), ["observed", "observed", "observed", "observed"]);
+  assert.deepEqual(coverage.observed.map((item) => item.state), ["observed", "observed", "observed", "observed", "not-observed"]);
   assert.equal(coverage.limitations.find((item) => item.key === "server-side-tagging").state, "not-technically-inspectable");
   assert.equal(coverage.limitations.find((item) => item.key === "first-party-proxy").state, "not-detected");
   assert.equal(coverage.limitations.find((item) => item.key === "opaque-client-signal").state, "not-observed");
@@ -79,6 +79,7 @@ test("keeps inaccessible consent surfaces incomplete and explicit", () => {
   assert.equal(coverage.observed.find((item) => item.key === "consent-surface").state, "not-technically-inspectable");
   assert.match(formatDeltaReport(delta), /INACCESSIBLE CONSENT SURFACES/);
   assert.match(formatDeltaReport(delta), /cmp\.example\.test/);
+  assert.match(formatDeltaReport(delta), /AUDIT INTEGRITY/);
 });
 
 test("detects essential infrastructure hosts", () => {
@@ -333,7 +334,8 @@ test("derives a positive verdict only when rejection and before/after coverage a
     remainingCookies: [],
     newCookies: [],
     nonEssentialStorageEntries: [],
-    serviceAudit: []
+    serviceAudit: [],
+    integrity: { status: "clean", uncertain: false, evidence: [] }
   };
 
   const positive = deriveAuditVerdict(base);
@@ -341,5 +343,6 @@ test("derives a positive verdict only when rejection and before/after coverage a
   assert.equal(positive.coverage.limitations.find((item) => item.key === "backend-enrichment").state, "not-technically-inspectable");
   assert.equal(deriveAuditVerdict({ ...base, denyAction: { clicked: false } }).status, "incomplete");
   assert.equal(deriveAuditVerdict({ ...base, denyAction: { clicked: true, verified: false } }).status, "incomplete");
+  assert.equal(deriveAuditVerdict({ ...base, integrity: { status: "contaminated", uncertain: true } }).status, "incomplete");
   assert.equal(deriveAuditVerdict({ ...base, riskLevel: "high", thirdPartyHosts: ["tracker.example"] }).status, "negative");
 });

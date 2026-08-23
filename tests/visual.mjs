@@ -18,7 +18,7 @@ const fixtureAnalysis = {
   },
   resources: [{ url: "https://analytics.example.net/script.js", host: "analytics.example.net", thirdParty: true }],
   contacts: { dpo: { kind: "dpo", email: "privacy@example.com", source: "Privacy policy", sourceUrl: "https://example.com/privacy" }, authority: { name: "Federal data protection authority", key: "fallback", note: "Review the privacy notice." } },
-  storage: { items: [{ key: "consent_state", scope: "localStorage", valuePreview: "denied", inBanner: true }] }
+  storage: { items: [{ key: "session_state", scope: "localStorage", valuePreview: "active", inBanner: false }] }
 };
 const fixtureCookies = [
   { name: "_ga", domain: "example.com", path: "/", secure: true, sameSite: "lax" },
@@ -41,6 +41,7 @@ const fixtureDelta = {
     { name: "Google Analytics", category: "analytics", source: "analytics.example.net", listedInBanner: false, essential: false, status: "active" },
     { name: "extension.example.net", category: "unlisted", source: "Third-party traffic", listedInBanner: false, essential: false, status: "unclear" }
   ],
+  integrity: { status: "clean", uncertain: false, knownStartingState: "clean", limitations: [], evidence: [], recommendation: "none" },
   beforeCounts: { cookies: 2, thirdPartyHosts: 1 },
   afterDenyCounts: { cookies: 1, thirdPartyHosts: 1, storageEntries: 1 },
   auditLifecycle: {
@@ -131,9 +132,10 @@ try {
   assert.ok(await details.locator("#downloadDeltaHtmlButton").isVisible(), "HTML export action should be visible");
   assert.ok(await details.locator("#downloadDeltaPdfButton").isVisible(), "print/PDF export action should be visible");
   assert.ok(await details.getByText("Still active", { exact: true }).isVisible(), "active services should be labeled");
-  assert.ok(await details.getByText("Unclear", { exact: true }).isVisible(), "unlisted signals should be labeled unclear");
+  assert.ok(await details.getByText("Unclear", { exact: true }).first().isVisible(), "unlisted signals should be labeled unclear");
   assert.ok(await details.getByText("Reject action verification", { exact: true }).isVisible(), "the report should show rejection verification evidence");
   assert.ok(await details.getByText("Coverage and limits", { exact: true }).isVisible(), "coverage limits should be visible in the evidence report");
+  assert.ok(await details.getByText("Audit integrity", { exact: true }).isVisible(), "audit integrity should be visible in the evidence report");
   assert.ok(await details.getByText("Minimized URL evidence", { exact: true }).isVisible(), "URL minimization should be disclosed in the evidence report");
   assert.ok(await details.getByText("Not technically inspectable", { exact: false }).count() > 0, "unsupported techniques should be labeled as not technically inspectable");
   assert.ok(await details.getByText("Heuristic indicators (not confirmed evidence)", { exact: true }).isVisible(), "heuristics should be separated from confirmed evidence");
