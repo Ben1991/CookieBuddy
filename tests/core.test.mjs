@@ -295,7 +295,7 @@ test("formats delta report without deny click", () => {
 test("derives a positive verdict only when rejection and before/after coverage are verified", () => {
   const base = {
     banner: { name: "Cookiebot", confidence: "high" },
-    denyAction: { clicked: true },
+    denyAction: { clicked: true, verified: true },
     beforeCounts: { cookies: 1, thirdPartyHosts: 0 },
     afterDenyCounts: { cookies: 0, thirdPartyHosts: 0, storageEntries: 0 },
     riskLevel: "low",
@@ -310,5 +310,6 @@ test("derives a positive verdict only when rejection and before/after coverage a
   assert.equal(positive.status, "positive");
   assert.equal(positive.coverage.limitations.find((item) => item.key === "backend-enrichment").state, "not-technically-inspectable");
   assert.equal(deriveAuditVerdict({ ...base, denyAction: { clicked: false } }).status, "incomplete");
+  assert.equal(deriveAuditVerdict({ ...base, denyAction: { clicked: true, verified: false } }).status, "incomplete");
   assert.equal(deriveAuditVerdict({ ...base, riskLevel: "high", thirdPartyHosts: ["tracker.example"] }).status, "negative");
 });

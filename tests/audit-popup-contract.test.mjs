@@ -26,6 +26,7 @@ test("the popup exposes all required progress phases and progressive evidence ac
   assert.match(popupScript, /deriveAuditVerdict/);
   assert.match(popupScript, /auditCompletenessComplete/);
   assert.match(popupScript, /slice\(0, 3\)/);
+  assert.match(popupScript, /denyAction\?\.verified/);
 });
 
 test("incomplete, negative, and positive states have non-color styling hooks", () => {

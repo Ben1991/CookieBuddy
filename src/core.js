@@ -166,7 +166,9 @@ export function buildDelta({
   banner = null,
   bannerCategories = {},
   denyClicked,
+  denyVerified = false,
   denyLabel,
+  denyVerification = null,
   manualConsentConfirmed,
   labels,
   tabUrl
@@ -190,8 +192,10 @@ export function buildDelta({
     url: minimizeUrlEvidence(tabUrl, { retainQueryKeys: false })?.url || "",
     denyAction: {
       clicked: Boolean(denyClicked),
+      verified: Boolean(denyVerified),
       label: denyLabel || "",
-      manual: Boolean(manualConsentConfirmed && !denyClicked)
+      manual: Boolean(manualConsentConfirmed && !denyClicked),
+      verification: denyVerification || { status: denyVerified ? "verified" : "unverified", evidence: [], actions: [] }
     },
     riskLevel: hasDelta ? "high" : "low",
     summary: hasDelta ? labels.deltaFoundSummary : labels.noDeltaSummary,
@@ -287,7 +291,7 @@ export function createCoverageSummary({ delta = {}, analysisComplete = true, heu
 export function deriveAuditVerdict(delta, { analysisComplete = true } = {}) {
   const coverage = delta?.coverage || createCoverageSummary({ delta, analysisComplete });
   const missingCoverage = [];
-  if (!delta?.denyAction?.clicked) missingCoverage.push("rejection-verification");
+  if (!delta?.denyAction?.clicked || !delta?.denyAction?.verified) missingCoverage.push("rejection-verification");
   if (!delta?.banner || delta.banner.confidence === "none") missingCoverage.push("consent-surface");
   if (!delta?.beforeCounts || !delta?.afterDenyCounts) missingCoverage.push("before-after-observation");
   if (!analysisComplete) missingCoverage.push("page-analysis");
@@ -391,13 +395,21 @@ export function formatDeltaReport(delta, url = "") {
   report += "DENY ACTION DETAILS\n";
   report += "═════════════════════════════════════════\n\n";
 
-  if (delta.denyAction.clicked) {
+  if (delta.denyAction.clicked && delta.denyAction.verified) {
     report += `✓ Deny button successfully clicked: "${delta.denyAction.label}"\n`;
+  } else if (delta.denyAction.clicked) {
+    report += `? Deny button clicked, but the consent change could NOT be verified: "${delta.denyAction.label}"\n`;
   } else {
     report += `✗ Deny button could NOT be clicked automatically\n`;
     if (delta.denyAction.label) {
       report += `  Expected button label: "${delta.denyAction.label}"\n`;
     }
+  }
+  if (delta.denyAction.verification) {
+    report += `  Verification status: ${delta.denyAction.verification.status}\n`;
+    (delta.denyAction.verification.evidence || []).forEach((item) => {
+      report += `  - Verification evidence: ${item}\n`;
+    });
   }
   report += "\n";
 

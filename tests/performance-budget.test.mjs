@@ -40,6 +40,8 @@ test("idle monitoring and page analysis enforce their limits in production code"
   assert.match(content, /AUDIT_NAVIGATION/);
   assert.match(content, /sanitizePageUrl/);
   assert.match(content, /minimizePageEvidence/);
+  assert.match(content, /evaluateConsentStateChange/);
+  assert.match(content, /isConsentSurfaceElement/);
   assert.match(lifecycle, /not technically inspectable|incomplete/);
   assert.match(content, /maxPageTextChars/);
   assert.match(content, /maxHtmlSampleChars/);

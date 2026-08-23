@@ -164,7 +164,7 @@ async function runDeltaCheck() {
     if (visualEvidenceItems[0]) visualEvidenceItems[0].rejectControlLabel = String(denyResult?.label || "").slice(0, 160);
     recordAuditEvent("reject");
     setAuditStep("reject", denyResult?.found ? "complete" : "manual", denyResult?.found ? "" : t("auditManualAction"));
-    setAuditStep("verify", denyResult?.clicked ? "complete" : "manual", denyResult?.clicked ? "" : t("auditManualAction"));
+    setAuditStep("verify", denyResult?.verified ? "complete" : "manual", denyResult?.verified ? "" : t("auditManualAction"));
     recordAuditEvent("verify");
     setAuditStep("observe", "active");
     await chrome.runtime.sendMessage({ target: "cookiebuddy-background", type: "CLEAR_TRAFFIC", tabId: state.tab.id });
@@ -195,7 +195,9 @@ async function runDeltaCheck() {
       banner: afterDeny.analysis?.banner || before.analysis?.banner || null,
       bannerCategories: afterDeny.analysis?.categories || before.analysis?.categories || {},
       denyClicked: denyResult?.clicked,
+      denyVerified: denyResult?.verified,
       denyLabel: denyResult?.label,
+      denyVerification: denyResult?.verification,
       manualConsentConfirmed: !denyResult?.found,
       labels: {
         deltaFoundSummary: t("deltaFoundSummary"),
@@ -688,6 +690,7 @@ function renderAuditVerdict(delta, verdict) {
           <span><strong>${escapeHtml(delta.remainingStorageEntries?.length || 0)}</strong>${escapeHtml(t("storageStillVisibleMetric"))}</span>
         </div>
         <p class="muted">${escapeHtml(delta.denyAction?.clicked ? t("clickedDenyControl", delta.denyAction.label || t("detectedButton")) : t("manualDenyAssumed"))}</p>
+        ${renderRejectVerification(delta.denyAction)}
         ${cookieItems.length ? `<h3>${escapeHtml(t("nonEssentialCookiesStillPresent"))}</h3>${cookieItems.map((cookie) => `<p class="chip">${escapeHtml(cookie.name)} · ${escapeHtml(cookie.domain)} · ${escapeHtml(cookie.service)}</p>`).join("")}` : ""}
         ${delta.thirdPartyHosts?.length ? `<h3>${escapeHtml(t("nonEssentialThirdPartyTrafficAfterOptOut"))}</h3>${delta.thirdPartyHosts.slice(0, 10).map((host) => `<p class="chip">${escapeHtml(host)}</p>`).join("")}` : ""}
         ${delta.essentialThirdPartyHosts?.length ? `<h3>${escapeHtml(t("essentialThirdPartyTrafficAllowed"))}</h3>${delta.essentialThirdPartyHosts.slice(0, 10).map((host) => `<p class="chip">${escapeHtml(host)}</p>`).join("")}` : ""}
@@ -705,6 +708,25 @@ function renderAuditVerdict(delta, verdict) {
   elements.deltaResult.innerHTML = html;
   if (elements.statusCardText) elements.statusCardText.textContent = `${meta.title}. ${meta.copy}`;
   return html;
+}
+
+function renderRejectVerification(denyAction = {}) {
+  const verification = denyAction.verification || {};
+  const statusCopy = denyAction.verified
+    ? t("rejectVerificationVerified")
+    : denyAction.clicked ? t("rejectVerificationUnclear") : t("rejectVerificationNotAttempted");
+  const firstAction = verification.actions?.[0];
+  const evidenceLabels = {
+    "reject-control-removed": t("rejectEvidenceControlRemoved"),
+    "consent-signals-changed": t("rejectEvidenceConsentSignals"),
+    "banner-state-changed": t("rejectEvidenceBannerChanged"),
+    "consent-control-state-changed": t("rejectEvidenceControlState")
+  };
+  const evidence = (verification.evidence || []).map((item) => `<li>${escapeHtml(evidenceLabels[item] || item)}</li>`).join("");
+  const selection = firstAction?.label
+    ? `<p class="muted">${escapeHtml(t("rejectControlSelected", [firstAction.label, firstAction.source || "unknown", firstAction.confidence || "unknown"]))}</p>`
+    : "";
+  return `<section class="reject-verification"><h3>${escapeHtml(t("rejectVerificationHeading"))}</h3><p class="muted">${escapeHtml(statusCopy)}</p>${selection}${evidence ? `<ul class="coverage-list">${evidence}</ul>` : ""}</section>`;
 }
 
 function renderCoverageSummary(coverage) {
@@ -880,7 +902,7 @@ async function updateIconStatus(delta = null) {
 function determineIconStatus(delta = null) {
   if (delta) {
     if (delta.riskLevel === "high") return "red";
-    if (delta.denyAction?.clicked && delta.thirdPartyHosts.length === 0 && delta.newCookies.length === 0 && delta.remainingCookies.length === 0) {
+    if (delta.denyAction?.clicked && delta.denyAction?.verified && delta.thirdPartyHosts.length === 0 && delta.newCookies.length === 0 && delta.remainingCookies.length === 0) {
       return "green";
     }
     return "yellow";
