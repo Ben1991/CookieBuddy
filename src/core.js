@@ -215,6 +215,64 @@ export function buildDelta({
   };
 }
 
+const COVERAGE_LIMITATIONS = [
+  { key: "fingerprinting", state: "not-technically-inspectable", confidence: "high" },
+  { key: "server-side-tagging", state: "not-technically-inspectable", confidence: "high" },
+  { key: "backend-enrichment", state: "not-technically-inspectable", confidence: "high" },
+  { key: "first-party-proxy", state: "not-detected", confidence: "medium" },
+  { key: "cname-routing", state: "not-detected", confidence: "medium" },
+  { key: "opaque-client-signal", state: "not-observed", confidence: "medium" }
+];
+
+const FINGERPRINTING_HINT = /fingerprint|fpjs|deviceprint|canvas|webgl/i;
+
+function normalizeHeuristicSignal(signal) {
+  if (!signal || typeof signal !== "object" || !signal.key) return null;
+  return {
+    key: String(signal.key),
+    confidence: String(signal.confidence || "low"),
+    evidence: Array.isArray(signal.evidence) ? signal.evidence.map(String).slice(0, 5) : [],
+    confirmed: false
+  };
+}
+
+export function deriveHeuristicSignals(delta = {}) {
+  const supplied = (delta.heuristicSignals || []).map(normalizeHeuristicSignal).filter(Boolean);
+  const candidates = [
+    ...(delta.thirdPartyHosts || []),
+    ...(delta.serviceAudit || []).flatMap((service) => [service.name, service.source, service.category])
+  ].filter(Boolean);
+  const fingerprintEvidence = candidates.filter((value) => FINGERPRINTING_HINT.test(String(value))).slice(0, 5);
+  if (fingerprintEvidence.length && !supplied.some((signal) => signal.key === "fingerprinting")) {
+    supplied.push({ key: "fingerprinting", confidence: "low", evidence: fingerprintEvidence, confirmed: false });
+  }
+  return supplied;
+}
+
+/**
+ * Describe what this audit observed in the browser and what remains outside
+ * reliable browser-side inspection. Scope limitations are explicit and do
+ * not turn a complete browser audit into a claim of complete tracking
+ * detection.
+ */
+export function createCoverageSummary({ delta = {}, analysisComplete = true, heuristicSignals } = {}) {
+  const hasCookieObservation = Number.isFinite(delta.beforeCounts?.cookies) && Number.isFinite(delta.afterDenyCounts?.cookies);
+  const hasTrafficObservation = Number.isFinite(delta.beforeCounts?.thirdPartyHosts) && Number.isFinite(delta.afterDenyCounts?.thirdPartyHosts);
+  const hasStorageObservation = Number.isFinite(delta.afterDenyCounts?.storageEntries);
+  const hasConsentObservation = Boolean(delta.banner && delta.banner.confidence !== "none");
+  return {
+    auditComplete: Boolean(analysisComplete && delta.beforeCounts && delta.afterDenyCounts),
+    observed: [
+      { key: "cookies", state: hasCookieObservation ? "observed" : "not-observed", confidence: hasCookieObservation ? "confirmed" : "limited", evidenceCount: delta.afterDenyCounts?.cookies || 0 },
+      { key: "browser-storage", state: hasStorageObservation ? "observed" : "not-observed", confidence: hasStorageObservation ? "confirmed" : "limited", evidenceCount: delta.afterDenyCounts?.storageEntries || 0 },
+      { key: "network-requests", state: hasTrafficObservation ? "observed" : "not-observed", confidence: hasTrafficObservation ? "confirmed" : "limited", evidenceCount: delta.afterDenyCounts?.thirdPartyHosts || 0 },
+      { key: "consent-surface", state: hasConsentObservation ? "observed" : "not-observed", confidence: hasConsentObservation ? (delta.banner.confidence || "confirmed") : "limited", evidenceCount: delta.banner?.evidence?.length || 0 }
+    ],
+    limitations: COVERAGE_LIMITATIONS.map((limitation) => ({ ...limitation })),
+    heuristicSignals: heuristicSignals || deriveHeuristicSignals(delta)
+  };
+}
+
 /**
  * Convert the observed delta into the conservative top-level answer shown in
  * the popup. A green answer requires a verified reject action and a complete
@@ -222,6 +280,7 @@ export function buildDelta({
  * is never presented as success.
  */
 export function deriveAuditVerdict(delta, { analysisComplete = true } = {}) {
+  const coverage = delta?.coverage || createCoverageSummary({ delta, analysisComplete });
   const missingCoverage = [];
   if (!delta?.denyAction?.clicked) missingCoverage.push("rejection-verification");
   if (!delta?.banner || delta.banner.confidence === "none") missingCoverage.push("consent-surface");
@@ -240,7 +299,7 @@ export function deriveAuditVerdict(delta, { analysisComplete = true } = {}) {
       status: "incomplete",
       confidence: "limited",
       reasons: missingCoverage,
-      coverage: { complete: false, missing: missingCoverage }
+      coverage: { ...coverage, complete: false, missing: missingCoverage }
     };
   }
 
@@ -249,7 +308,7 @@ export function deriveAuditVerdict(delta, { analysisComplete = true } = {}) {
       status: "negative",
       confidence: "evidence-backed",
       reasons,
-      coverage: { complete: true, missing: [] }
+      coverage: { ...coverage, complete: true, missing: [] }
     };
   }
 
@@ -257,7 +316,7 @@ export function deriveAuditVerdict(delta, { analysisComplete = true } = {}) {
     status: "positive",
     confidence: "evidence-backed",
     reasons: ["no-contradictory-evidence"],
-    coverage: { complete: true, missing: [] }
+    coverage: { ...coverage, complete: true, missing: [] }
   };
 }
 
@@ -287,6 +346,27 @@ export function formatDeltaReport(delta, url = "") {
 
   report += "SUMMARY:\n";
   report += `  ${delta.summary}\n\n`;
+
+  const coverage = delta.coverage || createCoverageSummary({ delta });
+  report += "COVERAGE AND LIMITATIONS:\n";
+  report += `  Browser audit complete: ${coverage.auditComplete ? "yes" : "no"}\n`;
+  report += "  Observed browser evidence:\n";
+  (coverage.observed || []).forEach((item) => {
+    report += `    - ${item.key}: ${item.state}; confidence: ${item.confidence}; evidence count: ${item.evidenceCount}\n`;
+  });
+  report += "  Techniques outside reliable browser-side inspection:\n";
+  (coverage.limitations || []).forEach((item) => {
+    report += `    - ${item.key}: ${item.state}; confidence: ${item.confidence}\n`;
+  });
+  report += "  Heuristic indicators (not confirmed evidence):\n";
+  if (coverage.heuristicSignals?.length) {
+    coverage.heuristicSignals.forEach((signal) => {
+      report += `    - ${signal.key}: ${signal.confidence}; evidence: ${(signal.evidence || []).join(", ")}\n`;
+    });
+  } else {
+    report += "    - none recorded\n";
+  }
+  report += "\n";
 
   report += "═════════════════════════════════════════\n";
   report += "DENY ACTION DETAILS\n";

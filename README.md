@@ -173,7 +173,7 @@ Important limitations include:
 - inaccessible cross-origin consent UI or browser APIs
 - interference from blockers, browser tracking protection, prior consent, login state, or other contaminated browser state
 
-Reports and verdicts must distinguish **not observed**, **not detected**, and **not technically inspectable**.
+Reports and verdicts must distinguish **not observed** (no signal appeared in this audit), **not detected** (CookieBuddy has no reliable detector for the technique), and **not technically inspectable** (the technique can run outside observable browser evidence). Confirmed cookies, browser storage, network requests, and consent-surface evidence are listed separately from low-confidence heuristic indicators. These states describe the audit's evidence scope; they never claim complete tracking detection.
 
 ## Development Contract
 

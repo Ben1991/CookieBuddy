@@ -1,4 +1,5 @@
 import { applyI18n, getLanguage, initI18n, setLanguage, t } from "./i18n.js";
+import { createCoverageSummary } from "./core.js";
 import { removeVisualEvidenceItem } from "./visual-evidence.mjs";
 const output = document.querySelector("#detailsOutput");
 const languageSelect = document.querySelector("#languageSelect");
@@ -194,6 +195,7 @@ function renderDelta(delta, options = {}) {
   const storageEntries = delta.remainingStorageEntries || [];
   const banner = delta.banner || detailsPayload?.cookiebuddyLastScan?.analysis?.banner || null;
   const bannerEvidence = formatBannerEvidence(banner);
+  const coverage = delta.coverage || createCoverageSummary({ delta });
   return `
     <div class="delta-report">
       <div class="delta-report-header">
@@ -250,11 +252,36 @@ function renderDelta(delta, options = {}) {
             <p class="muted">${escapeHtml(t("importantLimitationsHeading"))}</p>
             ${renderSimpleList([t("deltaLimitationBestEffort"), t("deltaLimitationServerSide"), t("deltaLimitationNecessary"), t("deltaLimitationHeuristic")])}
           </section>
+          ${renderCoverage(coverage)}
         </aside>
       </div>
       ${renderVisualEvidence(delta, options)}
     </div>
   `;
+}
+
+function renderCoverage(coverage) {
+  const stateLabels = {
+    observed: t("coverageStateObserved"),
+    "not-observed": t("coverageStateNotObserved"),
+    "not-detected": t("coverageStateNotDetected"),
+    "not-technically-inspectable": t("coverageStateNotInspectable")
+  };
+  const techniqueLabels = {
+    cookies: t("coverageTechniqueCookies"),
+    "browser-storage": t("coverageTechniqueStorage"),
+    "network-requests": t("coverageTechniqueTraffic"),
+    "consent-surface": t("coverageTechniqueConsent"),
+    fingerprinting: t("coverageTechniqueFingerprinting"),
+    "server-side-tagging": t("coverageTechniqueServerSide"),
+    "backend-enrichment": t("coverageTechniqueBackend"),
+    "first-party-proxy": t("coverageTechniqueProxy"),
+    "cname-routing": t("coverageTechniqueCname"),
+    "opaque-client-signal": t("coverageTechniqueOpaque")
+  };
+  const renderItem = (item) => `<li><strong>${escapeHtml(techniqueLabels[item.key] || item.key)}</strong><span>${escapeHtml(stateLabels[item.state] || item.state)} · ${escapeHtml(t("coverageConfidence", item.confidence))}${item.evidenceCount !== undefined ? ` · ${escapeHtml(t("coverageEvidenceCount", item.evidenceCount))}` : ""}</span></li>`;
+  const heuristics = (coverage.heuristicSignals || []).map((signal) => `<li><strong>${escapeHtml(techniqueLabels[signal.key] || signal.key)}</strong><span>${escapeHtml(t("coverageConfidence", signal.confidence))} · ${escapeHtml(t("coverageHeuristicNotConfirmed"))}${signal.evidence?.length ? ` · ${escapeHtml(signal.evidence.join(", "))}` : ""}</span></li>`).join("");
+  return `<section class="coverage-report"><h3>${escapeHtml(t("coverageHeading"))}</h3><p class="muted">${escapeHtml(t("coverageIntro"))}</p><p class="coverage-status"><strong>${escapeHtml(t("coverageStatusLabel"))}:</strong> ${escapeHtml(coverage.auditComplete ? t("coverageStatusComplete") : t("coverageStatusIncomplete"))}</p><h4>${escapeHtml(t("coverageObserved"))}</h4><ul class="coverage-list">${(coverage.observed || []).map(renderItem).join("")}</ul><h4>${escapeHtml(t("coverageLimitations"))}</h4><ul class="coverage-list">${(coverage.limitations || []).map(renderItem).join("")}</ul><h4>${escapeHtml(t("coverageHeuristicHeading"))}</h4><ul class="coverage-list">${heuristics || `<li>${escapeHtml(t("coverageHeuristicNone"))}</li>`}</ul></section>`;
 }
 
 function renderVisualEvidence(delta, { forExport = false } = {}) {

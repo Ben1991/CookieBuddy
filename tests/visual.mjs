@@ -125,6 +125,9 @@ try {
   assert.ok(await details.locator("#downloadDeltaPdfButton").isVisible(), "print/PDF export action should be visible");
   assert.ok(await details.getByText("Still active", { exact: true }).isVisible(), "active services should be labeled");
   assert.ok(await details.getByText("Unclear", { exact: true }).isVisible(), "unlisted signals should be labeled unclear");
+  assert.ok(await details.getByText("Coverage and limits", { exact: true }).isVisible(), "coverage limits should be visible in the evidence report");
+  assert.ok(await details.getByText("Not technically inspectable", { exact: false }).count() > 0, "unsupported techniques should be labeled as not technically inspectable");
+  assert.ok(await details.getByText("Heuristic indicators (not confirmed evidence)", { exact: true }).isVisible(), "heuristics should be separated from confirmed evidence");
   assert.ok(await details.getByText("Stored locally", { exact: true }).isVisible(), "local-only status should be visible in the redesigned details header");
   await details.locator("#languageSelect").selectOption("de");
   await details.locator("html[lang='de']").waitFor({ state: "attached", timeout: 10000 });

@@ -1065,6 +1065,12 @@ body,
 .cb-details-output .delta-content-grid { display: grid; gap: 13px; }
 .cb-details-output .delta-findings { display: grid; gap: 13px; }
 .cb-details-output .delta-side-panel { display: grid; gap: 13px; }
+.cb-details-output .coverage-report { border: 1px solid var(--cb-line); border-radius: 16px; background: var(--cb-surface); padding: 14px; }
+.cb-details-output .coverage-report h4 { margin: 14px 0 6px; color: var(--cb-muted); font-size: 10px; }
+.cb-details-output .coverage-status { margin: 0; color: var(--cb-muted); font-size: 10px; }
+.cb-details-output .coverage-list { display: grid; gap: 6px; margin: 0; padding-left: 18px; color: var(--cb-muted); font-size: 10px; }
+.cb-details-output .coverage-list li { display: grid; gap: 2px; }
+.cb-details-output .coverage-list strong { color: var(--cb-ink); font-size: 11px; }
 .cb-details-output .service-audit-row { display: grid; grid-template-columns: 1fr auto; gap: 10px; border-bottom: 1px solid var(--cb-line); padding: 12px 0; }
 .cb-details-output .service-audit-row:last-child { border-bottom: 0; }
 .cb-details-output .audit-badge { display: inline-flex; border-radius: 99px; padding: 5px 9px; background: var(--cb-yellow-bg); color: var(--cb-yellow); font-size: 10px; }
