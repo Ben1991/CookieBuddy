@@ -59,6 +59,13 @@
 .audit-evidence-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 8px; }
 .audit-evidence-grid span { display: grid; gap: 2px; padding: 7px; border-radius: 8px; background: color-mix(in srgb, var(--line) 34%, transparent); color: var(--muted); font-size: .66rem; }
 .audit-evidence-grid strong { color: var(--text); font-size: .95rem; }
+.audit-visual-option { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: color-mix(in srgb, var(--panel) 86%, var(--accent) 14%); }
+.audit-visual-option h2 { margin: 0; font-size: .9rem; }
+.audit-visual-option p { margin: 0; }
+.audit-visual-toggle { display: flex; align-items: center; gap: 8px; font-size: .78rem; font-weight: 700; cursor: pointer; }
+.audit-visual-toggle input { inline-size: 16px; block-size: 16px; accent-color: var(--accent); }
+.audit-visual-warning { color: var(--muted); font-size: .7rem; }
+.visual-evidence-summary { margin: 10px 0 0; }
 .audit-result-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .audit-result-actions a, .audit-result-actions button { flex: 1; min-width: 130px; text-align: center; }
 @media (prefers-color-scheme: dark) { .audit-hero, .audit-explainer, .audit-progress-card, .audit-result { box-shadow: 0 14px 34px rgba(0, 0, 0, .24); } }

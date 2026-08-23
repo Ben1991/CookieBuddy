@@ -185,8 +185,10 @@ Feature: One-click consent and tracking audit
     Given the user enables visual evidence for an audit
     When CookieBuddy captures the consent UI before and after rejection
     Then screenshots are limited to the tested tab and audit flow
+    And each screenshot records a minimized tested URL, timestamp, audit step, and selected reject label
     And the user can preview and remove screenshots before export
     And CookieBuddy warns that screenshots may contain page content or personal information
+    And permission or browser capture failures are recorded as unavailable without invalidating technical evidence
 
   @UC-21 @issue-49 @p1
   Scenario: Prepare a complaint from a supported negative finding

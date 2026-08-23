@@ -1,4 +1,5 @@
 import { applyI18n, getLanguage, initI18n, setLanguage, t } from "./i18n.js";
+import { removeVisualEvidenceItem } from "./visual-evidence.mjs";
 const output = document.querySelector("#detailsOutput");
 const languageSelect = document.querySelector("#languageSelect");
 const sendDeltaMailHint = document.querySelector("#sendDeltaMailHint");
@@ -41,6 +42,9 @@ function renderDetails() {
 
   if (isDeltaView && detailsPayload.cookiebuddyLastDelta) {
     output.innerHTML = renderDelta(detailsPayload.cookiebuddyLastDelta);
+    output.querySelectorAll("[data-visual-evidence-remove]").forEach((button) => {
+      button.addEventListener("click", () => void removeScreenshot(button.dataset.visualEvidenceRemove));
+    });
     renderDeltaMailActions();
     return;
   }
@@ -55,6 +59,17 @@ function renderDetails() {
     null,
     2
   );
+}
+
+async function removeScreenshot(itemId) {
+  const delta = detailsPayload?.cookiebuddyLastDelta;
+  if (!delta?.visualEvidence) return;
+  detailsPayload.cookiebuddyLastDelta = {
+    ...delta,
+    visualEvidence: removeVisualEvidenceItem(delta.visualEvidence, itemId)
+  };
+  await chrome.storage.local.set({ cookiebuddyLastDelta: detailsPayload.cookiebuddyLastDelta });
+  renderDetails();
 }
 
 function renderDeltaMailActions() {
@@ -174,7 +189,7 @@ function renderMailCard({ tone, title, description, recipient, subject, buttonLa
   `;
 }
 
-function renderDelta(delta) {
+function renderDelta(delta, options = {}) {
   const cookies = [...(delta.remainingCookies || []), ...(delta.newCookies || [])];
   const storageEntries = delta.remainingStorageEntries || [];
   const banner = delta.banner || detailsPayload?.cookiebuddyLastScan?.analysis?.banner || null;
@@ -237,8 +252,55 @@ function renderDelta(delta) {
           </section>
         </aside>
       </div>
+      ${renderVisualEvidence(delta, options)}
     </div>
   `;
+}
+
+function renderVisualEvidence(delta, { forExport = false } = {}) {
+  const evidence = delta.visualEvidence;
+  if (!evidence) return "";
+  const items = evidence.items || [];
+  const captured = items.filter((item) => item.status === "captured");
+  const timeline = delta.auditTimeline || [];
+  const cards = items
+    .filter((item) => ["captured", "unavailable", "removed"].includes(item.status))
+    .map((item) => {
+      const phaseLabel = item.phase === "after" ? t("visualEvidenceAfterLabel") : t("visualEvidenceBeforeLabel");
+      const timelineEvent = timeline.find((event) => event.evidenceIds?.includes(item.id));
+      const stepLabel = timelineEvent ? formatTimelineStep(timelineEvent.step) : formatTimelineStep(item.auditStep);
+      if (item.status === "captured") {
+        return `<figure class="visual-evidence-card" data-evidence-id="${escapeHtml(item.id)}">
+          <img src="${escapeHtml(item.dataUrl)}" alt="${escapeHtml(phaseLabel)}">
+          <figcaption><strong>${escapeHtml(phaseLabel)}</strong><span>${escapeHtml(t("visualEvidenceStepLabel", stepLabel))}</span><time datetime="${escapeHtml(item.capturedAt)}">${escapeHtml(formatDate(item.capturedAt))}</time></figcaption>
+          ${forExport ? "" : `<button class="ghost-button small" type="button" data-visual-evidence-remove="${escapeHtml(item.id)}">${escapeHtml(t("visualEvidenceRemoveButton"))}</button>`}
+        </figure>`;
+      }
+      const statusLabel = item.status === "removed" ? t("visualEvidenceRemoved") : item.status === "disabled" ? t("visualEvidenceDisabled") : t("visualEvidenceUnavailable");
+      return `<div class="visual-evidence-card visual-evidence-unavailable" data-evidence-id="${escapeHtml(item.id)}">
+        <strong>${escapeHtml(phaseLabel)}</strong><span>${escapeHtml(statusLabel)}</span><span>${escapeHtml(t("visualEvidenceStepLabel", stepLabel))}</span>
+      </div>`;
+    }).join("");
+  const summary = captured.length ? t("visualEvidenceCaptured") : evidence.enabled ? t("visualEvidenceUnavailable") : t("visualEvidenceDisabled");
+  return `<section class="visual-evidence-report" aria-labelledby="visualEvidenceReportHeading">
+    <div class="visual-evidence-report-header"><div><h3 id="visualEvidenceReportHeading">${escapeHtml(t("visualEvidenceHeading"))}</h3><p class="muted">${escapeHtml(t("visualEvidenceReviewHint"))}</p></div><span class="audit-badge">${escapeHtml(summary)}</span></div>
+    ${cards || `<p class="empty-state">${escapeHtml(t("visualEvidenceNoCapture"))}</p>`}
+    <p class="muted">${escapeHtml(t("visualEvidenceWarning"))}</p>
+  </section>`;
+}
+
+function formatTimelineStep(step) {
+  const key = {
+    prepare: "auditStepPrepare",
+    consent: "auditStepConsent",
+    baseline: "auditStepBaseline",
+    reject: "auditStepReject",
+    verify: "auditStepVerify",
+    observe: "auditStepObserve",
+    capture: "auditStepCapture",
+    analyze: "auditStepAnalyze"
+  }[step] || "auditStepCapture";
+  return t(key);
 }
 
 function renderServiceAudit(service) {
@@ -273,6 +335,7 @@ function buildDeltaMailBody(delta, target = "dpo") {
     thirdPartyHosts: formatMailList(delta.thirdPartyHosts || [], t("noneObserved")),
     storageEntries: formatMailList((delta.remainingStorageEntries || []).map(formatStorageForMail), t("noneObserved")),
     serviceAudit: formatMailList((delta.serviceAudit || []).map(formatServiceAuditForMail), t("noneObserved")),
+    visualEvidence: formatVisualEvidenceForMail(delta),
     bannerProvider: getBannerProvider(banner),
     bannerEvidence: formatMailList(formatBannerEvidence(banner), t("noBannerEvidence")),
     senderName: t("senderNamePlaceholder")
@@ -320,11 +383,21 @@ function buildDeltaMailBody(delta, target = "dpo") {
     "",
     values.bannerEvidence,
     "",
+    t("visualEvidenceMailNote", values.visualEvidence),
+    "",
     t("deltaMailNoLegalClaim"),
     "",
     t("mailClosing"),
     values.senderName
   ].join("\n");
+}
+
+function formatVisualEvidenceForMail(delta) {
+  const evidence = delta.visualEvidence;
+  if (!evidence) return t("visualEvidenceDisabled");
+  const captured = (evidence.items || []).filter((item) => item.status === "captured").length;
+  const unavailable = (evidence.items || []).filter((item) => item.status === "unavailable").length;
+  return `${captured} ${t("visualEvidenceCaptured")}${unavailable ? `; ${unavailable} ${t("visualEvidenceUnavailable")}` : ""}`;
 }
 
 function formatServiceAuditForMail(service) {
@@ -364,7 +437,7 @@ function openDeltaPdfView() {
 
 function buildDeltaHtmlDocument(delta, options = {}) {
   const title = t("deltaReportDocumentTitle");
-  const content = renderDelta(delta).replace(/\n\s*/g, "");
+  const content = renderDelta(delta, { forExport: true }).replace(/\n\s*/g, "");
   const printableNote = options.printable
     ? `<p class="muted">${escapeHtml(t("deltaPdfHint"))}</p>`
     : "";

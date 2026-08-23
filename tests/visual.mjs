@@ -49,7 +49,7 @@ const server = createServer(async (request, response) => {
   const requestPath = decodeURIComponent(new URL(request.url, "http://127.0.0.1").pathname);
   const filePath = join(root, requestPath === "/" ? "popup.html" : requestPath.slice(1));
   try {
-    const contentTypes = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".json": "application/json", ".svg": "image/svg+xml" };
+    const contentTypes = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/javascript", ".css": "text/css", ".json": "application/json", ".svg": "image/svg+xml" };
     response.setHeader("Content-Type", contentTypes[filePath.slice(filePath.lastIndexOf("."))] || "application/octet-stream");
     response.end(await readFile(filePath));
   } catch {
@@ -96,6 +96,8 @@ try {
   assert.ok(await popup.locator("#deltaButton").isVisible(), "one-click audit action should be visible");
   assert.ok(await popup.locator("#auditQuestion").isVisible(), "the main popup should lead with the audit question");
   assert.ok(await popup.locator("#auditSteps").isVisible(), "audit progress steps should be visible");
+  assert.equal(await popup.locator("#visualEvidenceToggle").isChecked(), false, "visual evidence must be opt-in");
+  assert.ok(await popup.getByText("Screenshots may contain page content or personal information.", { exact: false }).isVisible(), "visual evidence privacy warning should be visible");
   assert.equal(await popup.locator("#overviewGrid").isVisible(), false, "technical metrics should remain progressive disclosure");
   assert.ok((await popup.evaluate(() => document.documentElement.scrollWidth)) <= (await popup.evaluate(() => document.documentElement.clientWidth)) + 1, "popup should not overflow horizontally");
   await popup.locator("#languageSelect").selectOption("de");
