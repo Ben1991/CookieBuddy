@@ -27,6 +27,13 @@ test("classifies first-party and subdomain cookies separately from third-party c
   assert.deepEqual(coverage.thirdPartyHosts, ["tracker.vendor.test"]);
 });
 
+test("uses registrable domains for cookie coverage on multi-level public suffixes", () => {
+  assert.equal(isThirdPartyHost("cdn.example.co.uk", "www.example.co.uk"), false);
+  assert.equal(isThirdPartyHost("tracker.other.co.uk", "www.example.co.uk"), true);
+  assert.equal(isThirdPartyHost("cdn.example.com.au", "shop.example.com.au"), false);
+  assert.equal(isThirdPartyHost("cdn.example.co.jp", "shop.example.co.jp"), false);
+});
+
 test("marks an unavailable third-party host as incomplete and preserves it across before/after", () => {
   const before = createCookieCoverage({ pageHost: "example.test", requestedHosts: ["example.test", "tracker.vendor.test"], unavailableHosts: [] });
   const after = createCookieCoverage({ pageHost: "example.test", requestedHosts: ["example.test", "tracker.vendor.test"], unavailableHosts: ["tracker.vendor.test"] });

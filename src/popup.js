@@ -441,7 +441,7 @@ function renderOverview() {
   const categories = state.analysis.categories || {};
   const serviceCount = Object.values(categories).reduce((total, category) => total + (category.services?.length || 0), 0);
   const storage = state.analysis.storage || {};
-  const thirdPartyCount = normalizeTraffic(state.traffic || [], state.analysis.host || "").length;
+  const thirdPartyCount = normalizeTraffic(state.traffic || [], state.analysis.host || "").filter((item) => item.relationship === "third-party").length;
   const suspiciousCookies = (state.cookies || []).filter((cookie) => !/session|csrf|xsrf|auth|consent|cookie|privacy|necessary/i.test(cookie.name)).length;
   const bannerName = state.analysis.banner?.name || t("noSourceDetected");
 
@@ -734,6 +734,7 @@ function renderAuditVerdict(delta, verdict) {
     "audit-integrity": t("auditCoverageIntegrity"),
     "cookie-coverage": t("auditCoverageCookies"),
     "storage-coverage": t("auditCoverageStorage"),
+    "cname-routing": t("auditCoverageCname"),
     "before-after-observation": t("auditCoverageObservation"),
     "page-analysis": t("auditCoverageAnalysis"),
     "audit-lifecycle": t("auditCoverageLifecycle"),
@@ -777,6 +778,7 @@ function renderAuditVerdict(delta, verdict) {
         ${renderAuditIntegrity(delta)}
         ${cookieItems.length ? `<h3>${escapeHtml(t("nonEssentialCookiesStillPresent"))}</h3>${cookieItems.map((cookie) => `<p class="chip">${escapeHtml(cookie.name)} · ${escapeHtml(cookie.domain)} · ${escapeHtml(cookie.service)}</p>`).join("")}` : ""}
         ${delta.thirdPartyHosts?.length ? `<h3>${escapeHtml(t("nonEssentialThirdPartyTrafficAfterOptOut"))}</h3>${delta.thirdPartyHosts.slice(0, 10).map((host) => `<p class="chip">${escapeHtml(host)}</p>`).join("")}` : ""}
+        ${renderPossibleCnameTrackers(delta)}
         ${delta.essentialThirdPartyHosts?.length ? `<h3>${escapeHtml(t("essentialThirdPartyTrafficAllowed"))}</h3>${delta.essentialThirdPartyHosts.slice(0, 10).map((host) => `<p class="chip">${escapeHtml(host)}</p>`).join("")}` : ""}
         ${delta.serviceAudit?.length ? `<section class="service-audit"><h3>${escapeHtml(t("serviceAuditHeading"))}</h3><p class="muted">${escapeHtml(t("serviceAuditIntro"))}</p>${delta.serviceAudit.map(renderServiceAudit).join("")}</section>` : ""}
         ${renderCoverageSummary(delta.coverage || verdict.coverage)}
@@ -830,6 +832,7 @@ function renderCoverageSummary(coverage) {
     "not-observed": t("coverageStateNotObserved"),
     "not-detected": t("coverageStateNotDetected"),
     "not-inspected": t("coverageStateNotInspected"),
+    unknown: t("coverageStateUnknown"),
     "not-technically-inspectable": t("coverageStateNotInspectable")
   };
   const techniqueLabels = {
@@ -852,6 +855,12 @@ function renderCoverageSummary(coverage) {
   const renderItem = (item) => `<li><strong>${escapeHtml(techniqueLabels[item.key] || item.key)}</strong><span>${escapeHtml(stateLabels[item.state] || item.state)} · ${escapeHtml(t("coverageConfidence", item.confidence))}${item.evidenceCount !== undefined ? ` · ${escapeHtml(t("coverageEvidenceCount", item.evidenceCount))}` : ""}</span></li>`;
   const heuristics = (coverage.heuristicSignals || []).map((signal) => `<li><strong>${escapeHtml(techniqueLabels[signal.key] || signal.key)}</strong><span>${escapeHtml(t("coverageConfidence", signal.confidence))} · ${escapeHtml(t("coverageHeuristicNotConfirmed"))}${signal.evidence?.length ? ` · ${escapeHtml(signal.evidence.join(", "))}` : ""}</span></li>`).join("");
   return `<section class="coverage-summary"><h3>${escapeHtml(t("coverageHeading"))}</h3><p class="muted">${escapeHtml(t("coverageIntro"))}</p><p class="coverage-status"><strong>${escapeHtml(t("coverageStatusLabel"))}:</strong> ${escapeHtml(coverage.auditComplete ? t("coverageStatusComplete") : t("coverageStatusIncomplete"))}</p><h4>${escapeHtml(t("coverageObserved"))}</h4><ul class="coverage-list">${(coverage.observed || []).map(renderItem).join("")}</ul><h4>${escapeHtml(t("coverageLimitations"))}</h4><ul class="coverage-list">${(coverage.limitations || []).map(renderItem).join("")}</ul><h4>${escapeHtml(t("coverageHeuristicHeading"))}</h4><ul class="coverage-list">${heuristics || `<li>${escapeHtml(t("coverageHeuristicNone"))}</li>`}</ul></section>`;
+}
+
+function renderPossibleCnameTrackers(delta) {
+  const trackers = delta.possibleCloakedTrackers || [];
+  if (!trackers.length) return "";
+  return `<section class="possible-cname-evidence"><h3>${escapeHtml(t("possibleCnameHeading"))}</h3><p class="muted">${escapeHtml(t("possibleCnameIntro"))}</p>${trackers.slice(0, 8).map((item) => `<p class="chip">${escapeHtml(item.host || t("unknownWebsite"))}${item.path ? ` · ${escapeHtml(item.path)}` : ""}${item.cnameRule?.id ? ` · ${escapeHtml(item.cnameRule.id)}` : ""}</p>`).join("")}</section>`;
 }
 
 function renderConsentSurfaceLimitations(delta) {
@@ -917,7 +926,7 @@ async function ensureContentScript(tabId) {
   } catch {
     await chrome.scripting.executeScript({
       target: { tabId, allFrames: true },
-      files: ["src/service-rules.js", "src/contact-discovery-content.js", "src/consent-controls.js", "src/consent-surfaces.js", "src/content.js"]
+      files: ["src/service-rules.js", "src/domain-rules.js", "src/contact-discovery-content.js", "src/consent-controls.js", "src/consent-surfaces.js", "src/content.js"]
     });
   }
 }
@@ -1036,10 +1045,11 @@ function determineIconStatus(delta = null) {
   const traffic = normalizeTraffic(state.traffic || [], state.analysis?.host || "");
   const visibleCookies = state.cookies || [];
   const suspiciousCookies = visibleCookies.filter((cookie) => !isEssentialCookie(cookie));
-  const hasNonEssentialThirdPartyTraffic = traffic.some((item) => !isEssentialHost(item.host));
+  const hasNonEssentialThirdPartyTraffic = traffic.some((item) => item.relationship === "third-party" && !isEssentialHost(item.host));
+  const hasPossibleCloakedTracker = traffic.some((item) => item.relationship === "possible-cloaked-tracker");
 
   if (!banner || banner.confidence === "none") return "yellow";
-  if (hasNonEssentialThirdPartyTraffic || suspiciousCookies.length > 0) return "yellow";
+  if (hasNonEssentialThirdPartyTraffic || hasPossibleCloakedTracker || suspiciousCookies.length > 0) return "yellow";
   return "green";
 }
 

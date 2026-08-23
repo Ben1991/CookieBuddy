@@ -546,13 +546,19 @@ function collectResources() {
     .filter(Boolean)
     .map((url) => minimizePageEvidence(url.href))
     .filter(Boolean)
-    .map((evidence) => ({
-      url: evidence.url,
-      host: evidence.host,
-      path: evidence.path,
-      queryKeys: evidence.queryKeys,
-      thirdParty: getBaseDomain(evidence.host) !== getBaseDomain(location.hostname)
-    }))
+    .map((evidence) => {
+      const relationship = globalThis.CookieBuddyDomainRules?.classifyEndpointRelationship({ host: evidence.host, pageHost: location.hostname, path: evidence.path }) || { relationship: "unknown", cnameStatus: "unknown", cnameRule: null };
+      return {
+        url: evidence.url,
+        host: evidence.host,
+        path: evidence.path,
+        queryKeys: evidence.queryKeys,
+        relationship: relationship.relationship,
+        cnameStatus: relationship.cnameStatus,
+        cnameRule: relationship.cnameRule,
+        thirdParty: relationship.relationship === "third-party"
+      };
+    })
     .filter((resource, index, list) => list.findIndex((item) => item.url === resource.url) === index)
     .slice(0, PAGE_ANALYSIS_BUDGETS.maxResources);
 }
@@ -893,8 +899,7 @@ function sanitizePageUrl(value) {
 }
 
 function getBaseDomain(hostname) {
-  const parts = hostname.split(".").filter(Boolean);
-  return parts.slice(-2).join(".");
+  return globalThis.CookieBuddyDomainRules?.registrableDomain(hostname) || "";
 }
 
 function stripHtml(html) {

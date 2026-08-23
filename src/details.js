@@ -250,6 +250,7 @@ function renderDelta(delta, options = {}) {
             ${storageEntries.length ? renderStorageTable(storageEntries) : `<p class="empty-state">${escapeHtml(t("noStorageEntries"))}</p>`}
           </section>
           ${renderBrowserStorageEvidence(delta.browserStorage?.after)}
+          ${renderPossibleCnameTrackers(delta)}
           ${renderConsentSurfaceLimitations(delta)}
           <section>
             <h3>${escapeHtml(t("serviceAuditHeading"))}</h3>
@@ -327,6 +328,7 @@ function renderCoverage(coverage) {
     "not-observed": t("coverageStateNotObserved"),
     "not-detected": t("coverageStateNotDetected"),
     "not-inspected": t("coverageStateNotInspected"),
+    unknown: t("coverageStateUnknown"),
     "not-technically-inspectable": t("coverageStateNotInspectable")
   };
   const techniqueLabels = {
@@ -639,6 +641,12 @@ function renderBrowserStorageEvidence(storage) {
     ? `<ul class="delta-list">${registrations.map((registration) => `<li><strong>${escapeHtml(registration.scope || t("serviceWorkersHeading"))}</strong> · ${escapeHtml(registration.state || "unknown")}${registration.scriptUrl ? ` · ${escapeHtml(registration.scriptUrl)}` : ""}</li>`).join("")}</ul>`
     : `<p class="empty-state">${escapeHtml(storage.serviceWorkers?.status === "not-inspected" ? t("storageStatusNotInspected") : t("noServiceWorkerRegistrations"))}</p>`;
   return `<section class="browser-storage-evidence"><h3>${escapeHtml(t("browserStorageMetadataHeading"))}</h3><p class="muted">${escapeHtml(t("storageInspectionStatus", [statusLabel(storage.indexedDB?.status), statusLabel(storage.cacheStorage?.status), statusLabel(storage.serviceWorkers?.status)]))}</p><div class="storage-evidence-grid"><div><h4>${escapeHtml(t("indexedDbHeading"))}</h4>${databaseContent}</div><div><h4>${escapeHtml(t("cacheStorageHeading"))}</h4>${cacheContent}</div><div><h4>${escapeHtml(t("serviceWorkersHeading"))}</h4>${workerContent}</div></div></section>`;
+}
+
+function renderPossibleCnameTrackers(delta) {
+  const trackers = delta.possibleCloakedTrackers || [];
+  if (!trackers.length) return "";
+  return `<section class="possible-cname-evidence"><h3>${escapeHtml(t("possibleCnameHeading"))}</h3><p class="muted">${escapeHtml(t("possibleCnameIntro"))}</p><ul class="delta-list">${trackers.slice(0, 8).map((item) => `<li>${escapeHtml(item.host || t("unknownWebsite"))}${item.path ? ` · ${escapeHtml(item.path)}` : ""}${item.cnameRule?.id ? ` · ${escapeHtml(item.cnameRule.id)}` : ""}</li>`).join("")}</ul></section>`;
 }
 
 function renderConsentSurfaceLimitations(delta) {

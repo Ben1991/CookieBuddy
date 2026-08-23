@@ -44,7 +44,7 @@ test("keeps observable evidence, scope limitations, and heuristic signals separa
   });
 
   assert.equal(coverage.auditComplete, true);
-  assert.deepEqual(coverage.observed.map((item) => item.state), ["observed", "observed", "observed", "observed", "not-observed", "observed"]);
+  assert.deepEqual(coverage.observed.map((item) => item.state), ["observed", "observed", "observed", "observed", "not-observed", "observed", "not-observed"]);
   assert.equal(coverage.limitations.find((item) => item.key === "server-side-tagging").state, "not-technically-inspectable");
   assert.equal(coverage.limitations.find((item) => item.key === "first-party-proxy").state, "not-detected");
   assert.equal(coverage.limitations.find((item) => item.key === "opaque-client-signal").state, "not-observed");
@@ -107,6 +107,9 @@ test("formats cookies with service labels", () => {
 test("extracts base domains", () => {
   assert.equal(getBaseDomain("sub.example.com"), "example.com");
   assert.equal(getBaseDomain("example.de"), "example.de");
+  assert.equal(getBaseDomain("shop.example.co.uk"), "example.co.uk");
+  assert.equal(getBaseDomain("cdn.example.com.au"), "example.com.au");
+  assert.equal(getBaseDomain("assets.example.co.jp"), "example.co.jp");
 });
 
 test("keeps only third-party traffic", () => {
@@ -132,6 +135,39 @@ test("minimizes request URLs before traffic classification", () => {
   assert.equal(result[0].url, "https://analytics.other.com/pixel");
   assert.deepEqual(result[0].queryKeys, ["email", "query"]);
   assert.doesNotMatch(JSON.stringify(result[0]), /alice|private|section/);
+});
+
+test("keeps possible first-party-cloaked trackers unknown instead of treating them as safe", () => {
+  const traffic = normalizeTraffic([
+    { url: "https://analytics.example.co.uk/collect", type: "xmlhttprequest" },
+    { url: "https://tracker.other.co.uk/pixel", type: "script" }
+  ], "www.example.co.uk");
+
+  assert.deepEqual(traffic.map((item) => item.relationship), ["possible-cloaked-tracker", "third-party"]);
+  const delta = buildDelta({
+    beforeCookies: [],
+    afterCookies: [],
+    beforeTraffic: [],
+    afterTraffic: traffic,
+    denyClicked: true,
+    denyVerified: true,
+    banner: { confidence: "high" },
+    labels: { deltaFoundSummary: "found", noDeltaSummary: "none" },
+    tabUrl: "https://www.example.co.uk"
+  });
+
+  assert.deepEqual(delta.thirdPartyHosts, ["tracker.other.co.uk"]);
+  assert.equal(delta.possibleCloakedTrackers[0].host, "analytics.example.co.uk");
+  assert.equal(delta.cnameCoverage.status, "unknown");
+  assert.match(formatDeltaReport(delta), /CNAME ROUTING COVERAGE/);
+  const verdict = deriveAuditVerdict({
+    ...delta,
+    integrity: { status: "clean", uncertain: false },
+    cookieCoverage: { complete: true, requestedHosts: ["example.co.uk"], unavailableHosts: [] },
+    browserStorage: { after: { indexedDB: { status: "observed" }, cacheStorage: { status: "observed" }, serviceWorkers: { status: "observed" } } }
+  });
+  assert.equal(verdict.status, "incomplete");
+  assert.ok(verdict.reasons.includes("cname-routing"));
 });
 
 test("builds a delta summary from the before and after states", () => {

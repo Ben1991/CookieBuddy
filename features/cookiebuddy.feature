@@ -102,6 +102,7 @@ Feature: One-click consent and tracking audit
     Then it uses Public Suffix List compatible registrable-domain logic
     And does not rely on the last two hostname labels
     And possible first-party-looking tracking endpoints are not automatically treated as safe
+    And an unresolved CNAME status is recorded as unknown and prevents a positive result
 
   @UC-12 @issue-43 @p1
   Scenario: Classify necessity conservatively and with rationale
