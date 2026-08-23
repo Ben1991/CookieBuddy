@@ -41,6 +41,10 @@ test("details page opens a mail draft from the delta report", async () => {
   assert.match(decodeURIComponent(window.location.lastAssignedUrl), /Google Analytics: Still active/);
   assert.match(decodeURIComponent(window.location.lastAssignedUrl), /Not listed in banner/);
 
+  assert.match(element(document, "detailsOutput").innerHTML, /Coverage and limits/);
+  assert.match(element(document, "detailsOutput").innerHTML, /Not technically inspectable/);
+  assert.match(element(document, "detailsOutput").innerHTML, /Heuristic indicators/);
+
   element(document, "sendDeltaMailActions").querySelector("#downloadDeltaHtmlButton").click();
   await flush();
   assert.equal(window.lastDownloadedName, "cookiebuddy-delta-report.html");

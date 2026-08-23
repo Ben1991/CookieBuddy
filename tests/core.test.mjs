@@ -5,7 +5,9 @@ import {
   buildServiceAudit,
   capitalize,
   cookieKey,
+  createCoverageSummary,
   deriveAuditVerdict,
+  deriveHeuristicSignals,
   formatCookie,
   formatDeltaReport,
   getBaseDomain,
@@ -27,6 +29,26 @@ test("detects essential cookies by name", () => {
   assert.equal(isEssentialCookie({ name: "cookie_consent" }), true);
   assert.equal(isEssentialCookie({ name: "__cf_bm" }), true);
   assert.equal(isEssentialCookie({ name: "ga_id" }), false);
+});
+
+test("keeps observable evidence, scope limitations, and heuristic signals separate", () => {
+  const coverage = createCoverageSummary({
+    delta: {
+      banner: { confidence: "high", evidence: [{ source: "DOM marker" }] },
+      beforeCounts: { cookies: 2, thirdPartyHosts: 1 },
+      afterDenyCounts: { cookies: 1, thirdPartyHosts: 1, storageEntries: 0 },
+      thirdPartyHosts: ["fpjs.example.net"]
+    }
+  });
+
+  assert.equal(coverage.auditComplete, true);
+  assert.deepEqual(coverage.observed.map((item) => item.state), ["observed", "observed", "observed", "observed"]);
+  assert.equal(coverage.limitations.find((item) => item.key === "server-side-tagging").state, "not-technically-inspectable");
+  assert.equal(coverage.limitations.find((item) => item.key === "first-party-proxy").state, "not-detected");
+  assert.equal(coverage.limitations.find((item) => item.key === "opaque-client-signal").state, "not-observed");
+  assert.equal(coverage.heuristicSignals[0].key, "fingerprinting");
+  assert.equal(coverage.heuristicSignals[0].confirmed, false);
+  assert.equal(deriveHeuristicSignals({ thirdPartyHosts: ["analytics.example.net"] }).length, 0);
 });
 
 test("detects essential infrastructure hosts", () => {
@@ -197,6 +219,9 @@ test("formats delta report as plain text", () => {
   assert.match(report, /example.com/);
   assert.match(report, /HIGH RISK/);
   assert.match(report, /Delta found/);
+  assert.match(report, /COVERAGE AND LIMITATIONS/);
+  assert.match(report, /not-technically-inspectable/);
+  assert.match(report, /Heuristic indicators/);
   assert.match(report, /_ga/);
   assert.match(report, /tracker.example.net/);
 });
@@ -269,7 +294,9 @@ test("derives a positive verdict only when rejection and before/after coverage a
     serviceAudit: []
   };
 
-  assert.equal(deriveAuditVerdict(base).status, "positive");
+  const positive = deriveAuditVerdict(base);
+  assert.equal(positive.status, "positive");
+  assert.equal(positive.coverage.limitations.find((item) => item.key === "backend-enrichment").state, "not-technically-inspectable");
   assert.equal(deriveAuditVerdict({ ...base, denyAction: { clicked: false } }).status, "incomplete");
   assert.equal(deriveAuditVerdict({ ...base, riskLevel: "high", thirdPartyHosts: ["tracker.example"] }).status, "negative");
 });

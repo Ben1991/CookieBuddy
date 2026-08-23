@@ -222,8 +222,9 @@ Feature: One-click consent and tracking audit
     Given tracking may use fingerprinting, server-side tagging, backend enrichment, first-party proxies, or other opaque techniques
     When CookieBuddy reports audit coverage
     Then it distinguishes not observed, not detected, and not technically inspectable
+    And it explains that these states describe this audit's evidence scope rather than complete tracking coverage
     And does not claim complete tracking detection
-    And heuristic indicators are labeled separately from confirmed browser evidence
+    And heuristic indicators are labeled separately from confirmed browser evidence with confidence
 
   @UC-25 @issue-51 @issue-63 @p2
   Scenario: Preserve privacy and bounded performance of CookieBuddy itself

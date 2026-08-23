@@ -1,5 +1,5 @@
 import { applyI18n, getLanguage, initI18n, setLanguage, t } from "./i18n.js";
-import { buildDelta, capitalize, deriveAuditVerdict, getBaseDomain, isEssentialCookie, isEssentialHost, normalizeTraffic, serviceForCookie } from "./core.js";
+import { buildDelta, capitalize, createCoverageSummary, deriveAuditVerdict, getBaseDomain, isEssentialCookie, isEssentialHost, normalizeTraffic, serviceForCookie } from "./core.js";
 import { canCaptureVisibleTab, createAuditTimelineEvent, createVisualEvidenceItem, createVisualEvidenceState } from "./visual-evidence.mjs";
 
 const state = {
@@ -177,6 +177,7 @@ async function runDeltaCheck() {
       items: visualEvidenceItems,
       rejectControlLabel: denyResult?.label
     });
+    delta.coverage = createCoverageSummary({ delta, analysisComplete: Boolean(afterDeny.analysis) });
     recordAuditEvent("analyze");
     delta.auditTimeline = auditTimeline;
     const verdict = deriveAuditVerdict(delta, { analysisComplete: Boolean(afterDeny.analysis) });
@@ -564,6 +565,7 @@ function renderAuditVerdict(delta, verdict) {
         ${delta.thirdPartyHosts?.length ? `<h3>${escapeHtml(t("nonEssentialThirdPartyTrafficAfterOptOut"))}</h3>${delta.thirdPartyHosts.slice(0, 10).map((host) => `<p class="chip">${escapeHtml(host)}</p>`).join("")}` : ""}
         ${delta.essentialThirdPartyHosts?.length ? `<h3>${escapeHtml(t("essentialThirdPartyTrafficAllowed"))}</h3>${delta.essentialThirdPartyHosts.slice(0, 10).map((host) => `<p class="chip">${escapeHtml(host)}</p>`).join("")}` : ""}
         ${delta.serviceAudit?.length ? `<section class="service-audit"><h3>${escapeHtml(t("serviceAuditHeading"))}</h3><p class="muted">${escapeHtml(t("serviceAuditIntro"))}</p>${delta.serviceAudit.map(renderServiceAudit).join("")}</section>` : ""}
+        ${renderCoverageSummary(delta.coverage || verdict.coverage)}
         ${renderVisualEvidenceSummary(delta)}
       </details>
       <div class="audit-result-actions">
@@ -576,6 +578,31 @@ function renderAuditVerdict(delta, verdict) {
   elements.deltaResult.innerHTML = html;
   if (elements.statusCardText) elements.statusCardText.textContent = `${meta.title}. ${meta.copy}`;
   return html;
+}
+
+function renderCoverageSummary(coverage) {
+  if (!coverage) return "";
+  const stateLabels = {
+    observed: t("coverageStateObserved"),
+    "not-observed": t("coverageStateNotObserved"),
+    "not-detected": t("coverageStateNotDetected"),
+    "not-technically-inspectable": t("coverageStateNotInspectable")
+  };
+  const techniqueLabels = {
+    cookies: t("coverageTechniqueCookies"),
+    "browser-storage": t("coverageTechniqueStorage"),
+    "network-requests": t("coverageTechniqueTraffic"),
+    "consent-surface": t("coverageTechniqueConsent"),
+    fingerprinting: t("coverageTechniqueFingerprinting"),
+    "server-side-tagging": t("coverageTechniqueServerSide"),
+    "backend-enrichment": t("coverageTechniqueBackend"),
+    "first-party-proxy": t("coverageTechniqueProxy"),
+    "cname-routing": t("coverageTechniqueCname"),
+    "opaque-client-signal": t("coverageTechniqueOpaque")
+  };
+  const renderItem = (item) => `<li><strong>${escapeHtml(techniqueLabels[item.key] || item.key)}</strong><span>${escapeHtml(stateLabels[item.state] || item.state)} · ${escapeHtml(t("coverageConfidence", item.confidence))}${item.evidenceCount !== undefined ? ` · ${escapeHtml(t("coverageEvidenceCount", item.evidenceCount))}` : ""}</span></li>`;
+  const heuristics = (coverage.heuristicSignals || []).map((signal) => `<li><strong>${escapeHtml(techniqueLabels[signal.key] || signal.key)}</strong><span>${escapeHtml(t("coverageConfidence", signal.confidence))} · ${escapeHtml(t("coverageHeuristicNotConfirmed"))}${signal.evidence?.length ? ` · ${escapeHtml(signal.evidence.join(", "))}` : ""}</span></li>`).join("");
+  return `<section class="coverage-summary"><h3>${escapeHtml(t("coverageHeading"))}</h3><p class="muted">${escapeHtml(t("coverageIntro"))}</p><p class="coverage-status"><strong>${escapeHtml(t("coverageStatusLabel"))}:</strong> ${escapeHtml(coverage.auditComplete ? t("coverageStatusComplete") : t("coverageStatusIncomplete"))}</p><h4>${escapeHtml(t("coverageObserved"))}</h4><ul class="coverage-list">${(coverage.observed || []).map(renderItem).join("")}</ul><h4>${escapeHtml(t("coverageLimitations"))}</h4><ul class="coverage-list">${(coverage.limitations || []).map(renderItem).join("")}</ul><h4>${escapeHtml(t("coverageHeuristicHeading"))}</h4><ul class="coverage-list">${heuristics || `<li>${escapeHtml(t("coverageHeuristicNone"))}</li>`}</ul></section>`;
 }
 
 function renderVisualEvidenceSummary(delta) {

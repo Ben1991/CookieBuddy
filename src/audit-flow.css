@@ -59,6 +59,13 @@
 .audit-evidence-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 8px; }
 .audit-evidence-grid span { display: grid; gap: 2px; padding: 7px; border-radius: 8px; background: color-mix(in srgb, var(--line) 34%, transparent); color: var(--muted); font-size: .66rem; }
 .audit-evidence-grid strong { color: var(--text); font-size: .95rem; }
+.coverage-summary { display: grid; gap: 7px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+.coverage-summary h3, .coverage-summary h4 { margin: 0; }
+.coverage-summary h4 { color: var(--muted); font-size: .7rem; }
+.coverage-status { margin: 0; color: var(--muted); font-size: .7rem; }
+.coverage-list { display: grid; gap: 5px; margin: 0; padding-left: 18px; color: var(--muted); font-size: .7rem; }
+.coverage-list li { display: grid; gap: 2px; }
+.coverage-list strong { color: var(--text); font-size: .72rem; }
 .audit-visual-option { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: color-mix(in srgb, var(--panel) 86%, var(--accent) 14%); }
 .audit-visual-option h2 { margin: 0; font-size: .9rem; }
 .audit-visual-option p { margin: 0; }
