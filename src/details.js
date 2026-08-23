@@ -239,6 +239,7 @@ function renderDelta(delta, options = {}) {
             <h3>${escapeHtml(t("browserStorageAfterOptOutHeading"))}</h3>
             ${storageEntries.length ? renderStorageTable(storageEntries) : `<p class="empty-state">${escapeHtml(t("noStorageEntries"))}</p>`}
           </section>
+          ${renderConsentSurfaceLimitations(delta)}
           <section>
             <h3>${escapeHtml(t("serviceAuditHeading"))}</h3>
             <p class="muted">${escapeHtml(t("serviceAuditIntro"))}</p>
@@ -597,6 +598,13 @@ function renderStorageTable(entries) {
       </tbody>
     </table>
   `;
+}
+
+function renderConsentSurfaceLimitations(delta) {
+  const surfaces = delta.inaccessibleConsentSurfaces || [];
+  if (!surfaces.length) return "";
+  const items = surfaces.slice(0, 8).map((surface) => `<li>${escapeHtml(t("inaccessibleConsentSurface", [surface.frameUrl || t("unknownWebsite"), surface.frameOrigin || "unknown", surface.domContext || t("unknownDomContext")] ))}</li>`).join("");
+  return `<section><h3>${escapeHtml(t("inaccessibleConsentHeading"))}</h3><p class="muted">${escapeHtml(t("inaccessibleConsentIntro"))}</p><ul class="delta-list">${items}</ul></section>`;
 }
 
 function renderSimpleList(items) {

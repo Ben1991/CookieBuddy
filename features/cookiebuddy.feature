@@ -121,7 +121,7 @@ Feature: One-click consent and tracking audit
   Scenario: Detect consent surfaces in frames and open shadow roots
     Given a consent UI is rendered in the top document, a same-origin frame, or an open shadow root
     When CookieBuddy searches for the consent surface
-    Then it detects supported consent controls in the relevant DOM context
+    Then it detects and can operate supported consent controls in the relevant DOM context
     And records which frame or root produced the evidence
     And an inaccessible cross-origin consent surface is reported as inaccessible rather than absent
 

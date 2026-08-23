@@ -37,8 +37,10 @@
       "js": [
         "src/contact-discovery-content.js",
         "src/consent-controls.js",
+        "src/consent-surfaces.js",
         "src/content.js"
       ],
+      "all_frames": true,
       "run_at": "document_idle"
     }
   ],

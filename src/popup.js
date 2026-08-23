@@ -198,6 +198,7 @@ async function runDeltaCheck() {
       denyVerified: denyResult?.verified,
       denyLabel: denyResult?.label,
       denyVerification: denyResult?.verification,
+      inaccessibleConsentSurfaces: afterDeny.analysis?.inaccessibleConsentSurfaces || before.analysis?.inaccessibleConsentSurfaces || [],
       manualConsentConfirmed: !denyResult?.found,
       labels: {
         deltaFoundSummary: t("deltaFoundSummary"),
@@ -652,6 +653,7 @@ function renderAuditVerdict(delta, verdict) {
     "unclear-service": t("auditReasonUnclearService"),
     "rejection-verification": t("auditCoverageReject"),
     "consent-surface": t("auditCoverageConsent"),
+    "consent-surface-inaccessible": t("auditCoverageConsentInaccessible"),
     "before-after-observation": t("auditCoverageObservation"),
     "page-analysis": t("auditCoverageAnalysis"),
     "audit-lifecycle": t("auditCoverageLifecycle"),
@@ -691,6 +693,7 @@ function renderAuditVerdict(delta, verdict) {
         </div>
         <p class="muted">${escapeHtml(delta.denyAction?.clicked ? t("clickedDenyControl", delta.denyAction.label || t("detectedButton")) : t("manualDenyAssumed"))}</p>
         ${renderRejectVerification(delta.denyAction)}
+        ${renderConsentSurfaceLimitations(delta)}
         ${cookieItems.length ? `<h3>${escapeHtml(t("nonEssentialCookiesStillPresent"))}</h3>${cookieItems.map((cookie) => `<p class="chip">${escapeHtml(cookie.name)} · ${escapeHtml(cookie.domain)} · ${escapeHtml(cookie.service)}</p>`).join("")}` : ""}
         ${delta.thirdPartyHosts?.length ? `<h3>${escapeHtml(t("nonEssentialThirdPartyTrafficAfterOptOut"))}</h3>${delta.thirdPartyHosts.slice(0, 10).map((host) => `<p class="chip">${escapeHtml(host)}</p>`).join("")}` : ""}
         ${delta.essentialThirdPartyHosts?.length ? `<h3>${escapeHtml(t("essentialThirdPartyTrafficAllowed"))}</h3>${delta.essentialThirdPartyHosts.slice(0, 10).map((host) => `<p class="chip">${escapeHtml(host)}</p>`).join("")}` : ""}
@@ -754,6 +757,13 @@ function renderCoverageSummary(coverage) {
   return `<section class="coverage-summary"><h3>${escapeHtml(t("coverageHeading"))}</h3><p class="muted">${escapeHtml(t("coverageIntro"))}</p><p class="coverage-status"><strong>${escapeHtml(t("coverageStatusLabel"))}:</strong> ${escapeHtml(coverage.auditComplete ? t("coverageStatusComplete") : t("coverageStatusIncomplete"))}</p><h4>${escapeHtml(t("coverageObserved"))}</h4><ul class="coverage-list">${(coverage.observed || []).map(renderItem).join("")}</ul><h4>${escapeHtml(t("coverageLimitations"))}</h4><ul class="coverage-list">${(coverage.limitations || []).map(renderItem).join("")}</ul><h4>${escapeHtml(t("coverageHeuristicHeading"))}</h4><ul class="coverage-list">${heuristics || `<li>${escapeHtml(t("coverageHeuristicNone"))}</li>`}</ul></section>`;
 }
 
+function renderConsentSurfaceLimitations(delta) {
+  const surfaces = delta.inaccessibleConsentSurfaces || [];
+  if (!surfaces.length) return "";
+  const items = surfaces.slice(0, 8).map((surface) => `<li>${escapeHtml(t("inaccessibleConsentSurface", [surface.frameUrl || t("unknownWebsite"), surface.frameOrigin || "unknown", surface.domContext || t("unknownDomContext")] ))}</li>`).join("");
+  return `<section class="consent-surface-limitations"><h3>${escapeHtml(t("inaccessibleConsentHeading"))}</h3><p class="muted">${escapeHtml(t("inaccessibleConsentIntro"))}</p><ul class="coverage-list">${items}</ul></section>`;
+}
+
 function renderVisualEvidenceSummary(delta) {
   const evidence = delta.visualEvidence;
   if (!evidence) return "";
@@ -792,8 +802,8 @@ async function ensureContentScript(tabId) {
     await sendToTab(tabId, { target: "cookiebuddy-content", type: "ANALYZE_PAGE" });
   } catch {
     await chrome.scripting.executeScript({
-      target: { tabId },
-      files: ["src/contact-discovery-content.js", "src/consent-controls.js", "src/content.js"]
+      target: { tabId, allFrames: true },
+      files: ["src/contact-discovery-content.js", "src/consent-controls.js", "src/consent-surfaces.js", "src/content.js"]
     });
   }
 }
@@ -961,7 +971,9 @@ async function persistLastScan() {
 }
 
 function sendToTab(tabId, message) {
-  return chrome.tabs.sendMessage(tabId, message);
+  // The top-frame content script recursively inspects accessible child surfaces.
+  // Targeting frame 0 keeps responses deterministic now that all frames are injected.
+  return chrome.tabs.sendMessage(tabId, message, { frameId: 0 });
 }
 
 function setStatus(key, mode) {
