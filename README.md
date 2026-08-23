@@ -1,143 +1,214 @@
 # CookieBuddy
 
-CookieBuddy is a Chrome extension that helps you review cookie banners and tracking behavior on a website.
+CookieBuddy is a local Chrome extension for reviewing cookie-consent and tracking behavior on websites.
 
-It gives you a local, browser-side summary of:
+The product direction is a one-click technical audit that answers a simple question first: **does optional tracking appear to stop correctly after rejection?** CookieBuddy should then show the evidence behind that answer and, when a supported problem is found, make a factual complaint or escalation easy to prepare.
 
-- the cookie banner it detects
+CookieBuddy provides technical review signals, not legal advice or a legal compliance verdict.
+
+## Product Principle
+
+The intended product flow is:
+
+1. Start one audit.
+2. Observe the current consent/tracking state.
+3. Reject optional consent using a verified action where possible.
+4. Reload and observe the post-rejection state.
+5. Compare consent signals, cookies, browser storage, and network traffic.
+6. Produce a conservative verdict with confidence and coverage.
+7. Show reproducible evidence.
+8. Offer a factual complaint/escalation draft when supported by the evidence.
+
+A positive/green result is only valid when all mandatory checks completed successfully and no contradictory evidence was observed. Unknown, unsupported, contaminated, or incomplete coverage must remain unclear/incomplete rather than becoming green.
+
+## Current Capabilities
+
+The current implementation already provides a local browser-side summary of:
+
+- detected consent-banner/CMP evidence
 - visible cookies and browser storage
-- third-party requests made while the tab is open
-- contact details for privacy follow-up
-- a best-effort before/after delta check after trying to reject cookies
+- observed third-party requests while the tab is open
+- service/category hints
+- privacy/DPO contact discovery
+- a best-effort before/after rejection check
+- local HTML/printable report export
+- German and English UI
 
-It is a review tool, not legal advice.
+The acceptance contract below also defines the target behavior for the next implementation tasks. A scenario may therefore describe required behavior that is not fully implemented yet; the corresponding GitHub issue is the implementation task.
 
-## What It Does
+## Acceptance Contract
 
-- Detects consent banners from page text, DOM hints, loaded scripts, and known CMP signatures.
-- Shows the banner name, confidence level, and source evidence.
-- Groups detected services by category, such as analytics, marketing, functional, and social.
-- Lists visible cookies and storage keys, and marks items that appear related to the banner.
-- Tracks third-party requests while the tab is open.
-- Tries a best-effort "deny all" click when you run the delta check.
-- Opens a separate details view for the delta result.
-- Tries to open the banner's preferences or second-level view when supported.
-- Searches the page and linked legal pages for privacy contact details.
-- Drafts email links for access, correction, and deletion requests.
-- Exports the delta report as HTML or a printable view.
-- Supports English and German, with a manual language switch.
-- Shows a simple status color in the extension icon: green, yellow, or red.
+The source of truth for product acceptance behavior is [`features/cookiebuddy.feature`](features/cookiebuddy.feature). Every scenario has a stable `@UC-xx` ID. Product changes must update the affected Gherkin scenario, real automated tests, this README, and—when visible behavior changes—visual tests and screenshots in the same change.
 
-## How To Use
+| ID | Contract |
+| --- | --- |
+| UC-01 | Scan the visited page locally and show observed consent, cookie, storage, and network evidence. |
+| UC-02 | Prefer a DPO contact found in the visited site's privacy policy over a generic contact. |
+| UC-03 | Fall back to a clearly labeled DPO contact in the site's imprint when appropriate. |
+| UC-04 | Run a controlled before/after rejection audit with explicit observation windows and reload. |
+| UC-05 | Verify that reject-all actually changed consent; a successful DOM click alone is insufficient. |
+| UC-06 | Detect supported CMP APIs in the page main world and inspect IAB TCF / Google Consent Mode where available. |
+| UC-07 | Flag consent signals that contradict the rejected UI state as high-confidence technical findings. |
+| UC-08 | Preserve concurrent network evidence without request-loss race conditions. |
+| UC-09 | Capture relevant first-party and observable third-party cookie metadata without dumping unrelated cookies or values. |
+| UC-10 | Include supported localStorage, sessionStorage, IndexedDB, Cache Storage, and service-worker metadata. |
+| UC-11 | Classify endpoint relationships with Public Suffix List compatible registrable-domain logic. |
+| UC-12 | Classify necessity conservatively with rationale and confidence; names/CDNs alone cannot prove necessity. |
+| UC-13 | Recognize services from versioned maintainable offline rule data while keeping unknown signals visible. |
+| UC-14 | Detect consent surfaces in the top document, supported frames, and open shadow roots; inaccessible surfaces remain explicit. |
+| UC-15 | Detect contaminated audit state such as prior consent, blockers, tracking protection, or other conditions that undermine integrity. |
+| UC-16 | Handle SPA navigation, redirects, popup closure, service-worker restart, reload, tab closure, and delayed trackers deterministically. |
+| UC-17 | Produce a conservative verdict: looks correct, review recommended, likely incorrect, or audit incomplete. |
+| UC-18 | Build an evidence-grade report with timeline, coverage, observed facts, interpretation, and machine-readable export. |
+| UC-19 | Minimize sensitive URL data at capture time; exclude query values and fragments by default. |
+| UC-20 | Optionally capture user-controlled visual evidence with preview/removal before export. |
+| UC-21 | Prepare a factual complaint/escalation draft using only evidence actually present in the audit. |
+| UC-22 | Present the one-click verdict before technical metrics and expose evidence progressively. |
+| UC-23 | Support multilingual/accessibility-aware consent controls safely without broad-text false clicks. |
+| UC-24 | Explain limits for fingerprinting, server-side tagging, backend enrichment, first-party proxies, and other opaque techniques. |
+| UC-25 | Keep CookieBuddy itself private and performant: justified permissions, local processing, deletion, bounded retention and overhead. |
+| UC-26 | Keep Gherkin, implementation tests, README, visual tests, and screenshots synchronized for every affected product task. |
+
+`tests/use-cases.test.mjs` checks that every Gherkin use-case ID is represented in this README and that key safety invariants remain present. This is only contract hygiene: each implemented scenario also requires functional/unit/integration coverage of the real behavior.
+
+## How To Use the Current Prototype
 
 1. Open Chrome.
 2. Go to `chrome://extensions`.
-3. Enable `Developer mode`.
+3. Enable Developer mode.
 4. Click `Load unpacked`.
-5. Select this folder.
+5. Select this repository folder.
 6. Open a website and click the CookieBuddy extension icon.
-7. Use `Refresh` to rescan the page.
-8. Use `Delta Check` to test what remains after a reject attempt.
+7. Use `Neu scannen / Refresh` for the current scan.
+8. Use the current `Delta-Check` to compare the state around a rejection attempt.
 
-If the banner does not expose a reject button, reject cookies manually and run the delta check again.
-
-## Use Cases
-
-The acceptance contract for CookieBuddy is written in Gherkin in [`features/cookiebuddy.feature`](features/cookiebuddy.feature). It covers these user journeys:
-
-| ID | Given | When | Then |
-| --- | --- | --- | --- |
-| UC-01 Scan | The user is viewing a website in Chrome | CookieBuddy is opened | The banner, visible cookies, browser storage, third-party traffic, and local-only storage status are shown. |
-| UC-02 DPO contact | The footer links to a privacy policy containing a DPO email and another generic email exists | The page is scanned | The privacy-policy DPO email is used and its source URL is shown. |
-| UC-02b Imprint fallback | The privacy page contains only a generic contact and the imprint contains a labeled DPO email | The page is scanned | The labeled imprint DPO email is used and its source URL is shown. |
-| UC-03 Automatic delta | A reject-all action is detected | The user confirms the delta check | Before/after cookies, storage, and traffic are compared. |
-| UC-04 Manual delta | No automatic reject-all action is found and the user opts out manually | The user confirms the delta check | The current post-opt-out state is compared and marked as manual opt-out. |
-| UC-05 Review signal | Non-essential activity remains after opt-out | The result is displayed | Remaining items are marked for review and explicitly not presented as legal advice. |
-| UC-06 All opted out | The banner lists essential and non-essential services | Cookies, local storage, and traffic are compared with the all-opted-out state | Essential services are allowed; disabled, active, unclear, and banner-listed states are shown per service. |
-| UC-07 External signal | A service or browser-extension traffic is not listed in the banner | The audit is rendered | The signal is marked `Unclear` and surfaced for manual review. |
-| UC-08 Export | A delta check has completed | The details view is opened | Findings can be downloaded as HTML or opened as a printable/PDF report. |
-| UC-09 Email | A privacy contact was found in the visited page's privacy policy | The details view is opened | A reviewed mail draft and copy-for-email report are offered. |
-
-The Gherkin file is the source of truth for acceptance behavior. A feature change must update the matching scenario, automated tests, visual tests, README use-case table, and screenshots in the same change.
+The target UX replaces the technical `Delta-Check` framing with a plain-language one-click tracking audit and top-level verdict (UC-22).
 
 ## Product Screenshots
 
-The screenshots below are generated from the same Playwright fixture used by the visual test suite. They document the primary product states without uploading real browsing data.
-
-The popup overview intentionally stacks its metrics vertically so banner names, service counts, traffic findings, and local-storage details remain readable in the narrow extension window.
+The screenshots below are generated from the same Playwright fixture used by the visual test suite. They document the current primary product states without uploading real browsing data.
 
 | Scan overview | Delta audit and export |
 | --- | --- |
 | ![CookieBuddy scan overview](docs/screenshots/popup-overview.png) | ![CookieBuddy delta audit](docs/screenshots/delta-audit.png) |
 
-To regenerate them locally after a UI change:
+To regenerate them after a visible UI change:
 
 ```sh
 $env:COOKIEBUDDY_SCREENSHOT_DIR = "docs/screenshots"
 npm run test:visual
 ```
 
-Changes to these product flows must update the Gherkin scenarios, the matching automated tests, and this section in the same change.
+A visible flow change is not complete until the matching Gherkin scenario, functional tests, visual tests, README description/use-case contract, and screenshots are updated together.
 
-## What The Delta Check Means
+## Verdict Model
 
-CookieBuddy compares two states:
+The target verdict model is deliberately conservative:
 
-1. Before the reject attempt.
-2. After CookieBuddy tries to click a deny or reject control.
+- **Looks correctly implemented** — all mandatory checks completed and no contradictory evidence was observed.
+- **Review recommended** — relevant signals remain ambiguous or unknown.
+- **Likely incorrect implementation** — strong contradictory technical evidence remains after rejection.
+- **Audit incomplete / unable to determine** — a mandatory check failed, was unsupported, or audit integrity was insufficient.
 
-If cookies or third-party traffic still appear after the reject attempt, CookieBuddy flags the result as suspicious. This is a signal to review, not proof of non-compliance.
+These are technical review outcomes, not legal conclusions.
 
-## Main Limits
+## Evidence Model
 
-- Cookie banners vary a lot, so automatic reject clicking is best effort.
-- Chrome can only see what the browser exposes locally.
-- Cookie and tracker detection is heuristic, which means it is a rule of thumb rather than a guaranteed fact.
-- Privacy contact detection is approximate and may need manual review.
+CookieBuddy should separate raw observation from interpretation.
 
-## Development
+Observed evidence may include:
 
-CookieBuddy has no production build step. Development checks use the packages in `package.json`.
+- audit step and timestamp
+- tested URL/host (minimized before persistence)
+- CMP/banner evidence
+- reject action and verification evidence
+- consent framework state before/after
+- cookie metadata without cookie values
+- supported browser-storage metadata
+- request host/path/type/timestamp with sensitive URL values removed by default
+- service/rule mapping and confidence
+- explicit unsupported or incomplete checks
 
-Run these checks:
-
-```sh
-node --test tests/core.test.mjs tests/popup.integration.test.mjs tests/details.integration.test.mjs tests/use-cases.test.mjs
-node --check src/popup.js && node --check src/content.js && node --check src/details.js
-node --check src/background.js && node --check src/i18n.js
-node -e "for (const file of ['manifest.json','_locales/en/messages.json','_locales/de/messages.json']) JSON.parse(require('fs').readFileSync(file,'utf8'))"
-npx playwright install chromium
-npm run test:visual
-```
-
-GitHub Actions runs these checks on every push to every branch and on every pull request. The visual suite launches Chromium against the real popup and details pages, checks responsive layout, verifies the delta report's mail-copy, HTML, and printable export actions, and can regenerate the README screenshots. A feature change is not considered complete until the Gherkin contract, functional tests, visual tests, README use cases, and matching screenshots are updated together.
-
-After changing extension files, reload the extension in `chrome://extensions`.
-
-## Project Structure
-
-- `manifest.json`: Chrome extension configuration
-- `popup.html`: Main popup
-- `details.html`: Delta and scan details
-- `src/background.js`: Third-party request tracking and badge status
-- `src/content.js`: Page analysis, banner detection, contacts, and banner actions
-- `src/popup.js`: Popup flow, scan actions, and delta check
-- `src/core.js`: Shared cookie and delta helpers
-- `src/details.js`: Details view and report export
-- `src/i18n.js`: English and German text handling
-- `tests/`: Unit and integration tests
+Interpretations must link back to the evidence that produced them.
 
 ## Privacy
 
 CookieBuddy is designed to stay local.
 
 - No analytics
+- No telemetry
 - No remote logging
 - No account system
-- No scan upload
-- No telemetry
+- No user identifiers
+- No automatic scan upload
+- No cookie values stored/exported by default
+- Sensitive URL query/fragment values should be removed before evidence is persisted
 
-Scan results are stored only in Chrome local extension storage on the device.
+CookieBuddy may inspect the page, cookies, supported browser storage, consent APIs, and browser requests only to perform the user's local audit. Local audit data must have documented retention/deletion behavior.
+
+## Detection Limits
+
+CookieBuddy can only assess evidence observable from the browser extension context. It must not imply complete tracking detection.
+
+Important limitations include:
+
+- server-side tagging or forwarding that produces no distinguishable browser-side destination
+- backend enrichment or profiling
+- opaque first-party proxy endpoints
+- some CNAME-cloaked or first-party-looking tracking
+- fingerprinting that leaves no reliable identifiable client-side signal
+- inaccessible cross-origin consent UI or browser APIs
+- interference from blockers, browser tracking protection, prior consent, login state, or other contaminated browser state
+
+Reports and verdicts must distinguish **not observed**, **not detected**, and **not technically inspectable**.
+
+## Development Contract
+
+For every task that changes product behavior, detection, classification, verdicts, evidence, privacy behavior, user flow, or visible UI:
+
+1. Identify the affected `@UC-xx` scenario(s).
+2. Update/add the Gherkin scenario in the same change.
+3. Add/update real automated tests for the acceptance behavior, including negative/failure paths.
+4. Update this README use-case contract and relevant product/limitations/privacy text.
+5. Update visual tests and regenerate screenshots when visible behavior changes.
+6. Do not mark the task complete while any affected artifact is stale.
+
+See [`agent.md`](agent.md) for the full implementation rules.
+
+## Development Checks
+
+CookieBuddy has no production build step. Development checks use the packages in `package.json`.
+
+For product changes run:
+
+```sh
+npm test
+npm run check
+npm run test:visual
+```
+
+For documentation/contract-only changes at minimum run:
+
+```sh
+node --test tests/use-cases.test.mjs
+```
+
+GitHub Actions should run the automated checks on pushes and pull requests. A feature-specific task is complete only when the actual behavioral tests for its acceptance criteria exist and pass; the Gherkin/README sync test alone is not sufficient.
+
+## Project Structure
+
+- `features/cookiebuddy.feature`: authoritative Gherkin acceptance contract
+- `manifest.json`: Chrome extension configuration
+- `popup.html`: main popup
+- `details.html`: audit details and evidence actions
+- `src/background.js`: request capture and extension status
+- `src/content.js`: page/CMP analysis and consent actions
+- `src/popup.js`: popup and audit orchestration
+- `src/core.js`: shared classification/delta helpers
+- `src/details.js`: details view and report export
+- `src/i18n.js`: English/German text handling
+- `tests/use-cases.test.mjs`: contract/README synchronization guard
+- `tests/`: functional, integration, unit, and visual tests
 
 ## Links
 
