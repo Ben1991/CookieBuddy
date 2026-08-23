@@ -1,9 +1,12 @@
 import { PERFORMANCE_BUDGETS } from "./performance-budgets.mjs";
+import { createAuditLifecycleState, getAuditLifecycleEvidence, transitionAuditLifecycle } from "./audit-lifecycle.mjs";
 
 const TRAFFIC_STORAGE_KEY = "cookiebuddyTraffic";
 const ICON_STATUS_STORAGE_KEY = "cookiebuddyIconStatus";
+const AUDIT_STATE_STORAGE_KEY = "cookiebuddyAuditLifecycle";
 const activeAuditTabs = new Map();
 const auditExpiryTimers = new Map();
+const WORKER_SESSION_ID = `worker-${Date.now()}`;
 
 /**
  * Helper to get traffic data from session storage
@@ -41,6 +44,37 @@ async function setIconStatus(tabId, status) {
   const iconStatusByTab = data[ICON_STATUS_STORAGE_KEY] || {};
   iconStatusByTab[tabId] = status;
   await chrome.storage.session.set({ [ICON_STATUS_STORAGE_KEY]: iconStatusByTab });
+}
+
+async function getStoredAuditState({ tabId, controllerId, recover = true } = {}) {
+  const data = await chrome.storage.session.get(AUDIT_STATE_STORAGE_KEY);
+  let state = data[AUDIT_STATE_STORAGE_KEY] || null;
+  if (!state || (tabId != null && Number(state.tabId) !== Number(tabId))) return null;
+
+  let changed = false;
+  if (recover && state.status === "running" && state.workerSessionId && state.workerSessionId !== WORKER_SESSION_ID) {
+    state = transitionAuditLifecycle(state, "service-worker-restarted", { reason: "service-worker-restarted-during-audit" });
+    state.workerSessionId = WORKER_SESSION_ID;
+    changed = true;
+  }
+  if (controllerId && state.status === "running" && state.controllerId && state.controllerId !== controllerId) {
+    state = transitionAuditLifecycle(state, "popup-reopened", { reason: "popup-reopened-during-audit" });
+    state.controllerId = controllerId;
+    changed = true;
+  }
+  if (changed) await chrome.storage.session.set({ [AUDIT_STATE_STORAGE_KEY]: state });
+  return state;
+}
+
+async function setStoredAuditState(state) {
+  if (state) await chrome.storage.session.set({ [AUDIT_STATE_STORAGE_KEY]: state });
+  return state;
+}
+
+async function transitionStoredAuditState(tabId, type, payload = {}) {
+  const state = await getStoredAuditState({ tabId });
+  if (!state || state.status !== "running") return state;
+  return setStoredAuditState(transitionAuditLifecycle(state, type, payload));
 }
 
 /**
@@ -90,6 +124,7 @@ chrome.webRequest.onBeforeRequest.addListener(
 );
 
 chrome.tabs.onRemoved.addListener(async (tabId) => {
+  await transitionStoredAuditState(tabId, "tab-closed");
   activeAuditTabs.delete(tabId);
   clearTimeout(auditExpiryTimers.get(tabId));
   auditExpiryTimers.delete(tabId);
@@ -98,12 +133,21 @@ chrome.tabs.onRemoved.addListener(async (tabId) => {
 });
 
 chrome.tabs.onActivated.addListener(async ({ tabId }) => {
+  const auditState = await getStoredAuditState();
+  if (auditState?.status === "running" && auditState.tabId !== tabId) {
+    await setStoredAuditState(transitionAuditLifecycle(auditState, "tab-switched", { tabId }));
+  }
   const status = await getIconStatus(tabId);
   await applyIconStatus(status || "neutral");
 });
 
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
   if (changeInfo.status === "loading") {
+    await transitionStoredAuditState(tabId, "navigation", {
+      kind: changeInfo.url ? "redirect" : "reload",
+      url: changeInfo.url,
+      reason: changeInfo.url ? "redirect-during-audit" : "reload-during-audit"
+    });
     await clearTabTraffic(tabId);
     await clearTabIconStatus(tabId);
     await applyIconStatus("neutral");
@@ -121,6 +165,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if (message.type === "GET_AUDIT_STATE") {
+    (async () => {
+      const state = await getStoredAuditState({ tabId: message.tabId, controllerId: message.controllerId });
+      sendResponse({ state: getAuditLifecycleEvidence(state) });
+    })();
+    return true;
+  }
+
   if (message.type === "START_AUDIT") {
     (async () => {
       const tabId = Number(message.tabId);
@@ -128,26 +180,53 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         sendResponse({ ok: false, error: "invalid tab" });
         return;
       }
-      activeAuditTabs.set(tabId, Date.now());
+      const state = createAuditLifecycleState({
+        auditId: message.auditId,
+        tabId,
+        tabUrl: message.tabUrl,
+        controllerId: message.controllerId,
+        workerSessionId: WORKER_SESSION_ID,
+        maxDurationMs: PERFORMANCE_BUDGETS.activeAudit.maxDurationMs
+      });
+      await setStoredAuditState(state);
+      activeAuditTabs.set(tabId, Date.parse(state.startedAt));
       clearTimeout(auditExpiryTimers.get(tabId));
       auditExpiryTimers.set(tabId, setTimeout(async () => {
+        await transitionStoredAuditState(tabId, "timeout", { reason: "audit-time-budget-exceeded" });
         activeAuditTabs.delete(tabId);
         auditExpiryTimers.delete(tabId);
         await clearTabTraffic(tabId);
       }, PERFORMANCE_BUDGETS.activeAudit.maxDurationMs));
       await clearTabTraffic(tabId);
-      sendResponse({ ok: true, maxDurationMs: PERFORMANCE_BUDGETS.activeAudit.maxDurationMs });
+      sendResponse({ ok: true, maxDurationMs: PERFORMANCE_BUDGETS.activeAudit.maxDurationMs, state: getAuditLifecycleEvidence(state) });
+    })();
+    return true;
+  }
+
+  if (message.type === "AUDIT_EVENT" || message.type === "AUDIT_NAVIGATION") {
+    (async () => {
+      const eventType = message.type === "AUDIT_NAVIGATION" ? "navigation" : message.eventType || "step";
+      const state = await getStoredAuditState({ tabId: message.tabId });
+      const next = state?.status === "running" ? transitionAuditLifecycle(state, eventType, message) : state;
+      await setStoredAuditState(next);
+      sendResponse({ ok: Boolean(next), state: getAuditLifecycleEvidence(next) });
     })();
     return true;
   }
 
   if (message.type === "STOP_AUDIT") {
-    const tabId = Number(message.tabId);
-    activeAuditTabs.delete(tabId);
-    clearTimeout(auditExpiryTimers.get(tabId));
-    auditExpiryTimers.delete(tabId);
-    sendResponse({ ok: true });
-    return false;
+    (async () => {
+      const tabId = Number(message.tabId);
+      const state = await getStoredAuditState({ tabId });
+      const terminalEvent = message.status === "failed" ? "failed" : message.status === "incomplete" ? "incomplete" : "complete";
+      const next = state?.status === "running" ? transitionAuditLifecycle(state, terminalEvent, { reason: message.reason }) : state;
+      await setStoredAuditState(next);
+      activeAuditTabs.delete(tabId);
+      clearTimeout(auditExpiryTimers.get(tabId));
+      auditExpiryTimers.delete(tabId);
+      sendResponse({ ok: true, state: getAuditLifecycleEvidence(next) });
+    })();
+    return true;
   }
 
   if (message.type === "CLEAR_TRAFFIC") {

@@ -138,6 +138,8 @@ Feature: One-click consent and tracking audit
     When <interruption> occurs
     Then the audit ends or resumes in a deterministic completed, incomplete, or failed state
     And partial evidence cannot be rendered as a green result
+    And the local evidence report records the interruption type and a minimized navigation URL where relevant
+    And long observation windows report progress and a clear timeout reason
 
     Examples:
       | interruption |

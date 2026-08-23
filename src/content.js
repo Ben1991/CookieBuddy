@@ -124,6 +124,24 @@ function getCmpGlobals() {
   return FALLBACK_CMP_GLOBALS;
 }
 
+function reportAuditNavigation(kind, url) {
+  if (!globalThis.chrome?.runtime?.sendMessage) return;
+  void Promise.resolve(chrome.runtime.sendMessage({
+    target: "cookiebuddy-background",
+    type: "AUDIT_NAVIGATION",
+    kind,
+    url: url || location.href
+  })).catch(() => {});
+}
+
+globalThis.addEventListener?.("message", (event) => {
+  if (event.source !== globalThis || event.data?.source !== "cookiebuddy-navigation-monitor") return;
+  reportAuditNavigation(event.data.kind || "spa", event.data.url);
+});
+
+globalThis.addEventListener?.("popstate", () => reportAuditNavigation("spa", location.href));
+globalThis.addEventListener?.("hashchange", () => reportAuditNavigation("spa", location.href));
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (!message || message.target !== "cookiebuddy-content") return false;
 

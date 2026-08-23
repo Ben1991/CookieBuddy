@@ -1,5 +1,6 @@
 import { applyI18n, getLanguage, initI18n, setLanguage, t } from "./i18n.js";
 import { buildDelta, capitalize, createCoverageSummary, deriveAuditVerdict, getBaseDomain, isEssentialCookie, isEssentialHost, normalizeTraffic, serviceForCookie } from "./core.js";
+import { AUDIT_LIFECYCLE_STATUS } from "./audit-lifecycle.mjs";
 import { canCaptureVisibleTab, createAuditTimelineEvent, createVisualEvidenceItem, createVisualEvidenceState } from "./visual-evidence.mjs";
 
 const state = {
@@ -10,7 +11,8 @@ const state = {
   statusMode: "ok",
   statusKey: "statusReady",
   verdict: null,
-  delta: null
+  delta: null,
+  auditLifecycle: null
 };
 
 const elements = {
@@ -41,6 +43,17 @@ const elements = {
 
 const deltaGuide = "1) Reloads the page without cache.\n2) Tries to find the banner and a reject option.\n3) If no reject option is found, reject cookies manually and run the check again.\n4) Opens the result in a new tab.";
 const DEFAULT_AUDIT_MAX_DURATION_MS = 30_000;
+const DEFAULT_AUDIT_OBSERVATION_WINDOW_MS = 1_800;
+const POPUP_INSTANCE_ID = `popup-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+
+class AuditLifecycleError extends Error {
+  constructor(message, status = AUDIT_LIFECYCLE_STATUS.incomplete, reason = "audit-lifecycle-interruption") {
+    super(message);
+    this.name = "AuditLifecycleError";
+    this.status = status;
+    this.reason = reason;
+  }
+}
 
 elements.refreshButton.addEventListener("click", () => scanCurrentTab());
 document.querySelector("#heroScanButton")?.addEventListener("click", () => scanCurrentTab());
@@ -71,6 +84,7 @@ async function scanCurrentTab() {
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     state.tab = tab;
+    const lifecyclePromise = getAuditLifecycleState(tab.id);
     await ensureContentScript(tab.id);
 
     const [analysis, cookies, trafficResponse] = await Promise.all([
@@ -82,10 +96,11 @@ async function scanCurrentTab() {
     state.analysis = analysis;
     state.cookies = cookies;
     state.traffic = [...(trafficResponse?.traffic || []), ...(analysis.resources || [])];
+    state.auditLifecycle = await lifecyclePromise;
     await persistLastScan();
     await updateIconStatus();
     render();
-    setStatus("statusReady", "ok");
+    setStatus(state.auditLifecycle?.status === AUDIT_LIFECYCLE_STATUS.incomplete || state.auditLifecycle?.status === AUDIT_LIFECYCLE_STATUS.failed ? "statusAuditIncomplete" : "statusReady", state.auditLifecycle?.status === AUDIT_LIFECYCLE_STATUS.completed ? "ok" : state.auditLifecycle ? "warn" : "ok");
   } catch (error) {
     setStatus("statusNeedsAccess", "warn");
     renderError(error);
@@ -114,16 +129,26 @@ async function runDeltaCheck() {
   elements.deltaResult.innerHTML = `<p class="muted">${escapeHtml(t("deltaCheckingDescription"))}</p>`;
   const auditStartedAt = Date.now();
   let auditMaxDurationMs = DEFAULT_AUDIT_MAX_DURATION_MS;
+  let auditOutcome = { status: AUDIT_LIFECYCLE_STATUS.failed, reason: "audit-error" };
+  let lifecycleState = null;
   const visualEvidenceEnabled = elements.visualEvidenceToggle?.checked === true;
   const auditTimeline = [];
   const visualEvidenceItems = [];
   const recordAuditEvent = (step, evidenceIds = []) => {
     auditTimeline.push(createAuditTimelineEvent(step, new Date().toISOString(), evidenceIds));
+    void sendAuditLifecycleEvent("step", { phase: step });
   };
 
   try {
-    const auditStartResponse = await chrome.runtime.sendMessage({ target: "cookiebuddy-background", type: "START_AUDIT", tabId: state.tab.id });
+    const auditStartResponse = await chrome.runtime.sendMessage({ target: "cookiebuddy-background", type: "START_AUDIT", tabId: state.tab.id, tabUrl: state.tab.url, controllerId: POPUP_INSTANCE_ID, auditId: `audit-${Date.now()}` });
     auditMaxDurationMs = auditStartResponse?.maxDurationMs || DEFAULT_AUDIT_MAX_DURATION_MS;
+    lifecycleState = auditStartResponse?.state || null;
+    state.auditLifecycle = lifecycleState;
+    try {
+      await installNavigationMonitor(state.tab.id);
+    } catch {
+      throw new AuditLifecycleError(t("auditNavigationMonitorUnavailable"), AUDIT_LIFECYCLE_STATUS.incomplete, "navigation-monitor-unavailable");
+    }
     recordAuditEvent("prepare");
     assertAuditBudget(auditStartedAt, auditMaxDurationMs);
     const before = await snapshot(t("snapshotCurrentState"));
@@ -143,7 +168,9 @@ async function runDeltaCheck() {
     recordAuditEvent("verify");
     setAuditStep("observe", "active");
     await chrome.runtime.sendMessage({ target: "cookiebuddy-background", type: "CLEAR_TRAFFIC", tabId: state.tab.id });
-    await wait(1800);
+    const observationWindowMs = Math.min(DEFAULT_AUDIT_OBSERVATION_WINDOW_MS, Math.max(0, auditMaxDurationMs - (Date.now() - auditStartedAt)));
+    setAuditStep("observe", "active", t("auditObservationProgress", Math.ceil(observationWindowMs / 1000)));
+    await wait(observationWindowMs);
     assertAuditBudget(auditStartedAt, auditMaxDurationMs);
     recordAuditEvent("observe");
     setAuditStep("observe", "complete");
@@ -155,6 +182,10 @@ async function runDeltaCheck() {
     recordAuditEvent("capture", [afterVisualEvidence.id]);
     setAuditStep("capture", "complete");
     setAuditStep("analyze", "active");
+    lifecycleState = await getAuditLifecycleState(state.tab.id);
+    if (lifecycleState?.status && lifecycleState.status !== AUDIT_LIFECYCLE_STATUS.running) {
+      throw new AuditLifecycleError(t("auditLifecycleInterrupted"), lifecycleState.status, lifecycleState.reason || "audit-lifecycle-interruption");
+    }
     const delta = buildDelta({
       beforeCookies: before.cookies,
       afterCookies: afterDeny.cookies,
@@ -172,6 +203,11 @@ async function runDeltaCheck() {
       },
       tabUrl: state.tab.url
     });
+    delta.auditLifecycle = {
+      ...(lifecycleState || {}),
+      status: AUDIT_LIFECYCLE_STATUS.completed,
+      events: [...(lifecycleState?.events || []), ...auditTimeline].slice(-60)
+    };
     delta.visualEvidence = createVisualEvidenceState({
       enabled: visualEvidenceEnabled,
       items: visualEvidenceItems,
@@ -182,6 +218,7 @@ async function runDeltaCheck() {
     delta.auditTimeline = auditTimeline;
     const verdict = deriveAuditVerdict(delta, { analysisComplete: Boolean(afterDeny.analysis) });
     delta.verdict = verdict;
+    auditOutcome = { status: verdict.status === "incomplete" ? AUDIT_LIFECYCLE_STATUS.incomplete : AUDIT_LIFECYCLE_STATUS.completed, reason: verdict.status === "incomplete" ? "verdict-incomplete" : "" };
     const persistedDelta = await persistAuditDelta(delta);
     state.delta = persistedDelta;
     state.verdict = verdict;
@@ -195,16 +232,90 @@ async function runDeltaCheck() {
   } catch (error) {
     const activeStep = [...document.querySelectorAll?.("#auditSteps [data-state=active]") || []][0];
     if (activeStep) setAuditStep(activeStep.dataset.step, "failed");
-    elements.deltaResult.innerHTML = `<p class="error">${escapeHtml(error.message || t("deltaCheckFailed"))}</p>`;
-    setStatus("statusCheckFailed", "warn");
+    auditOutcome = error instanceof AuditLifecycleError
+      ? { status: error.status, reason: error.reason }
+      : { status: AUDIT_LIFECYCLE_STATUS.failed, reason: "audit-error" };
+    state.auditLifecycle = await getAuditLifecycleState(state.tab?.id);
+    const fallback = createIncompleteAuditDelta(auditOutcome, state.auditLifecycle, error.message || t("deltaCheckFailed"));
+    const fallbackVerdict = deriveAuditVerdict(fallback, { analysisComplete: false });
+    fallback.verdict = fallbackVerdict;
+    state.delta = fallback;
+    state.verdict = fallbackVerdict;
+    await persistAuditDelta(fallback);
+    renderDelta(fallback, fallbackVerdict);
+    setStatus(auditOutcome.status === AUDIT_LIFECYCLE_STATUS.failed ? "statusCheckFailed" : "statusAuditIncomplete", "warn");
   } finally {
     try {
-      await chrome.runtime.sendMessage({ target: "cookiebuddy-background", type: "STOP_AUDIT", tabId: state.tab?.id });
+      await chrome.runtime.sendMessage({ target: "cookiebuddy-background", type: "STOP_AUDIT", tabId: state.tab?.id, status: auditOutcome.status, reason: auditOutcome.reason });
     } catch {
       // The service worker may have restarted; the next audit starts cleanly.
     }
     elements.deltaButton.disabled = false;
   }
+}
+
+async function getAuditLifecycleState(tabId) {
+  if (tabId == null) return null;
+  try {
+    const response = await chrome.runtime.sendMessage({ target: "cookiebuddy-background", type: "GET_AUDIT_STATE", tabId, controllerId: POPUP_INSTANCE_ID });
+    return response?.state || null;
+  } catch {
+    return null;
+  }
+}
+
+async function sendAuditLifecycleEvent(eventType, payload = {}) {
+  if (state.tab?.id == null) return null;
+  try {
+    const response = await chrome.runtime.sendMessage({ target: "cookiebuddy-background", type: "AUDIT_EVENT", tabId: state.tab.id, eventType, ...payload });
+    return response?.state || null;
+  } catch {
+    return null;
+  }
+}
+
+async function installNavigationMonitor(tabId) {
+  if (!chrome.scripting?.executeScript) throw new Error("navigation monitor unavailable");
+  await chrome.scripting.executeScript({
+    target: { tabId },
+    world: "MAIN",
+    func: () => {
+      if (globalThis.__cookiebuddyNavigationMonitorInstalled) return;
+      globalThis.__cookiebuddyNavigationMonitorInstalled = true;
+      const report = (kind) => globalThis.postMessage({ source: "cookiebuddy-navigation-monitor", kind, url: globalThis.location.href }, "*");
+      ["popstate", "hashchange"].forEach((eventName) => globalThis.addEventListener(eventName, () => report("spa")));
+      ["pushState", "replaceState"].forEach((method) => {
+        const original = globalThis.history?.[method];
+        if (typeof original !== "function") return;
+        globalThis.history[method] = function (...args) {
+          const result = original.apply(this, args);
+          report("spa");
+          return result;
+        };
+      });
+    }
+  });
+}
+
+function createIncompleteAuditDelta(outcome, lifecycleState, summary) {
+  return {
+    checkedAt: new Date().toISOString(),
+    url: state.tab?.url || state.analysis?.url || "",
+    riskLevel: "low",
+    summary,
+    denyAction: { clicked: false, label: "", manual: false },
+    remainingCookies: [],
+    newCookies: [],
+    thirdPartyHosts: [],
+    essentialThirdPartyHosts: [],
+    remainingStorageEntries: [],
+    nonEssentialStorageEntries: [],
+    serviceAudit: [],
+    banner: state.analysis?.banner || null,
+    beforeCounts: null,
+    afterDenyCounts: null,
+    auditLifecycle: { ...(lifecycleState || {}), status: outcome.status, reason: outcome.reason, events: lifecycleState?.events || [] }
+  };
 }
 
 async function snapshot(label) {
@@ -530,6 +641,7 @@ function renderAuditVerdict(delta, verdict) {
     "consent-surface": t("auditCoverageConsent"),
     "before-after-observation": t("auditCoverageObservation"),
     "page-analysis": t("auditCoverageAnalysis"),
+    "audit-lifecycle": t("auditCoverageLifecycle"),
     "no-contradictory-evidence": t("auditReasonNoContradiction")
   };
   const reasons = (verdict.reasons || []).map((reason) => `<li>${escapeHtml(reasonLabels[reason] || reason)}</li>`).join("");

@@ -44,6 +44,8 @@ test("details page opens a mail draft from the delta report", async () => {
   assert.match(element(document, "detailsOutput").innerHTML, /Coverage and limits/);
   assert.match(element(document, "detailsOutput").innerHTML, /Not technically inspectable/);
   assert.match(element(document, "detailsOutput").innerHTML, /Heuristic indicators/);
+  assert.match(element(document, "detailsOutput").innerHTML, /Audit lifecycle evidence/);
+  assert.match(element(document, "detailsOutput").innerHTML, /Navigation interrupted the audit/);
 
   element(document, "sendDeltaMailActions").querySelector("#downloadDeltaHtmlButton").click();
   await flush();
@@ -197,7 +199,12 @@ function buildDeltaFixture() {
     serviceAudit: [
       { name: "Google Analytics", source: "analytics.example.net", listedInBanner: false, status: "active" },
       { name: "Essential services", source: "Banner text", listedInBanner: true, status: "allowed-essential" }
-    ]
+    ],
+    auditLifecycle: {
+      status: "incomplete",
+      reason: "spa-navigation-during-audit",
+      events: [{ type: "navigation", kind: "spa", url: "https://example.com/next" }]
+    }
   };
 }
 

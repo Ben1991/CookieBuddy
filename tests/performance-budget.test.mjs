@@ -5,6 +5,7 @@ import { PERFORMANCE_BUDGETS, isWithinBudget, summarizeAuditBudget } from "../sr
 
 const background = await readFile(new URL("../src/background.js", import.meta.url), "utf8");
 const content = await readFile(new URL("../src/content.js", import.meta.url), "utf8");
+const lifecycle = await readFile(new URL("../src/audit-lifecycle.mjs", import.meta.url), "utf8");
 
 test("performance budgets define bounded idle, active-audit, and page-analysis work", () => {
   assert.equal(PERFORMANCE_BUDGETS.idle.capturedRequests, 0);
@@ -31,6 +32,11 @@ test("idle monitoring and page analysis enforce their limits in production code"
   assert.match(background, /activeAuditTabs\.get\(details\.tabId\)/);
   assert.match(background, /type === "START_AUDIT"/);
   assert.match(background, /type === "STOP_AUDIT"/);
+  assert.match(background, /AUDIT_STATE_STORAGE_KEY/);
+  assert.match(background, /service-worker-restarted/);
+  assert.match(background, /tab-closed/);
+  assert.match(content, /AUDIT_NAVIGATION/);
+  assert.match(lifecycle, /not technically inspectable|incomplete/);
   assert.match(content, /maxPageTextChars/);
   assert.match(content, /maxHtmlSampleChars/);
   assert.match(content, /maxResources/);
