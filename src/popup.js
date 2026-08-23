@@ -4,6 +4,7 @@ import { AUDIT_LIFECYCLE_STATUS } from "./audit-lifecycle.mjs";
 import { canCaptureVisibleTab, createAuditTimelineEvent, createVisualEvidenceItem, createVisualEvidenceState, sanitizeEvidenceUrl } from "./visual-evidence.mjs";
 import { createCookieCoverage, getObservedCookieHosts } from "./cookie-evidence.mjs";
 import { LOCAL_AUDIT_STORAGE_KEYS } from "./audit-storage.mjs";
+import { createAuditReport } from "./audit-report.mjs";
 
 const state = {
   tab: null,
@@ -210,6 +211,7 @@ async function runDeltaCheck() {
       denyVerification: denyResult?.verification,
       inaccessibleConsentSurfaces: afterDeny.analysis?.inaccessibleConsentSurfaces || before.analysis?.inaccessibleConsentSurfaces || [],
       beforeAnalysis: before.analysis,
+      afterAnalysis: afterDeny.analysis,
       blockedRequests: [...(before.blockedRequests || []), ...(afterDeny.blockedRequests || [])],
       manualConsentConfirmed: !denyResult?.found,
       labels: {
@@ -233,6 +235,7 @@ async function runDeltaCheck() {
     delta.auditTimeline = auditTimeline;
     const verdict = deriveAuditVerdict(delta, { analysisComplete: Boolean(afterDeny.analysis) });
     delta.verdict = verdict;
+    await attachAuditReport(delta);
     auditOutcome = { status: verdict.status === "incomplete" ? AUDIT_LIFECYCLE_STATUS.incomplete : AUDIT_LIFECYCLE_STATUS.completed, reason: verdict.status === "incomplete" ? "verdict-incomplete" : "" };
     const persistedDelta = await persistAuditDelta(delta);
     state.delta = persistedDelta;
@@ -254,6 +257,7 @@ async function runDeltaCheck() {
     const fallback = createIncompleteAuditDelta(auditOutcome, state.auditLifecycle, error.message || t("deltaCheckFailed"));
     const fallbackVerdict = deriveAuditVerdict(fallback, { analysisComplete: false });
     fallback.verdict = fallbackVerdict;
+    await attachAuditReport(fallback);
     state.delta = fallback;
     state.verdict = fallbackVerdict;
     await persistAuditDelta(fallback);
@@ -379,6 +383,18 @@ function createIncompleteAuditDelta(outcome, lifecycleState, summary) {
     afterDenyCounts: null,
     auditLifecycle: { ...(lifecycleState || {}), status: outcome.status, reason: outcome.reason, events: lifecycleState?.events || [] }
   };
+}
+
+async function attachAuditReport(delta) {
+  const manifest = (() => {
+    try {
+      return chrome.runtime.getManifest?.() || null;
+    } catch {
+      return null;
+    }
+  })();
+  delta.report = await createAuditReport({ delta, manifest });
+  return delta.report;
 }
 
 async function snapshot(label) {

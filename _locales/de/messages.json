@@ -584,6 +584,9 @@
   "downloadDeltaHtmlButton": {
     "message": "Bericht als HTML herunterladen"
   },
+  "downloadDeltaJsonButton": {
+    "message": "JSON-Bericht herunterladen"
+  },
   "downloadDeltaPdfButton": {
     "message": "Als PDF speichern"
   },
@@ -601,6 +604,30 @@
   },
   "deltaPdfHint": {
     "message": "Öffne den Druckdialog des Browsers und wähle anschließend „Als PDF speichern“."
+  },
+  "reportIntegrityHeading": {
+    "message": "Berichtsintegrität"
+  },
+  "reportContextHeading": {
+    "message": "Berichtskontext"
+  },
+  "reportHostnameLabel": {
+    "message": "Hostname"
+  },
+  "reportExtensionLabel": {
+    "message": "Erweiterung"
+  },
+  "reportBrowserLabel": {
+    "message": "Browser"
+  },
+  "reportIntegrityIntro": {
+    "message": "Dieser SHA-256-Fingerabdruck deckt den strukturierten Berichtspayload ab. Ein veränderter Payload passt nicht mehr dazu."
+  },
+  "reportHashLabel": {
+    "message": "Payload-Hash"
+  },
+  "reportVersionLabel": {
+    "message": "Version des strukturierten Berichts: $1"
   },
   "reviewRecommended": {
     "message": "Prüfung empfohlen"

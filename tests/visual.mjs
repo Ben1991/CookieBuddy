@@ -59,6 +59,7 @@ const fixtureDelta = {
     reason: "redirect-during-audit",
     events: [{ type: "navigation", kind: "redirect", url: "https://example.com/redirected" }]
   },
+  report: { reportVersion: 1, payload: { audit: { hostname: "example.com", extension: { name: "CookieBuddy", version: "2.4.0" }, browser: { userAgent: "TestBrowser/1.0", platform: "test" } } }, integrity: { algorithm: "SHA-256", payloadHash: "b".repeat(64) } },
   browserStorage: {
     before: {
       indexedDB: { status: "observed", names: ["consent-db"] },
@@ -175,6 +176,7 @@ try {
   assert.ok(await details.getByText("Candidate only", { exact: true }).isVisible(), "uncertain authority should be labeled as a candidate");
   assert.ok(await details.getByText("Open authority details", { exact: true }).isVisible(), "uncertain authority should be shown as a candidate");
   assert.ok(await details.locator("#downloadDeltaHtmlButton").isVisible(), "HTML export action should be visible");
+  assert.ok(await details.locator("#downloadDeltaJsonButton").isVisible(), "JSON export action should be visible");
   assert.ok(await details.locator("#downloadDeltaPdfButton").isVisible(), "print/PDF export action should be visible");
   assert.ok(await details.getByText("Still active", { exact: true }).isVisible(), "active services should be labeled");
   assert.ok(await details.getByText("Unclear", { exact: true }).first().isVisible(), "unlisted signals should be labeled unclear");
@@ -187,6 +189,8 @@ try {
   assert.ok(await details.getByText("Not technically inspectable", { exact: false }).count() > 0, "unsupported techniques should be labeled as not technically inspectable");
   assert.ok(await details.getByText("Heuristic indicators (not confirmed evidence)", { exact: true }).isVisible(), "heuristics should be separated from confirmed evidence");
   assert.ok(await details.getByText("Audit lifecycle evidence", { exact: true }).isVisible(), "lifecycle evidence should be visible in the report");
+  assert.ok(await details.getByText("Report context", { exact: true }).isVisible(), "report context should be visible in the evidence report");
+  assert.ok(await details.getByText("Report integrity", { exact: true }).isVisible(), "report integrity should be visible in the evidence report");
   assert.ok(await details.getByText("Navigation interrupted the audit", { exact: false }).count() > 0, "navigation interruptions should be explained");
   assert.ok(await details.getByText("Stored locally", { exact: true }).isVisible(), "local-only status should be visible in the redesigned details header");
   await details.locator("#languageSelect").selectOption("de");

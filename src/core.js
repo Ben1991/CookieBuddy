@@ -53,6 +53,67 @@ export function formatCookie(cookie, unknownServiceLabel = "Unknown service") {
   };
 }
 
+export function formatCookieEvidence(cookie = {}) {
+  const rule = serviceRuleForCookie(cookie);
+  const essential = isEssentialCookie(cookie);
+  return {
+    name: String(cookie.name || "").slice(0, 160),
+    domain: String(cookie.domain || "").slice(0, 240),
+    path: String(cookie.path || "/").slice(0, 240),
+    secure: Boolean(cookie.secure),
+    sameSite: String(cookie.sameSite || "unspecified").slice(0, 32),
+    hostOnly: Boolean(cookie.hostOnly),
+    session: Boolean(cookie.session),
+    classification: {
+      essential,
+      service: rule?.name || "Unknown service",
+      confidence: rule?.confidence || (essential ? "medium" : "none"),
+      ruleId: rule?.id || "",
+      rationale: rule?.evidence?.source || (essential ? "Conservative cookie-name rule" : "No matching local service rule")
+    }
+  };
+}
+
+function formatStorageEvidence(entries = []) {
+  return entries.filter(Boolean).slice(0, 100).map((entry) => ({
+    key: String(entry.key || "").slice(0, 160),
+    scope: String(entry.scope || "browser-storage").slice(0, 80),
+    inBanner: Boolean(entry.inBanner),
+    classification: isEssentialStorageEntry(entry) ? "essential-or-banner-related" : "observed-unclassified-storage"
+  }));
+}
+
+function formatTrafficEvidence(traffic = []) {
+  return traffic.filter(Boolean).slice(0, 250).map((item) => {
+    const minimized = minimizeUrlEvidence(item.url, { retainQueryKeys: true });
+    return {
+      url: minimized?.url || "",
+      host: String(item.host || minimized?.host || "").slice(0, 240),
+      path: String(item.path || minimized?.path || "/").slice(0, 240),
+      protocol: String(item.protocol || minimized?.protocol || "").slice(0, 20),
+      queryKeys: (Array.isArray(item.queryKeys) ? item.queryKeys : minimized?.queryKeys || []).slice(0, 20).map((key) => String(key).slice(0, 80)),
+      type: String(item.type || "unknown").slice(0, 40),
+      timeStamp: Number.isFinite(item.timeStamp) ? item.timeStamp : null,
+      blocked: Boolean(item.blocked),
+      error: item.blocked ? String(item.error || "blocked").slice(0, 100) : "",
+      relationship: item.relationship || (item.thirdParty ? "third-party" : "unknown"),
+      cnameStatus: item.cnameStatus || "not-recorded",
+      cnameRule: item.cnameRule || null
+    };
+  });
+}
+
+function formatConsentEvidence(state = null) {
+  if (!state) return null;
+  return {
+    bannerVisible: Boolean(state.bannerVisible),
+    bannerSignature: String(state.bannerSignature || "").slice(0, 1200),
+    consentSignalSignature: String(state.consentSignalSignature || "").slice(0, 2400),
+    controlStateSignature: String(state.controlStateSignature || "").slice(0, 2400),
+    rejectCandidateCount: Number.isFinite(state.rejectCandidateCount) ? state.rejectCandidateCount : 0
+  };
+}
+
 export function normalizeTraffic(traffic, firstPartyHost) {
   return traffic
     .map((item) => {
@@ -72,6 +133,7 @@ export function normalizeTraffic(traffic, firstPartyHost) {
           path: minimized.path,
           queryKeys: minimized.queryKeys,
           type: item.type,
+          timeStamp: Number.isFinite(item.timeStamp) ? item.timeStamp : null,
           blocked: Boolean(item.blocked),
           error: item.blocked ? String(item.error || "blocked").slice(0, 100) : "",
           thirdParty: relationship.relationship === "third-party",
@@ -246,6 +308,7 @@ export function buildDelta({
   denyVerification = null,
   inaccessibleConsentSurfaces = [],
   beforeAnalysis = null,
+  afterAnalysis = null,
   blockedRequests = [],
   manualConsentConfirmed,
   labels,
@@ -305,6 +368,22 @@ export function buildDelta({
     remainingStorageEntries,
     nonEssentialStorageEntries,
     essentialStorageEntries,
+    cookieEvidence: {
+      before: beforeCookies.map(formatCookieEvidence).slice(0, 100),
+      after: afterCookies.map(formatCookieEvidence).slice(0, 100)
+    },
+    storageEvidence: {
+      before: formatStorageEvidence(beforeAnalysis?.storage?.items || []),
+      after: formatStorageEvidence(afterStorageEntries)
+    },
+    networkEvidence: {
+      before: formatTrafficEvidence(beforeTraffic),
+      after: formatTrafficEvidence(afterTraffic)
+    },
+    consentEvidence: {
+      before: formatConsentEvidence(beforeAnalysis?.consentState),
+      after: formatConsentEvidence(afterAnalysis?.consentState)
+    },
     browserStorage: {
       before: summarizeBrowserStorage(beforeAnalysis?.storage),
       after: summarizeBrowserStorage(afterStorage)

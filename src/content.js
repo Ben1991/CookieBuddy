@@ -177,6 +177,7 @@ async function analyzePage() {
     categories,
     resources,
     contacts,
+    consentState: collectConsentState(),
     storage,
     consentSurfaces: consentSurfaces.map(({ context }) => context),
     inaccessibleConsentSurfaces: consentSurfaces
