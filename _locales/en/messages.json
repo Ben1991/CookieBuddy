@@ -584,6 +584,9 @@
   "downloadDeltaHtmlButton": {
     "message": "Download HTML report"
   },
+  "downloadDeltaJsonButton": {
+    "message": "Download JSON report"
+  },
   "downloadDeltaPdfButton": {
     "message": "Save as PDF"
   },
@@ -601,6 +604,30 @@
   },
   "deltaPdfHint": {
     "message": "Open the browser print dialog, then choose Save as PDF."
+  },
+  "reportIntegrityHeading": {
+    "message": "Report integrity"
+  },
+  "reportContextHeading": {
+    "message": "Report context"
+  },
+  "reportHostnameLabel": {
+    "message": "Hostname"
+  },
+  "reportExtensionLabel": {
+    "message": "Extension"
+  },
+  "reportBrowserLabel": {
+    "message": "Browser"
+  },
+  "reportIntegrityIntro": {
+    "message": "This SHA-256 fingerprint covers the structured report payload. A changed payload will no longer match it."
+  },
+  "reportHashLabel": {
+    "message": "Payload hash"
+  },
+  "reportVersionLabel": {
+    "message": "Structured report version: $1"
   },
   "reviewRecommended": {
     "message": "Review recommended"

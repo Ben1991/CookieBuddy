@@ -181,6 +181,7 @@ Feature: One-click consent and tracking audit
     Then the report includes the tested URL, timestamp, extension version, audit timeline, detected CMP, rejection action, consent state, cookie metadata, storage metadata, network evidence, service mappings, limitations, and classification rationale
     And every interpreted finding links to the concrete observed evidence that caused it
     And the report offers human-readable and structured machine-readable export
+    And the structured export includes minimized before/after metadata, browser context, a local SHA-256 payload fingerprint, and no cookie/storage values or URL query values
 
   @UC-19 @issue-58 @p1
   Scenario: Minimize sensitive URL data when evidence is captured

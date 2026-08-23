@@ -31,7 +31,7 @@ The current implementation already provides a local browser-side summary of:
 - service/category hints
 - privacy/DPO contact discovery
 - a best-effort before/after rejection check
-- local HTML/printable report export
+- local HTML/printable and structured JSON report export with a SHA-256 payload fingerprint
 - German and English UI
 
 The acceptance contract below also defines the target behavior for the next implementation tasks. A scenario may therefore describe required behavior that is not fully implemented yet; the corresponding GitHub issue is the implementation task.
@@ -59,7 +59,7 @@ The source of truth for product acceptance behavior is [`features/cookiebuddy.fe
 | UC-15 | Detect and report prior consent, prior opt-out, observable blocker interference, and unknown audit integrity; uncertain runs cannot be green and recommend a clean rerun. |
 | UC-16 | Handle SPA navigation, redirects, popup closure, service-worker restart, reload, tab closure, and delayed trackers deterministically; persist lifecycle evidence and never render interrupted work as green. |
 | UC-17 | Produce a conservative verdict: looks correct, review recommended, likely incorrect, or audit incomplete, with confidence, coverage, unresolved signals, and evidence links. |
-| UC-18 | Build an evidence-grade report with timeline, coverage, observed facts, interpretation, and machine-readable export. |
+| UC-18 | Build an evidence-grade report with reproducible timeline, minimized before/after metadata, observed facts, interpretation, evidence links, limitations, and hashed structured JSON export. |
 | UC-19 | Minimize sensitive URL data at capture time; exclude query values and fragments by default. |
 | UC-20 | Optionally capture user-controlled visual evidence with preview/removal before export. Screenshots are off by default, limited to the tested active tab, linked to audit steps, and recorded as unavailable when browser permissions prevent capture. |
 | UC-21 | Prepare an editable factual complaint/escalation draft from a negative audit, with evidence export and uncertain recipients/authorities shown as candidates. |
@@ -168,7 +168,7 @@ The `tabs` permission and persistent all-page content-script registration are no
 
 The popup's **Delete local audit data** action removes `cookiebuddyLastScan` and `cookiebuddyLastDelta` from `chrome.storage.local` and clears the session traffic, icon status, and lifecycle state. The latest scan and delta remain on the device until the user deletes them. CookieBuddy never deletes a website's own localStorage, cookies, or other browser data.
 
-Reports and details views escape page-provided text, URLs, cookie names, and service labels before inserting HTML. Plain-text and mail exports use the same minimized evidence and do not add remote lookups.
+Reports and details views escape page-provided text, URLs, cookie names, and service labels before inserting HTML. Human-readable HTML/print reports and structured JSON exports include the checked URL/hostname, timestamp, extension and available browser context, consent state, minimized before/after cookie/storage/network metadata, service mappings, limitations, and links from interpretations to observed evidence. Cookie and storage values, response bodies, URL query values, and fragments are excluded. The JSON payload is fingerprinted locally with SHA-256; no report or hash is uploaded.
 
 ## Performance budgets
 

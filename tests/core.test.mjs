@@ -200,6 +200,33 @@ test("builds a delta summary from the before and after states", () => {
   assert.equal(delta.summary, "found");
 });
 
+test("keeps report evidence metadata without cookie, storage, or URL values", () => {
+  const delta = buildDelta({
+    beforeCookies: [{ name: "_ga", domain: ".example.com", path: "/", value: "cookie-secret", secure: true, sameSite: "lax" }],
+    afterCookies: [{ name: "_ga", domain: ".example.com", path: "/", value: "cookie-secret", secure: true, sameSite: "lax" }],
+    beforeTraffic: [{ url: "https://analytics.example.net/pixel?email=alice@example.com", type: "xmlhttprequest", timeStamp: 100 }],
+    afterTraffic: [{ url: "https://analytics.example.net/pixel?email=alice@example.com", type: "xmlhttprequest", timeStamp: 200 }],
+    beforeAnalysis: {
+      storage: { items: [{ key: "consent_state", scope: "localStorage", valuePreview: "storage-secret", inBanner: true }] },
+      consentState: { bannerVisible: true, bannerSignature: "before" }
+    },
+    afterAnalysis: { consentState: { bannerVisible: false, bannerSignature: "after" } },
+    afterStorageEntries: [{ key: "consent_state", scope: "localStorage", valuePreview: "storage-secret", inBanner: true }],
+    denyClicked: true,
+    denyLabel: "Reject all",
+    labels: { deltaFoundSummary: "found", noDeltaSummary: "none" },
+    tabUrl: "https://example.com"
+  });
+
+  assert.equal("value" in delta.cookieEvidence.after[0], false);
+  assert.equal("valuePreview" in delta.storageEvidence.after[0], false);
+  assert.equal(delta.networkEvidence.after[0].timeStamp, 200);
+  assert.deepEqual(delta.networkEvidence.after[0].queryKeys, ["email"]);
+  assert.doesNotMatch(JSON.stringify(delta.networkEvidence), /alice|example\.com\/pixel\?/);
+  assert.equal(delta.consentEvidence.before.bannerSignature, "before");
+  assert.equal(delta.consentEvidence.after.bannerVisible, false);
+});
+
 test("keeps extended browser storage metadata as before-and-after evidence", () => {
   const storage = {
     localStorageKeys: [],

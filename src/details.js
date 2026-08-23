@@ -1,6 +1,7 @@
 import { applyI18n, getLanguage, initI18n, setLanguage, t } from "./i18n.js";
 import { createCoverageSummary } from "./core.js";
 import { removeVisualEvidenceItem } from "./visual-evidence.mjs";
+import { createAuditReport } from "./audit-report.mjs";
 const output = document.querySelector("#detailsOutput");
 const languageSelect = document.querySelector("#languageSelect");
 const sendDeltaMailHint = document.querySelector("#sendDeltaMailHint");
@@ -136,6 +137,7 @@ function renderDeltaMailActions() {
     <div class="contact-actions">
       <button id="downloadDeltaHtmlButton" class="ghost-button small" type="button" data-i18n="downloadDeltaHtmlButton">${escapeHtml(t("downloadDeltaHtmlButton"))}</button>
       <button id="downloadDeltaPdfButton" class="ghost-button small" type="button" data-i18n="downloadDeltaPdfButton">${escapeHtml(t("downloadDeltaPdfButton"))}</button>
+      <button id="downloadDeltaJsonButton" class="ghost-button small" type="button" data-i18n="downloadDeltaJsonButton">${escapeHtml(t("downloadDeltaJsonButton"))}</button>
       <button id="copyDeltaReportButton" class="primary-button small" type="button" data-i18n="copyDeltaReportButton">${escapeHtml(t("copyDeltaReportButton"))}</button>
     </div>
   `;
@@ -146,6 +148,7 @@ function renderDeltaMailActions() {
 
   sendDeltaMailActions.querySelector("#downloadDeltaHtmlButton")?.addEventListener("click", downloadDeltaHtmlReport);
   sendDeltaMailActions.querySelector("#downloadDeltaPdfButton")?.addEventListener("click", openDeltaPdfView);
+  sendDeltaMailActions.querySelector("#downloadDeltaJsonButton")?.addEventListener("click", downloadDeltaJsonReport);
   sendDeltaMailActions.querySelector("#copyDeltaReportButton")?.addEventListener("click", () => void copyDeltaReport());
 
   applyI18n(sendDeltaMailActions);
@@ -222,6 +225,8 @@ function renderDelta(delta, options = {}) {
         <div><span>${escapeHtml(t("cookieBannerLabel"))}</span><strong>${escapeHtml(getBannerProvider(banner))}</strong></div>
         <div><span>${escapeHtml(t("optOutAttemptLabel"))}</span><strong>${escapeHtml(delta.denyAction?.clicked ? (delta.denyAction.label || t("detectedButton")) : t("noDenyButtonClicked"))}</strong></div>
       </div>
+      ${renderReportContext(delta)}
+      ${renderReportIntegrity(delta)}
       <section class="delta-detected-box">
         <h3>${escapeHtml(t("observedFactsHeading"))}</h3>
         <p class="muted">${escapeHtml(t("stillDetectedHeading"))}</p>
@@ -525,6 +530,15 @@ async function downloadDeltaHtmlReport() {
   triggerDownload(blob, "cookiebuddy-delta-report.html");
 }
 
+async function downloadDeltaJsonReport() {
+  const delta = detailsPayload?.cookiebuddyLastDelta;
+  if (!delta) return;
+  const report = delta.report || await createAuditReport({ delta });
+  const BlobCtor = globalThis.Blob || (await import("node:buffer")).Blob;
+  const blob = new BlobCtor([JSON.stringify(report, null, 2)], { type: "application/json;charset=utf-8" });
+  triggerDownload(blob, "cookiebuddy-audit-report.json");
+}
+
 function openDeltaPdfView() {
   const delta = detailsPayload?.cookiebuddyLastDelta;
   if (!delta) return;
@@ -641,6 +655,20 @@ function renderBrowserStorageEvidence(storage) {
     ? `<ul class="delta-list">${registrations.map((registration) => `<li><strong>${escapeHtml(registration.scope || t("serviceWorkersHeading"))}</strong> · ${escapeHtml(registration.state || "unknown")}${registration.scriptUrl ? ` · ${escapeHtml(registration.scriptUrl)}` : ""}</li>`).join("")}</ul>`
     : `<p class="empty-state">${escapeHtml(storage.serviceWorkers?.status === "not-inspected" ? t("storageStatusNotInspected") : t("noServiceWorkerRegistrations"))}</p>`;
   return `<section class="browser-storage-evidence"><h3>${escapeHtml(t("browserStorageMetadataHeading"))}</h3><p class="muted">${escapeHtml(t("storageInspectionStatus", [statusLabel(storage.indexedDB?.status), statusLabel(storage.cacheStorage?.status), statusLabel(storage.serviceWorkers?.status)]))}</p><div class="storage-evidence-grid"><div><h4>${escapeHtml(t("indexedDbHeading"))}</h4>${databaseContent}</div><div><h4>${escapeHtml(t("cacheStorageHeading"))}</h4>${cacheContent}</div><div><h4>${escapeHtml(t("serviceWorkersHeading"))}</h4>${workerContent}</div></div></section>`;
+}
+
+function renderReportIntegrity(delta) {
+  const report = delta.report;
+  if (!report?.integrity?.payloadHash) return "";
+  return `<section class="report-integrity"><h3>${escapeHtml(t("reportIntegrityHeading"))}</h3><p class="muted">${escapeHtml(t("reportIntegrityIntro"))}</p><p class="report-hash"><strong>${escapeHtml(t("reportHashLabel"))}:</strong> <code>${escapeHtml(report.integrity.payloadHash)}</code></p><p class="muted">${escapeHtml(t("reportVersionLabel", report.reportVersion || "unknown"))}</p></section>`;
+}
+
+function renderReportContext(delta) {
+  const audit = delta.report?.payload?.audit;
+  if (!audit) return "";
+  const browser = audit.browser || {};
+  const browserLabel = [browser.userAgent, browser.platform].filter((value) => value && value !== "unknown").join(" · ") || "unknown";
+  return `<section class="report-context"><h3>${escapeHtml(t("reportContextHeading"))}</h3><p><strong>${escapeHtml(t("reportHostnameLabel"))}:</strong> ${escapeHtml(audit.hostname || "unknown")}</p><p><strong>${escapeHtml(t("reportExtensionLabel"))}:</strong> ${escapeHtml(`${audit.extension?.name || "CookieBuddy"} ${audit.extension?.version || "unknown"}`)}</p><p><strong>${escapeHtml(t("reportBrowserLabel"))}:</strong> ${escapeHtml(browserLabel)}</p></section>`;
 }
 
 function renderPossibleCnameTrackers(delta) {

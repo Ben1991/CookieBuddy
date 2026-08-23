@@ -42,6 +42,8 @@ test("details page opens a mail draft from the delta report", async () => {
   assert.match(decodeURIComponent(window.location.lastAssignedUrl), /Not listed in banner/);
 
   assert.match(element(document, "detailsOutput").innerHTML, /Coverage and limits/);
+  assert.match(element(document, "detailsOutput").innerHTML, /Report context/);
+  assert.match(element(document, "detailsOutput").innerHTML, /CookieBuddy unknown/);
   assert.match(element(document, "detailsOutput").innerHTML, /Minimized URL evidence/);
   assert.match(element(document, "detailsOutput").innerHTML, /Reject action verification/);
   assert.match(element(document, "detailsOutput").innerHTML, /Not technically inspectable/);
@@ -58,6 +60,11 @@ test("details page opens a mail draft from the delta report", async () => {
   await flush();
   assert.equal(window.lastDownloadedName, "cookiebuddy-delta-report.html");
   assert.match(await window.lastDownloadedTextPromise, /CookieBuddy delta report/);
+
+  element(document, "sendDeltaMailActions").querySelector("#downloadDeltaJsonButton").click();
+  await flush();
+  assert.equal(window.lastDownloadedName, "cookiebuddy-audit-report.json");
+  assert.match(await window.lastDownloadedTextPromise, /payloadHash/);
 
   element(document, "sendDeltaMailActions").querySelector("#downloadDeltaPdfButton").click();
   assert.equal(window.lastPrinted, true);
@@ -291,7 +298,8 @@ function buildDeltaFixture() {
       status: "incomplete",
       reason: "spa-navigation-during-audit",
       events: [{ type: "navigation", kind: "spa", url: "https://example.com/next" }]
-    }
+    },
+    report: { reportVersion: 1, payload: { audit: { hostname: "example.com", extension: { name: "CookieBuddy", version: "unknown" }, browser: { userAgent: "unknown", platform: "unknown" } } }, integrity: { algorithm: "SHA-256", payloadHash: "a".repeat(64) } }
   };
 }
 
@@ -433,6 +441,7 @@ class FakeElement {
     const isGerman = String(globalThis.document?.documentElement?.lang || "").startsWith("de");
     for (const spec of [
       { id: "downloadDeltaHtmlButton", label: isGerman ? "Bericht als HTML herunterladen" : "Download HTML report" },
+      { id: "downloadDeltaJsonButton", label: isGerman ? "JSON-Bericht herunterladen" : "Download JSON report" },
       { id: "downloadDeltaPdfButton", label: isGerman ? "Als PDF speichern" : "Save as PDF" }
     ]) {
       if (!this._html.includes(`id=\"${spec.id}\"`)) continue;
