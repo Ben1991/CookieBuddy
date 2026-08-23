@@ -6,6 +6,8 @@ The product direction is a one-click technical audit that answers a simple quest
 
 CookieBuddy provides technical review signals, not legal advice or a legal compliance verdict.
 
+Accessibility is part of the product contract. See [ACCESSIBILITY.md](ACCESSIBILITY.md) for supported interaction goals, known limitations, the verification checklist, and the dedicated reporting path. CookieBuddy does not claim complete WCAG conformance; unsupported or unverified accessibility behavior remains explicitly documented.
+
 ## Product Principle
 
 The intended product flow is:
@@ -228,6 +230,8 @@ For every task that changes product behavior, detection, classification, verdict
 6. Do not mark the task complete while any affected artifact is stale.
 
 See [`agent.md`](agent.md) for the full implementation rules.
+
+Accessibility-related UI changes must also follow [ACCESSIBILITY.md](ACCESSIBILITY.md), including keyboard, focus, language, screen-reader, zoom/reflow, contrast, reduced-motion, and automated-check review where applicable.
 
 ## Development Checks
 

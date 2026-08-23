@@ -1,0 +1,85 @@
+name: Accessibility issue
+description: Report a barrier or accessibility regression in CookieBuddy
+title: "[a11y] "
+labels:
+  - accessibility
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting an accessibility issue. Please avoid including cookies, browsing history, personal data, or unredacted screenshots.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What barrier or accessibility regression did you encounter?
+      placeholder: A keyboard or screen-reader user cannot complete ...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      description: Choose the highest impact that applies.
+      options:
+        - Critical — a core task is blocked
+        - High — significant difficulty, but a workaround exists
+        - Medium — inconsistent or frustrating experience
+        - Low — minor usability issue
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Include browser, browser version, operating system, zoom level, and assistive technology/version if relevant.
+      placeholder: Chrome ..., Windows ..., NVDA ..., 200% zoom
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: List the shortest reliable steps, including keyboard input where relevant.
+      placeholder: |
+        1. Open ...
+        2. Press Tab ...
+        3. Observe ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What should a user be able to perceive or do?
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: What happened instead? Include any announcement, focus, contrast, or reflow detail.
+    validations:
+      required: true
+
+  - type: textarea
+    id: workaround
+    attributes:
+      label: Workaround or evidence
+      description: Add a safe workaround, redacted screenshot, or relevant log if available.
+
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy checklist
+      options:
+        - label: I removed cookies, browsing history, personal data, and unredacted page content.
+          required: true
+        - label: I checked for an existing related issue before submitting.
+          required: true
