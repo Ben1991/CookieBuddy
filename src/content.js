@@ -102,6 +102,9 @@ const PAGE_ANALYSIS_BUDGETS = Object.freeze({
   maxConsentNodes: 96,
   maxBannerTextChars: 20_000,
   maxStorageEntries: 50,
+  maxCacheStorageNames: 20,
+  maxCacheStorageKeys: 20,
+  maxServiceWorkerRegistrations: 20,
   maxContactPages: 8,
   maxContactResponseChars: 200_000,
   contactTimeoutMs: 1_500
@@ -164,7 +167,7 @@ async function analyzePage() {
   const banner = detectBanner({ htmlSample, pageText, resources }, consentSurfaces);
   const categories = detectCategories(pageText, htmlSample, resources, collectBannerText(consentSurfaces));
   const contacts = await detectContacts();
-  const storage = collectStoredData({ banner, categories, pageText, htmlSample });
+  const storage = await collectStoredData({ banner, categories, pageText, htmlSample });
 
   return {
     url: sanitizePageUrl(location.href),
@@ -405,10 +408,15 @@ function detectCategories(pageText, htmlSample, resources, bannerText = "") {
   return categories;
 }
 
-function collectStoredData({ banner, categories, pageText, htmlSample }) {
+async function collectStoredData({ banner, categories, pageText, htmlSample }) {
   const localStorageKeys = Object.keys(localStorage || {});
   const sessionStorageKeys = Object.keys(sessionStorage || {});
-  const indexedDbNames = [];
+  const [indexedDb, cacheStorage, serviceWorkers] = await Promise.all([
+    collectIndexedDbMetadata(),
+    collectCacheStorageMetadata(),
+    collectServiceWorkerMetadata()
+  ]);
+  const indexedDbNames = indexedDb.databases.map((database) => database.name).filter(Boolean);
   const matchesBanner = (key) => {
     const haystack = `${banner.name} ${pageText} ${htmlSample} ${Object.values(categories).flatMap((category) => category.services.map((service) => service.name)).join(" ")}`.toLowerCase();
     return haystack.includes(key.toLowerCase());
@@ -432,6 +440,18 @@ function collectStoredData({ banner, categories, pageText, htmlSample }) {
       scope: "IndexedDB",
       valuePreview: "Database",
       inBanner: matchesBanner(name)
+    })),
+    ...cacheStorage.caches.map((cache) => ({
+      key: cache.name,
+      scope: "Cache Storage",
+      valuePreview: `${cache.keys.length} request keys`,
+      inBanner: matchesBanner(cache.name)
+    })),
+    ...serviceWorkers.registrations.map((registration) => ({
+      key: registration.scope || "Service worker scope",
+      scope: "Service worker",
+      valuePreview: "Registration",
+      inBanner: false
     }))
   ];
 
@@ -439,8 +459,83 @@ function collectStoredData({ banner, categories, pageText, htmlSample }) {
     localStorageKeys,
     sessionStorageKeys,
     indexedDbNames,
+    indexedDb,
+    cacheStorage,
+    serviceWorkers,
+    coverage: {
+      indexedDB: indexedDb.status,
+      cacheStorage: cacheStorage.status,
+      serviceWorkers: serviceWorkers.status
+    },
     items: items.sort((a, b) => Number(b.inBanner) - Number(a.inBanner) || a.scope.localeCompare(b.scope) || a.key.localeCompare(b.key)).slice(0, PAGE_ANALYSIS_BUDGETS.maxStorageEntries)
   };
+}
+
+async function collectIndexedDbMetadata() {
+  if (!globalThis.indexedDB || typeof indexedDB.databases !== "function") {
+    return { status: "not-inspected", reason: "api-unavailable", databases: [] };
+  }
+  try {
+    const databases = await indexedDB.databases();
+    return {
+      status: "observed",
+      reason: "",
+      databases: databases.slice(0, PAGE_ANALYSIS_BUDGETS.maxStorageEntries).map((database) => ({
+        name: String(database.name || "").slice(0, 160),
+        version: Number.isFinite(database.version) ? database.version : null
+      }))
+    };
+  } catch {
+    return { status: "not-inspected", reason: "inspection-error", databases: [] };
+  }
+}
+
+async function collectCacheStorageMetadata() {
+  if (!globalThis.caches || typeof caches.keys !== "function") {
+    return { status: "not-inspected", reason: "api-unavailable", caches: [] };
+  }
+  try {
+    const names = (await caches.keys()).slice(0, PAGE_ANALYSIS_BUDGETS.maxCacheStorageNames);
+    const cacheEntries = await Promise.all(names.map(async (name) => {
+      try {
+        const requests = await caches.open(name).then((cache) => cache.keys());
+        return {
+          name: String(name).slice(0, 160),
+          status: "observed",
+          keys: requests.slice(0, PAGE_ANALYSIS_BUDGETS.maxCacheStorageKeys).map((request) => {
+            const evidence = minimizePageEvidence(request.url);
+            return evidence ? { url: evidence.url, method: String(request.method || "GET").slice(0, 12), queryKeys: evidence.queryKeys } : null;
+          }).filter(Boolean)
+        };
+      } catch {
+        return { name: String(name).slice(0, 160), status: "not-inspected", keys: [] };
+      }
+    }));
+    const failed = cacheEntries.some((entry) => entry.status === "not-inspected");
+    return { status: failed ? "not-inspected" : "observed", reason: failed ? "inspection-error" : "", caches: cacheEntries };
+  } catch {
+    return { status: "not-inspected", reason: "inspection-error", caches: [] };
+  }
+}
+
+async function collectServiceWorkerMetadata() {
+  if (!globalThis.navigator?.serviceWorker || typeof globalThis.navigator.serviceWorker.getRegistrations !== "function") {
+    return { status: "not-inspected", reason: "api-unavailable", registrations: [] };
+  }
+  try {
+    const registrations = await globalThis.navigator.serviceWorker.getRegistrations();
+    return {
+      status: "observed",
+      reason: "",
+      registrations: registrations.slice(0, PAGE_ANALYSIS_BUDGETS.maxServiceWorkerRegistrations).map((registration) => ({
+        scope: sanitizePageUrl(registration.scope),
+        scriptUrl: sanitizePageUrl(registration.active?.scriptURL || registration.waiting?.scriptURL || registration.installing?.scriptURL || ""),
+        state: registration.active?.state || registration.waiting?.state || registration.installing?.state || "unknown"
+      }))
+    };
+  } catch {
+    return { status: "not-inspected", reason: "inspection-error", registrations: [] };
+  }
 }
 
 function collectResources() {

@@ -161,7 +161,37 @@ export function buildServiceAudit({
 }
 
 export function isEssentialStorageEntry(entry = {}) {
+  if (["Cache Storage", "Service worker"].includes(entry.scope)) return true;
   return Boolean(entry.inBanner) || /consent|session|csrf|xsrf|auth|necessary|essential|privacy|security|required/i.test(entry.key || "");
+}
+
+function summarizeBrowserStorage(storage) {
+  if (!storage) return null;
+  const coverage = storage.coverage || {};
+  return {
+    localStorage: { status: "observed", count: (storage.localStorageKeys || []).length },
+    sessionStorage: { status: "observed", count: (storage.sessionStorageKeys || []).length },
+    indexedDB: {
+      status: coverage.indexedDB || storage.indexedDb?.status || "not-recorded",
+      names: (storage.indexedDbNames || []).slice(0, 50)
+    },
+    cacheStorage: {
+      status: coverage.cacheStorage || storage.cacheStorage?.status || "not-recorded",
+      caches: (storage.cacheStorage?.caches || []).slice(0, 20).map((cache) => ({
+        name: cache.name,
+        status: cache.status || "observed",
+        keys: (cache.keys || []).slice(0, 20).map((key) => ({ url: key.url, method: key.method, queryKeys: key.queryKeys || [] }))
+      }))
+    },
+    serviceWorkers: {
+      status: coverage.serviceWorkers || storage.serviceWorkers?.status || "not-recorded",
+      registrations: (storage.serviceWorkers?.registrations || []).slice(0, 20).map((registration) => ({
+        scope: registration.scope || "",
+        scriptUrl: registration.scriptUrl || "",
+        state: registration.state || "unknown"
+      }))
+    }
+  };
 }
 
 function serviceHasEvidence(service, state) {
@@ -200,6 +230,7 @@ export function buildDelta({
   afterStorageEntries = [],
   beforeCookieCoverage = null,
   afterCookieCoverage = null,
+  afterStorage = null,
   banner = null,
   bannerCategories = {},
   denyClicked,
@@ -256,6 +287,10 @@ export function buildDelta({
     remainingStorageEntries,
     nonEssentialStorageEntries,
     essentialStorageEntries,
+    browserStorage: {
+      before: summarizeBrowserStorage(beforeAnalysis?.storage),
+      after: summarizeBrowserStorage(afterStorage)
+    },
     serviceAudit,
     beforeCounts: {
       cookies: beforeCookies.length,
@@ -315,18 +350,31 @@ export function createCoverageSummary({ delta = {}, analysisComplete = true, heu
   const hasCookieObservation = Number.isFinite(delta.beforeCounts?.cookies) && Number.isFinite(delta.afterDenyCounts?.cookies);
   const hasTrafficObservation = Number.isFinite(delta.beforeCounts?.thirdPartyHosts) && Number.isFinite(delta.afterDenyCounts?.thirdPartyHosts);
   const hasStorageObservation = Number.isFinite(delta.afterDenyCounts?.storageEntries);
+  const storageCoverage = delta.browserStorage?.after || null;
+  const storageMechanisms = storageCoverage ? [
+    { key: "indexeddb", coverageKey: "indexedDB", evidenceCount: storageCoverage.indexedDB?.names?.length || 0 },
+    { key: "cache-storage", coverageKey: "cacheStorage", evidenceCount: storageCoverage.cacheStorage?.caches?.length || 0 },
+    { key: "service-workers", coverageKey: "serviceWorkers", evidenceCount: storageCoverage.serviceWorkers?.registrations?.length || 0 }
+  ] : [];
+  const storageInspectionIncomplete = storageMechanisms.some(({ coverageKey }) => storageCoverage[coverageKey]?.status === "not-inspected");
   const inaccessibleConsentSurfaces = Array.isArray(delta.inaccessibleConsentSurfaces) ? delta.inaccessibleConsentSurfaces : [];
   const hasConsentObservation = Boolean(delta.banner && delta.banner.confidence !== "none") && inaccessibleConsentSurfaces.length === 0;
   const hasCookieCoverage = delta.cookieCoverage?.complete === true;
   return {
-    auditComplete: Boolean(analysisComplete && delta.beforeCounts && delta.afterDenyCounts && inaccessibleConsentSurfaces.length === 0 && (!delta.integrity || delta.integrity.uncertain === false) && hasCookieCoverage),
+    auditComplete: Boolean(analysisComplete && delta.beforeCounts && delta.afterDenyCounts && inaccessibleConsentSurfaces.length === 0 && (!delta.integrity || delta.integrity.uncertain === false) && hasCookieCoverage && !storageInspectionIncomplete),
     observed: [
       { key: "cookies", state: hasCookieObservation ? "observed" : "not-observed", confidence: hasCookieObservation ? "confirmed" : "limited", evidenceCount: delta.afterDenyCounts?.cookies || 0 },
-      { key: "browser-storage", state: hasStorageObservation ? "observed" : "not-observed", confidence: hasStorageObservation ? "confirmed" : "limited", evidenceCount: delta.afterDenyCounts?.storageEntries || 0 },
+      { key: "browser-storage", state: storageInspectionIncomplete ? "not-inspected" : hasStorageObservation ? "observed" : "not-observed", confidence: storageInspectionIncomplete ? "limited" : hasStorageObservation ? "confirmed" : "limited", evidenceCount: delta.afterDenyCounts?.storageEntries || 0 },
       { key: "network-requests", state: hasTrafficObservation ? "observed" : "not-observed", confidence: hasTrafficObservation ? "confirmed" : "limited", evidenceCount: delta.afterDenyCounts?.thirdPartyHosts || 0 },
       { key: "consent-surface", state: inaccessibleConsentSurfaces.length ? "not-technically-inspectable" : hasConsentObservation ? "observed" : "not-observed", confidence: inaccessibleConsentSurfaces.length ? "high" : hasConsentObservation ? (delta.banner.confidence || "confirmed") : "limited", evidenceCount: delta.banner?.evidence?.length || 0 },
       { key: "audit-integrity", state: delta.integrity?.uncertain === false ? "observed" : "not-observed", confidence: delta.integrity?.uncertain === false ? "confirmed" : "limited", evidenceCount: delta.integrity?.evidence?.length || 0 },
-      { key: "cookie-coverage", state: delta.cookieCoverage?.complete ? "observed" : "not-observed", confidence: delta.cookieCoverage?.complete ? "confirmed" : "limited", evidenceCount: delta.cookieCoverage?.requestedHosts?.length || 0 }
+      { key: "cookie-coverage", state: delta.cookieCoverage?.complete ? "observed" : "not-observed", confidence: delta.cookieCoverage?.complete ? "confirmed" : "limited", evidenceCount: delta.cookieCoverage?.requestedHosts?.length || 0 },
+      ...storageMechanisms.map(({ key, coverageKey, evidenceCount }) => ({
+        key,
+        state: storageCoverage[coverageKey]?.status === "observed" ? "observed" : "not-inspected",
+        confidence: storageCoverage[coverageKey]?.status === "observed" ? "confirmed" : "limited",
+        evidenceCount
+      }))
     ],
     limitations: COVERAGE_LIMITATIONS.map((limitation) => ({ ...limitation })),
     heuristicSignals: heuristicSignals || deriveHeuristicSignals(delta)
@@ -348,6 +396,8 @@ export function deriveAuditVerdict(delta, { analysisComplete = true } = {}) {
   if (delta?.inaccessibleConsentSurfaces?.length) missingCoverage.push("consent-surface-inaccessible");
   if (!delta?.integrity || delta.integrity.uncertain) missingCoverage.push("audit-integrity");
   if (!delta?.cookieCoverage || !delta.cookieCoverage.complete) missingCoverage.push("cookie-coverage");
+  const storageCoverage = delta?.browserStorage?.after;
+  if (storageCoverage && ["indexedDB", "cacheStorage", "serviceWorkers"].some((key) => storageCoverage[key]?.status === "not-inspected")) missingCoverage.push("storage-coverage");
   if (!delta?.beforeCounts || !delta?.afterDenyCounts) missingCoverage.push("before-after-observation");
   if (!analysisComplete) missingCoverage.push("page-analysis");
   if (delta?.auditLifecycle?.status && delta.auditLifecycle.status !== "completed") missingCoverage.push("audit-lifecycle");

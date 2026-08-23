@@ -249,6 +249,7 @@ function renderDelta(delta, options = {}) {
             <h3>${escapeHtml(t("browserStorageAfterOptOutHeading"))}</h3>
             ${storageEntries.length ? renderStorageTable(storageEntries) : `<p class="empty-state">${escapeHtml(t("noStorageEntries"))}</p>`}
           </section>
+          ${renderBrowserStorageEvidence(delta.browserStorage?.after)}
           ${renderConsentSurfaceLimitations(delta)}
           <section>
             <h3>${escapeHtml(t("serviceAuditHeading"))}</h3>
@@ -325,11 +326,15 @@ function renderCoverage(coverage) {
     observed: t("coverageStateObserved"),
     "not-observed": t("coverageStateNotObserved"),
     "not-detected": t("coverageStateNotDetected"),
+    "not-inspected": t("coverageStateNotInspected"),
     "not-technically-inspectable": t("coverageStateNotInspectable")
   };
   const techniqueLabels = {
     cookies: t("coverageTechniqueCookies"),
     "browser-storage": t("coverageTechniqueStorage"),
+    indexeddb: t("coverageTechniqueIndexedDb"),
+    "cache-storage": t("coverageTechniqueCacheStorage"),
+    "service-workers": t("coverageTechniqueServiceWorkers"),
     "network-requests": t("coverageTechniqueTraffic"),
     "consent-surface": t("coverageTechniqueConsent"),
     "cookie-coverage": t("coverageTechniqueCookieCoverage"),
@@ -618,6 +623,22 @@ function renderStorageTable(entries) {
       </tbody>
     </table>
   `;
+}
+
+function renderBrowserStorageEvidence(storage) {
+  if (!storage) return "";
+  const statusLabel = (status) => status === "observed" ? t("storageStatusObserved") : status === "not-inspected" ? t("storageStatusNotInspected") : t("storageStatusNotRecorded");
+  const databases = storage.indexedDB?.names || [];
+  const caches = storage.cacheStorage?.caches || [];
+  const registrations = storage.serviceWorkers?.registrations || [];
+  const databaseContent = databases.length ? renderSimpleList(databases) : `<p class="empty-state">${escapeHtml(storage.indexedDB?.status === "not-inspected" ? t("storageStatusNotInspected") : t("noIndexedDbDatabases"))}</p>`;
+  const cacheContent = caches.length
+    ? `<ul class="delta-list">${caches.map((cache) => `<li><strong>${escapeHtml(cache.name)}</strong> · ${escapeHtml(t("cacheKeyCount", cache.keys?.length || 0))}${cache.keys?.length ? `<ul>${cache.keys.slice(0, 8).map((key) => `<li>${escapeHtml(key.method || "GET")} ${escapeHtml(key.url)}</li>`).join("")}</ul>` : ""}</li>`).join("")}</ul>`
+    : `<p class="empty-state">${escapeHtml(storage.cacheStorage?.status === "not-inspected" ? t("storageStatusNotInspected") : t("noCacheStorageCaches"))}</p>`;
+  const workerContent = registrations.length
+    ? `<ul class="delta-list">${registrations.map((registration) => `<li><strong>${escapeHtml(registration.scope || t("serviceWorkersHeading"))}</strong> · ${escapeHtml(registration.state || "unknown")}${registration.scriptUrl ? ` · ${escapeHtml(registration.scriptUrl)}` : ""}</li>`).join("")}</ul>`
+    : `<p class="empty-state">${escapeHtml(storage.serviceWorkers?.status === "not-inspected" ? t("storageStatusNotInspected") : t("noServiceWorkerRegistrations"))}</p>`;
+  return `<section class="browser-storage-evidence"><h3>${escapeHtml(t("browserStorageMetadataHeading"))}</h3><p class="muted">${escapeHtml(t("storageInspectionStatus", [statusLabel(storage.indexedDB?.status), statusLabel(storage.cacheStorage?.status), statusLabel(storage.serviceWorkers?.status)]))}</p><div class="storage-evidence-grid"><div><h4>${escapeHtml(t("indexedDbHeading"))}</h4>${databaseContent}</div><div><h4>${escapeHtml(t("cacheStorageHeading"))}</h4>${cacheContent}</div><div><h4>${escapeHtml(t("serviceWorkersHeading"))}</h4>${workerContent}</div></div></section>`;
 }
 
 function renderConsentSurfaceLimitations(delta) {

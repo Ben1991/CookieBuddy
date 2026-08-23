@@ -164,6 +164,35 @@ test("builds a delta summary from the before and after states", () => {
   assert.equal(delta.summary, "found");
 });
 
+test("keeps extended browser storage metadata as before-and-after evidence", () => {
+  const storage = {
+    localStorageKeys: [],
+    sessionStorageKeys: [],
+    indexedDbNames: ["consent-db"],
+    indexedDb: { status: "observed", databases: [{ name: "consent-db", version: 2 }] },
+    cacheStorage: { status: "observed", caches: [{ name: "app-shell", status: "observed", keys: [{ url: "https://example.com/app.js", method: "GET", queryKeys: [] }] }] },
+    serviceWorkers: { status: "observed", registrations: [{ scope: "https://example.com/", scriptUrl: "https://example.com/sw.js", state: "activated" }] },
+    coverage: { indexedDB: "observed", cacheStorage: "observed", serviceWorkers: "observed" }
+  };
+  const delta = buildDelta({
+    beforeCookies: [],
+    afterCookies: [],
+    beforeTraffic: [],
+    afterTraffic: [],
+    beforeAnalysis: { storage },
+    afterStorage: storage,
+    denyClicked: true,
+    denyVerified: true,
+    labels: { deltaFoundSummary: "found", noDeltaSummary: "none" },
+    tabUrl: "https://example.com"
+  });
+
+  assert.equal(delta.browserStorage.before.indexedDB.names[0], "consent-db");
+  assert.equal(delta.browserStorage.after.cacheStorage.caches[0].keys[0].url, "https://example.com/app.js");
+  assert.equal(delta.browserStorage.after.serviceWorkers.registrations[0].scriptUrl, "https://example.com/sw.js");
+  assert.equal("valuePreview" in delta.browserStorage.after.cacheStorage.caches[0].keys[0], false);
+});
+
 test("keeps delta low when only essential cookies and infrastructure remain after manual opt-out", () => {
   const delta = buildDelta({
     beforeCookies: [
@@ -212,6 +241,26 @@ test("treats remaining storage entries as part of the delta", () => {
   assert.equal(delta.riskLevel, "high");
   assert.equal(delta.afterDenyCounts.storageEntries, 1);
   assert.equal(delta.afterStorageEntries.length, 1);
+});
+
+test("keeps Cache Storage and service-worker presence as metadata instead of non-essential tracking evidence", () => {
+  const delta = buildDelta({
+    beforeCookies: [],
+    afterCookies: [],
+    beforeTraffic: [],
+    afterTraffic: [],
+    afterStorageEntries: [
+      { key: "app-shell", scope: "Cache Storage" },
+      { key: "https://example.com/", scope: "Service worker" }
+    ],
+    denyClicked: true,
+    denyVerified: true,
+    labels: { deltaFoundSummary: "found", noDeltaSummary: "none" },
+    tabUrl: "https://example.com"
+  });
+
+  assert.equal(delta.riskLevel, "low");
+  assert.deepEqual(delta.nonEssentialStorageEntries, []);
 });
 
 test("audits banner services against post-opt-out cookies, storage, and traffic", () => {
@@ -341,7 +390,14 @@ test("derives a positive verdict only when rejection and before/after coverage a
     nonEssentialStorageEntries: [],
     serviceAudit: [],
     integrity: { status: "clean", uncertain: false, evidence: [] },
-    cookieCoverage: { complete: true, requestedHosts: ["example.test"], unavailableHosts: [], thirdPartyHosts: [] }
+    cookieCoverage: { complete: true, requestedHosts: ["example.test"], unavailableHosts: [], thirdPartyHosts: [] },
+    browserStorage: {
+      after: {
+        indexedDB: { status: "observed", names: [] },
+        cacheStorage: { status: "observed", caches: [] },
+        serviceWorkers: { status: "observed", registrations: [] }
+      }
+    }
   };
 
   const positive = deriveAuditVerdict(base);
@@ -351,6 +407,18 @@ test("derives a positive verdict only when rejection and before/after coverage a
   assert.equal(deriveAuditVerdict({ ...base, denyAction: { clicked: true, verified: false } }).status, "incomplete");
   assert.equal(deriveAuditVerdict({ ...base, integrity: { status: "contaminated", uncertain: true } }).status, "incomplete");
   assert.equal(deriveAuditVerdict({ ...base, cookieCoverage: { complete: false, requestedHosts: ["tracker.example"], unavailableHosts: ["tracker.example"] } }).status, "incomplete");
+  const unsupportedStorage = deriveAuditVerdict({
+    ...base,
+    browserStorage: {
+      after: {
+        indexedDB: { status: "not-inspected", names: [] },
+        cacheStorage: { status: "observed", caches: [] },
+        serviceWorkers: { status: "observed", registrations: [] }
+      }
+    }
+  });
+  assert.equal(unsupportedStorage.status, "incomplete");
+  assert.ok(unsupportedStorage.reasons.includes("storage-coverage"));
   assert.equal(deriveAuditVerdict({ ...base, riskLevel: "high", thirdPartyHosts: ["tracker.example"] }).status, "negative");
   const review = deriveAuditVerdict({
     ...base,

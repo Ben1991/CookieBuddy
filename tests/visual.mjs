@@ -18,7 +18,16 @@ const fixtureAnalysis = {
   },
   resources: [{ url: "https://analytics.example.net/script.js", host: "analytics.example.net", thirdParty: true }],
   contacts: { dpo: { kind: "dpo", email: "privacy@example.com", source: "Privacy policy", sourceUrl: "https://example.com/privacy" }, authority: { name: "Federal data protection authority", key: "fallback", note: "Review the privacy notice.", url: "https://authority.example.test/complaints" } },
-  storage: { items: [{ key: "session_state", scope: "localStorage", valuePreview: "active", inBanner: false }] }
+  storage: {
+    items: [{ key: "session_state", scope: "localStorage", valuePreview: "active", inBanner: false }],
+    localStorageKeys: ["session_state"],
+    sessionStorageKeys: [],
+    indexedDbNames: ["consent-db"],
+    indexedDb: { status: "observed", databases: [{ name: "consent-db", version: 1 }] },
+    cacheStorage: { status: "observed", caches: [{ name: "app-shell", status: "observed", keys: [{ url: "https://example.com/app.js", method: "GET", queryKeys: [] }] }] },
+    serviceWorkers: { status: "observed", registrations: [{ scope: "https://example.com/", scriptUrl: "https://example.com/sw.js", state: "activated" }] },
+    coverage: { indexedDB: "observed", cacheStorage: "observed", serviceWorkers: "observed" }
+  }
 };
 const fixtureCookies = [
   { name: "_ga", domain: "example.com", path: "/", secure: true, sameSite: "lax" },
@@ -49,6 +58,18 @@ const fixtureDelta = {
     status: "incomplete",
     reason: "redirect-during-audit",
     events: [{ type: "navigation", kind: "redirect", url: "https://example.com/redirected" }]
+  },
+  browserStorage: {
+    before: {
+      indexedDB: { status: "observed", names: ["consent-db"] },
+      cacheStorage: { status: "observed", caches: [{ name: "app-shell", status: "observed", keys: [{ url: "https://example.com/app.js", method: "GET", queryKeys: [] }] }] },
+      serviceWorkers: { status: "observed", registrations: [{ scope: "https://example.com/", scriptUrl: "https://example.com/sw.js", state: "activated" }] }
+    },
+    after: {
+      indexedDB: { status: "observed", names: ["consent-db"] },
+      cacheStorage: { status: "observed", caches: [{ name: "app-shell", status: "observed", keys: [{ url: "https://example.com/app.js", method: "GET", queryKeys: [] }] }] },
+      serviceWorkers: { status: "observed", registrations: [{ scope: "https://example.com/", scriptUrl: "https://example.com/sw.js", state: "activated" }] }
+    }
   }
 };
 
@@ -112,6 +133,7 @@ try {
   assert.ok(await popup.locator("#auditSteps").isVisible(), "audit progress steps should be visible");
   assert.equal(await popup.locator("#visualEvidenceToggle").isChecked(), false, "visual evidence must be opt-in");
   assert.ok(await popup.getByText("Screenshots may contain page content or personal information.", { exact: false }).isVisible(), "visual evidence privacy warning should be visible");
+  assert.match(await popup.locator("#cookieResult").innerHTML(), /Extended browser storage metadata/, "popup should render extended browser storage metadata");
   assert.equal(await popup.locator("#overviewGrid").isVisible(), false, "technical metrics should remain progressive disclosure");
   assert.ok((await popup.evaluate(() => document.documentElement.scrollWidth)) <= (await popup.evaluate(() => document.documentElement.clientWidth)) + 1, "popup should not overflow horizontally");
   await popup.locator("#languageSelect").selectOption("de");
@@ -158,6 +180,8 @@ try {
   assert.ok(await details.getByText("Unclear", { exact: true }).first().isVisible(), "unlisted signals should be labeled unclear");
   assert.ok(await details.getByText("Reject action verification", { exact: true }).isVisible(), "the report should show rejection verification evidence");
   assert.ok(await details.getByText("Coverage and limits", { exact: true }).isVisible(), "coverage limits should be visible in the evidence report");
+  assert.ok(await details.getByText("Extended browser storage metadata", { exact: true }).isVisible(), "delta report should show extended browser storage metadata");
+  assert.ok(await details.getByText("app-shell", { exact: true }).isVisible(), "delta report should show Cache Storage names and keys");
   assert.ok(await details.getByText("Audit integrity", { exact: true }).isVisible(), "audit integrity should be visible in the evidence report");
   assert.ok(await details.getByText("Minimized URL evidence", { exact: true }).isVisible(), "URL minimization should be disclosed in the evidence report");
   assert.ok(await details.getByText("Not technically inspectable", { exact: false }).count() > 0, "unsupported techniques should be labeled as not technically inspectable");

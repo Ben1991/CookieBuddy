@@ -51,7 +51,7 @@ The source of truth for product acceptance behavior is [`features/cookiebuddy.fe
 | UC-07 | Flag consent signals that contradict the rejected UI state as high-confidence technical findings. |
 | UC-08 | Preserve concurrent network evidence without request-loss race conditions. |
 | UC-09 | Capture relevant first-party, subdomain, and observed third-party cookie metadata without dumping unrelated cookies or values; unavailable hosts remain an explicit coverage limitation. |
-| UC-10 | Include supported localStorage, sessionStorage, IndexedDB, Cache Storage, and service-worker metadata. |
+| UC-10 | Include localStorage/sessionStorage plus supported IndexedDB, Cache Storage, and service-worker metadata; show unsupported inspection explicitly and never export stored values or response bodies. |
 | UC-11 | Classify endpoint relationships with Public Suffix List compatible registrable-domain logic. |
 | UC-12 | Classify necessity conservatively with rationale and confidence; names/CDNs alone cannot prove necessity. |
 | UC-13 | Recognize services from versioned maintainable offline rule data, expose the matching evidence/version/confidence, and keep unknown signals visible. |
@@ -162,6 +162,8 @@ CookieBuddy uses the following capabilities only for the local audit flow:
 | `webRequest` | Observes minimized request metadata only while an audit is active. |
 | HTTP(S) host access | Retained for HTTP(S) third-party cookie metadata and subresource requests; it is not used for idle collection. |
 
+Browser persistence coverage is metadata-only: IndexedDB database names/versions, Cache Storage names and minimized request keys, and service-worker scope/script metadata. CookieBuddy does not read IndexedDB records, cache response bodies, or service-worker payloads. If a browser API cannot be inspected, the report marks it as **not inspected** and the audit cannot produce a positive result from that incomplete coverage.
+
 The `tabs` permission and persistent all-page content-script registration are not requested. The details page is opened as an extension page and does not need broad web-accessible resources. HTTP(S) host access remains a deliberate trade-off for reliable third-party cookie and request coverage; removing it would silently reduce the evidence promised by UC-09 and UC-25.
 
 The popup's **Delete local audit data** action removes `cookiebuddyLastScan` and `cookiebuddyLastDelta` from `chrome.storage.local` and clears the session traffic, icon status, and lifecycle state. The latest scan and delta remain on the device until the user deletes them. CookieBuddy never deletes a website's own localStorage, cookies, or other browser data.
@@ -174,7 +176,7 @@ The budgets are local safeguards, not telemetry:
 
 - Idle browsing captures zero requests and performs zero per-request session-storage writes.
 - An active audit runs for at most 30 seconds and retains at most 500 requests per tab.
-- Page analysis limits text to 120,000 characters, HTML evidence to 250,000 characters, resources to 250 entries, stored entries to 50, contact pages to 8, and each contact response to 200,000 characters with a 1.5-second timeout.
+- Page analysis limits text to 120,000 characters, HTML evidence to 250,000 characters, resources to 250 entries, stored entries to 50, Cache Storage names to 20, Cache Storage keys per cache to 20, service-worker registrations to 20, contact pages to 8, and each contact response to 200,000 characters with a 1.5-second timeout.
 - Each page analysis records only local duration and bounded sample counts for regression inspection; it does not upload performance data.
 
 The corresponding contract and regression tests live in `tests/performance-budget.test.mjs`. If a limit is exceeded, the audit remains local and is marked incomplete rather than silently weakening evidence integrity.

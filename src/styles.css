@@ -682,6 +682,49 @@ h3 {
   gap: 10px;
 }
 
+.storage-metadata {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+.storage-metadata > h3,
+.storage-metadata h4 {
+  margin: 0;
+}
+
+.storage-metadata-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.storage-metadata-grid > div {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-width: 0;
+}
+
+.storage-metadata-grid h4 {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.storage-key-list {
+  display: grid;
+  gap: 3px;
+  margin: 6px 0 0;
+  padding-left: 16px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  overflow-wrap: anywhere;
+}
+
 .list-group {
   display: grid;
   gap: 8px;
@@ -1066,6 +1109,11 @@ body,
 .cb-details-output .delta-findings { display: grid; gap: 13px; }
 .cb-details-output .delta-side-panel { display: grid; gap: 13px; }
 .cb-details-output .coverage-report { border: 1px solid var(--cb-line); border-radius: 16px; background: var(--cb-surface); padding: 14px; }
+.cb-details-output .browser-storage-evidence { border: 1px solid var(--cb-line); border-radius: 16px; background: var(--cb-surface); padding: 14px; }
+.cb-details-output .storage-evidence-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
+.cb-details-output .storage-evidence-grid > div { min-width: 0; }
+.cb-details-output .storage-evidence-grid h4 { margin: 12px 0 6px; color: var(--cb-muted); font-size: 10px; }
+.cb-details-output .storage-evidence-grid .delta-list { overflow-wrap: anywhere; }
 .cb-details-output .coverage-report h4 { margin: 14px 0 6px; color: var(--cb-muted); font-size: 10px; }
 .cb-details-output .coverage-status { margin: 0; color: var(--cb-muted); font-size: 10px; }
 .cb-details-output .coverage-list { display: grid; gap: 6px; margin: 0; padding-left: 18px; color: var(--cb-muted); font-size: 10px; }
@@ -1814,7 +1862,8 @@ body {
 @media (max-width: 860px) {
   .delta-template-grid,
   .delta-content-grid,
-  .delta-fact-grid {
+  .delta-fact-grid,
+  .storage-evidence-grid {
     grid-template-columns: 1fr;
   }
 
@@ -1870,7 +1919,8 @@ body {
   }
 
   .summary-grid,
-  .storage-columns {
+  .storage-columns,
+  .storage-metadata-grid {
     grid-template-columns: 1fr;
   }
 
