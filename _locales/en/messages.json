@@ -78,6 +78,7 @@
   "auditShowEvidence": { "message": "Show observed evidence" },
   "auditOpenEvidence": { "message": "Open evidence" },
   "auditContactWebsite": { "message": "Contact website / DPO" },
+  "auditPrepareAuthority": { "message": "Prepare authority complaint" },
   "auditRecipientUnclear": { "message": "Recipient not confirmed; review the evidence and choose a contact manually." },
   "auditComplaintReviewNote": { "message": "Review the factual draft before sending. CookieBuddy does not determine a legal violation." },
   "auditDurationExceeded": { "message": "The audit exceeded its local time budget and was marked incomplete." },
@@ -805,6 +806,15 @@
   "deltaAuthorityMailIntro": {
     "message": "I am contacting you regarding the cookie and consent behavior on your website:"
   },
+  "deltaMailWebsiteLabel": { "message": "Tested website" },
+  "deltaMailCheckedAtLabel": { "message": "Checked at" },
+  "deltaMailOptOutLabel": { "message": "Opt-out action" },
+  "deltaMailVerificationLabel": { "message": "Observed consent state" },
+  "deltaMailVerificationVerified": { "message": "The selected rejection action was technically verified." },
+  "deltaMailVerificationUnclear": { "message": "The selected action was not fully verifiable; please review the audit status before sending." },
+  "complaintDraftLabel": { "message": "Review and edit the factual draft before opening your mail client" },
+  "authorityCandidateLabel": { "message": "Candidate only" },
+  "authorityCandidateHint": { "message": "The exact supervisory authority could not be determined from the available site evidence. Review this candidate and jurisdiction before sending." },
   "deltaMailObservation": {
     "message": "After selecting \"reject all\", \"deny all\", or a similar opt-out option in the cookie banner, I still observed cookies, browser storage entries, and/or third-party requests that may relate to analytics, marketing, social media, or other non-essential services."
   },
@@ -841,6 +851,7 @@
   "deltaMailNoLegalClaim": {
     "message": "Please treat this message as a request for clarification. It is not intended as a formal legal claim."
   },
+  "deltaMailReportExportNote": { "message": "The corresponding CookieBuddy audit report can be exported from the evidence view alongside this draft." },
   "senderNamePlaceholder": {
     "message": "{{sender_name}}"
   },

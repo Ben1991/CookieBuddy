@@ -78,6 +78,7 @@
   "auditShowEvidence": { "message": "Beobachtete Belege anzeigen" },
   "auditOpenEvidence": { "message": "Belege öffnen" },
   "auditContactWebsite": { "message": "Website / DSB kontaktieren" },
+  "auditPrepareAuthority": { "message": "Beschwerde an Behörde vorbereiten" },
   "auditRecipientUnclear": { "message": "Empfänger nicht bestätigt; prüfe die Belege und wähle den Kontakt manuell." },
   "auditComplaintReviewNote": { "message": "Prüfe den sachlichen Entwurf vor dem Versand. CookieBuddy stellt keinen Rechtsverstoß fest." },
   "auditDurationExceeded": { "message": "Der Audit hat sein lokales Zeitlimit überschritten und wurde als unvollständig markiert." },
@@ -805,6 +806,15 @@
   "deltaAuthorityMailIntro": {
     "message": "ich kontaktiere Sie bezüglich des Cookie- und Einwilligungsverhaltens auf Ihrer Website:"
   },
+  "deltaMailWebsiteLabel": { "message": "Geprüfte Website" },
+  "deltaMailCheckedAtLabel": { "message": "Geprüft am" },
+  "deltaMailOptOutLabel": { "message": "Opt-out-Aktion" },
+  "deltaMailVerificationLabel": { "message": "Beobachteter Einwilligungsstatus" },
+  "deltaMailVerificationVerified": { "message": "Die ausgewählte Ablehnungsaktion wurde technisch verifiziert." },
+  "deltaMailVerificationUnclear": { "message": "Die ausgewählte Aktion konnte nicht vollständig verifiziert werden; bitte den Audit-Status vor dem Versand prüfen." },
+  "complaintDraftLabel": { "message": "Faktenentwurf vor dem Öffnen des Mail-Programms prüfen und bearbeiten" },
+  "authorityCandidateLabel": { "message": "Nur Kandidat" },
+  "authorityCandidateHint": { "message": "Die genaue Aufsichtsbehörde konnte aus den verfügbaren Seitennachweisen nicht bestimmt werden. Bitte Kandidat und Zuständigkeit vor dem Versand prüfen." },
   "deltaMailObservation": {
     "message": "Nach Auswahl von \"Alle ablehnen\", \"Ablehnen\" oder einer ähnlichen Opt-out-Option im Cookie-Banner habe ich weiterhin Cookies, Browser-Speicher-Einträge und/oder Drittanbieter-Requests beobachtet, die mit Analytics, Marketing, Social Media oder anderen nicht notwendigen Diensten zusammenhängen können."
   },
@@ -841,6 +851,7 @@
   "deltaMailNoLegalClaim": {
     "message": "Bitte verstehen Sie diese Nachricht als Bitte um Klärung. Sie ist nicht als formeller rechtlicher Anspruch gemeint."
   },
+  "deltaMailReportExportNote": { "message": "Der zugehörige CookieBuddy-Auditbericht kann neben diesem Entwurf in der Evidenzansicht exportiert werden." },
   "senderNamePlaceholder": {
     "message": "{{sender_name}}"
   },

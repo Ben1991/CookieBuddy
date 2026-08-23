@@ -120,6 +120,50 @@ test("details page offers authority mail when available", async () => {
   assert.match(decodeURIComponent(window.location.lastAssignedUrl), /Bitte verstehen Sie diese Nachricht als Bitte um Klärung/);
 });
 
+test("details creates an editable factual complaint draft and an uncertain authority candidate", async () => {
+  const document = createDocument("en");
+  const window = createWindow("?view=delta&focus=complaint");
+  setupGlobals({ document, window, locale: "en" });
+
+  globalThis.chrome.storage.local.get = async () => ({
+    cookiebuddyLastScan: {
+      analysis: {
+        contacts: {
+          dpo: buildContactsFixture().dpo,
+          authority: {
+            name: "Local data protection authority",
+            note: "Review the jurisdiction before sending.",
+            url: "https://authority.example.test/complaints"
+          }
+        }
+      }
+    },
+    cookiebuddyLastDelta: buildDeltaFixture()
+  });
+
+  await import(`../src/details.js?test=${Date.now()}-complaint-draft`);
+  await flush();
+
+  const draft = element(document, "sendDeltaMailActions").querySelector("#complaintDraft");
+  assert.ok(draft);
+  assert.match(draft.value, /Tested website: https:\/\/example\.com/);
+  assert.match(draft.value, /Checked at:/);
+  assert.match(draft.value, /Opt-out action: Reject all/);
+  assert.match(draft.value, /Observed consent state: The selected rejection action was technically verified/);
+  assert.match(draft.value, /_ga/);
+  assert.match(draft.value, /tracker\.example\.net/);
+  assert.match(draft.value, /Google Analytics/);
+  assert.match(draft.value, /not intended as a formal legal claim/i);
+  assert.doesNotMatch(draft.value, /legal violation/i);
+  assert.match(element(document, "sendDeltaMailActions").innerHTML, /Local data protection authority/);
+  assert.match(element(document, "sendDeltaMailActions").innerHTML, /Candidate only/);
+  assert.match(element(document, "sendDeltaMailActions").innerHTML, /authority\.example\.test/);
+
+  draft.value += "\nEdited by the user.";
+  element(document, "sendDeltaMailActions").querySelectorAll("button[data-mail-target]")[0].click();
+  assert.match(decodeURIComponent(window.location.lastAssignedUrl), /Edited by the user/);
+});
+
 test("details page hides mail drafting outside the delta view", async () => {
   const document = createDocument("de");
   const window = createWindow("?view=summary");
@@ -354,6 +398,8 @@ class FakeElement {
     this._text = "";
     this._html = "";
     this._childrenButtons = [];
+    this._childrenFields = [];
+    this.value = "";
   }
 
   set textContent(value) {
@@ -368,6 +414,7 @@ class FakeElement {
     this._html = String(value);
     this._text = this._html;
     this._childrenButtons = [];
+    this._childrenFields = [];
 
     const isGerman = String(globalThis.document?.documentElement?.lang || "").startsWith("de");
     for (const spec of [
@@ -394,6 +441,12 @@ class FakeElement {
       button.textContent = match[2].replace(/[<>]/g, "").trim();
       this._childrenButtons.push(button);
     }
+
+    for (const match of this._html.matchAll(/<textarea[^>]*id="([^"]+)"[^>]*>([\s\S]*?)<\/textarea>/g)) {
+      const field = new FakeElement(match[1]);
+      field.value = decodeHtml(match[2]);
+      this._childrenFields.push(field);
+    }
   }
 
   get innerHTML() {
@@ -412,7 +465,9 @@ class FakeElement {
 
   querySelector(selector) {
     if (selector.startsWith("#")) {
-      return this._childrenButtons.find((button) => `#${button.id}` === selector) || null;
+      return this._childrenButtons.find((button) => `#${button.id}` === selector)
+        || this._childrenFields.find((field) => `#${field.id}` === selector)
+        || null;
     }
     return null;
   }
@@ -428,6 +483,15 @@ class FakeElement {
   setAttribute(name, value) {
     this.attributes.set(name, String(value));
   }
+}
+
+function decodeHtml(value) {
+  return String(value)
+    .replaceAll("&lt;", "<")
+    .replaceAll("&gt;", ">")
+    .replaceAll("&quot;", '"')
+    .replaceAll("&#039;", "'")
+    .replaceAll("&amp;", "&");
 }
 
 class FakeAnchor {

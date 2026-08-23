@@ -715,13 +715,10 @@ function renderAuditVerdict(delta, verdict) {
   const reasons = (verdict.reasons || []).slice(0, 3).map((reason) => `<li>${escapeHtml(reasonLabels[reason] || reason)}</li>`).join("");
   const complete = verdict.coverage?.complete === true;
   const cookieCount = (delta.remainingCookies?.length || 0) + (delta.newCookies?.length || 0);
-  const dpoEmail = state.analysis?.contacts?.dpo?.email || "";
-  const complaintBody = dpoEmail ? buildMailBody("access", delta) : "";
-  const complaintHref = dpoEmail ? `mailto:${encodeURIComponent(dpoEmail)}?subject=${encodeURIComponent(t("mailSubject", state.analysis.host))}&body=${encodeURIComponent(complaintBody)}` : "";
-  const detailsHref = chrome.runtime.getURL("details.html?view=delta");
-  const complaintAction = verdict.status === "negative" && complaintHref
-    ? `<a class="primary-button small" href="${complaintHref}" target="_blank" rel="noreferrer" data-complaint-action="true">${escapeHtml(t("auditContactWebsite"))}</a>`
-    : verdict.status === "negative" ? `<span class="audit-recipient-note">${escapeHtml(t("auditRecipientUnclear"))}</span>` : "";
+  const detailsHref = chrome.runtime.getURL(verdict.status === "negative" ? "details.html?view=delta&focus=complaint" : "details.html?view=delta");
+  const complaintAction = verdict.status === "negative"
+    ? `<a class="primary-button small" href="${escapeHtml(detailsHref)}" target="_blank" rel="noreferrer" data-complaint-action="true">${escapeHtml(t("auditContactWebsite"))}</a><a class="ghost-button small" href="${escapeHtml(detailsHref)}" target="_blank" rel="noreferrer" data-authority-complaint-action="true">${escapeHtml(t("auditPrepareAuthority"))}</a>`
+    : "";
   const cookieItems = [...(delta.remainingCookies || []), ...(delta.newCookies || [])].slice(0, 8);
 
   const html = `

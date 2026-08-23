@@ -169,6 +169,9 @@ test("popup delta view separates non-essential findings from allowed infrastruct
     assert.match(deltaHtml, /non-essential cookies still present/i);
     assert.match(deltaHtml, /non-essential third-party traffic after opt-out/i);
     assert.match(deltaHtml, /essential third-party infrastructure/i);
+    assert.doesNotMatch(deltaHtml, /data-complaint-action="true"/, "incomplete findings must not invite a complaint workflow");
+    assert.doesNotMatch(deltaHtml, /data-authority-complaint-action="true"/, "incomplete findings must not invite an authority complaint workflow");
+    assert.doesNotMatch(deltaHtml, /focus=complaint/, "incomplete findings must open the evidence view without complaint focus");
   } finally {
     globalThis.setTimeout = originalSetTimeout;
     globalThis.clearTimeout = originalClearTimeout;
