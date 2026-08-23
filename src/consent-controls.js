@@ -57,8 +57,9 @@
     const labelledText = labelledBy && element?.ownerDocument
       ? labelledBy.split(/\s+/).map((id) => element.ownerDocument.getElementById(id)?.textContent || "").join(" ")
       : "";
-    const associatedLabel = element?.id && element.ownerDocument?.querySelector
-      ? element.ownerDocument.querySelector(`label[for="${String(element.id).replace(/"/g, "\\\"")}"]`)?.textContent || ""
+    const associatedLabel = element?.id && element.ownerDocument?.querySelectorAll
+      ? Array.from(element.ownerDocument.querySelectorAll("label"))
+        .find((label) => getAttribute(label, "for") === String(element.id))?.textContent || ""
       : element?.parentElement?.tagName?.toLowerCase() === "label"
         ? element.parentElement.textContent || ""
         : "";

@@ -65,12 +65,14 @@ test("uses an associated label as an accessible name", () => {
     id: "reject-control",
     tagName: "input",
     ownerDocument: {
-      querySelector: (selector) => selector === 'label[for="reject-control"]' ? label : null
+      querySelectorAll: (selector) => selector === "label" ? [label] : []
     },
     getAttribute(name) {
       return name === "type" ? "button" : "";
     }
   };
+
+  label.getAttribute = (name) => name === "for" ? "reject-control" : "";
 
   const details = controls.getAccessibleNameDetails(element);
   assert.equal(details.name, "Tout refuser");
