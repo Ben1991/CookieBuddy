@@ -216,6 +216,52 @@ export function buildDelta({
 }
 
 /**
+ * Convert the observed delta into the conservative top-level answer shown in
+ * the popup. A green answer requires a verified reject action and a complete
+ * set of before/after observations; a missing control or incomplete snapshot
+ * is never presented as success.
+ */
+export function deriveAuditVerdict(delta, { analysisComplete = true } = {}) {
+  const missingCoverage = [];
+  if (!delta?.denyAction?.clicked) missingCoverage.push("rejection-verification");
+  if (!delta?.banner || delta.banner.confidence === "none") missingCoverage.push("consent-surface");
+  if (!delta?.beforeCounts || !delta?.afterDenyCounts) missingCoverage.push("before-after-observation");
+  if (!analysisComplete) missingCoverage.push("page-analysis");
+
+  const reasons = [];
+  if (delta?.thirdPartyHosts?.length) reasons.push("third-party-traffic");
+  if (delta?.remainingCookies?.length || delta?.newCookies?.length) reasons.push("non-essential-cookies");
+  if (delta?.nonEssentialStorageEntries?.length) reasons.push("non-essential-storage");
+  if (delta?.serviceAudit?.some((service) => service.status === "active")) reasons.push("active-service");
+  if (delta?.serviceAudit?.some((service) => service.status === "unclear")) reasons.push("unclear-service");
+
+  if (missingCoverage.length) {
+    return {
+      status: "incomplete",
+      confidence: "limited",
+      reasons: missingCoverage,
+      coverage: { complete: false, missing: missingCoverage }
+    };
+  }
+
+  if (delta.riskLevel === "high" || reasons.length) {
+    return {
+      status: "negative",
+      confidence: "evidence-backed",
+      reasons,
+      coverage: { complete: true, missing: [] }
+    };
+  }
+
+  return {
+    status: "positive",
+    confidence: "evidence-backed",
+    reasons: ["no-contradictory-evidence"],
+    coverage: { complete: true, missing: [] }
+  };
+}
+
+/**
  * Generate a formatted delta report for auditing and email communication.
  * Returns a plain-text report that can be sent to DPO/authority.
  * @param {object} delta - The delta object from buildDelta

@@ -1,23 +1,24 @@
 <!doctype html>
-<html lang="en">
+<html lang="de">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title data-i18n="popupDocumentTitle">CookieBuddy – Cookie review</title>
+    <title data-i18n="auditDocumentTitle">CookieBuddy – Tracking prüfen</title>
     <link rel="stylesheet" href="src/styles.css">
+    <link rel="stylesheet" href="src/audit-flow.css">
   </head>
   <body>
-    <main class="shell cb-popup" aria-live="polite">
-      <header class="cb-header">
+    <main class="shell cb-popup audit-popup">
+      <header class="cb-header audit-header">
         <div class="cb-brand">
           <span class="cb-logo" aria-hidden="true">C</span>
           <div>
             <strong>CookieBuddy</strong>
-            <span data-i18n="popupTitle">Lokaler Privacy-Check</span>
+            <span data-i18n="popupTitle">Lokaler Tracking-Check</span>
           </div>
         </div>
         <label class="cb-language">
-          <span class="sr-only" data-i18n="languageLabel">Language</span>
+          <span class="sr-only" data-i18n="languageLabel">Sprache</span>
           <select id="languageSelect" data-i18n-aria-label="languageAriaLabel">
             <option value="en">EN</option>
             <option value="de">DE</option>
@@ -25,48 +26,78 @@
         </label>
       </header>
 
-      <section id="statusCard" class="cb-card cb-site-summary" aria-live="polite">
-        <div class="cb-summary-top">
-          <strong id="currentPageLabel" class="cb-site-name" data-i18n-aria-label="currentPageAriaLabel"></strong>
-          <span id="statusPill" class="cb-badge good" data-i18n="statusReady">Ready</span>
+      <section id="statusCard" class="audit-hero" aria-live="polite" aria-atomic="true">
+        <div class="audit-site-row">
+          <div>
+            <span class="audit-eyebrow" data-i18n="currentPageLabel">Aktuelle Seite</span>
+            <strong id="currentPageLabel" class="audit-site" data-i18n-aria-label="currentPageAriaLabel"></strong>
+          </div>
+          <span id="statusPill" class="audit-state-pill" data-i18n="statusReady">Bereit</span>
         </div>
-        <p id="statusCardText" class="cb-muted" data-i18n="scanStatusReady">Last scan ready.</p>
-        <div class="cb-local-row">
-          <span class="cb-badge local" data-i18n="localOnlyBadge">LOKAL</span>
-          <span class="cb-local-copy" data-i18n="privacyLocalOnly">Analyse bleibt in deinem Browser</span>
+        <div class="audit-verdict-intro">
+          <h1 id="auditQuestion" data-i18n="auditQuestion">Ist das Tracking korrekt umgesetzt?</h1>
+          <p id="statusCardText" class="audit-copy" data-i18n="auditReadyCopy">CookieBuddy ist bereit für die Prüfung.</p>
         </div>
-        <p class="hero-intro sr-only" data-i18n="popupIntro">See what the page does before and after a reject attempt.</p>
+        <div class="audit-local-note">
+          <span class="audit-local-icon" aria-hidden="true">●</span>
+          <div>
+            <strong data-i18n="privacyLocalOnlyShort">Lokal im Browser</strong>
+            <span data-i18n="privacyLocalOnlyDetail">Die Analyse wird nicht hochgeladen.</span>
+          </div>
+        </div>
       </section>
 
-      <section id="overviewGrid" class="cb-metrics" data-i18n-aria-label="scanOverviewAriaLabel"></section>
+      <section class="audit-explainer" aria-labelledby="auditExplainerHeading">
+        <h2 id="auditExplainerHeading" data-i18n="auditWhatIsChecked">Was wird geprüft?</h2>
+        <ol class="audit-steps-preview">
+          <li><span>1</span><div><strong data-i18n="auditPreviewConsent">Consent erkennen</strong><small data-i18n="auditPreviewConsentDetail">Banner und Einwilligungssignale identifizieren</small></div></li>
+          <li><span>2</span><div><strong data-i18n="auditPreviewReject">Optionale Einwilligung ablehnen</strong><small data-i18n="auditPreviewRejectDetail">Ablehnung ausführen und technisch verifizieren</small></div></li>
+          <li><span>3</span><div><strong data-i18n="auditPreviewObserve">Tracking erneut beobachten</strong><small data-i18n="auditPreviewObserveDetail">Cookies, Speicher und Requests vergleichen</small></div></li>
+        </ol>
+      </section>
 
-      <section class="cb-card cb-signal" aria-labelledby="signalHeading">
-        <div class="cb-row">
-          <h2 id="signalHeading">Technisches Review-Signal</h2>
-          <span class="cb-badge warning" data-i18n="reviewRecommended">ZU PRÜFEN</span>
+      <section class="audit-progress-card" aria-labelledby="auditProgressHeading">
+        <div class="audit-section-head">
+          <div>
+            <span class="audit-eyebrow" data-i18n="auditProgressEyebrow">Prüfstatus</span>
+            <h2 id="auditProgressHeading" data-i18n="auditProgressHeading">Technischer Audit</h2>
+          </div>
+          <span class="audit-progress-dot" aria-hidden="true"></span>
         </div>
-        <span class="cb-signal-label" data-i18n="deltaHeading">Delta check</span>
-        <p id="scanStatusText" class="cb-muted" data-i18n="scanStatusReady">Last scan ready.</p>
+        <p id="scanStatusText" class="audit-copy" data-i18n="auditReadyProgress">Noch nicht gestartet.</p>
+        <ol id="auditSteps" class="audit-step-list" aria-label="Audit progress">
+          <li data-step="prepare" data-state="waiting"><span class="audit-step-icon" aria-hidden="true">1</span><span data-i18n="auditStepPrepare">Seite vorbereiten</span><small></small></li>
+          <li data-step="consent" data-state="waiting"><span class="audit-step-icon" aria-hidden="true">2</span><span data-i18n="auditStepConsent">Consent-Banner erkennen</span><small></small></li>
+          <li data-step="baseline" data-state="waiting"><span class="audit-step-icon" aria-hidden="true">3</span><span data-i18n="auditStepBaseline">Ausgangszustand erfassen</span><small></small></li>
+          <li data-step="reject" data-state="waiting"><span class="audit-step-icon" aria-hidden="true">4</span><span data-i18n="auditStepReject">Optionale Einwilligung ablehnen</span><small></small></li>
+          <li data-step="verify" data-state="waiting"><span class="audit-step-icon" aria-hidden="true">5</span><span data-i18n="auditStepVerify">Ablehnung verifizieren</span><small></small></li>
+          <li data-step="observe" data-state="waiting"><span class="audit-step-icon" aria-hidden="true">6</span><span data-i18n="auditStepObserve">Nach der Ablehnung beobachten</span><small></small></li>
+          <li data-step="capture" data-state="waiting"><span class="audit-step-icon" aria-hidden="true">7</span><span data-i18n="auditStepCapture">Cookies, Speicher und Requests erfassen</span><small></small></li>
+          <li data-step="analyze" data-state="waiting"><span class="audit-step-icon" aria-hidden="true">8</span><span data-i18n="auditStepAnalyze">Ergebnis analysieren</span><small></small></li>
+        </ol>
+        <div class="audit-progress-track" aria-hidden="true"><span id="auditProgressBar"></span></div>
       </section>
 
-      <section class="cb-card cb-categories" aria-labelledby="categoriesHeading">
-        <h2 id="categoriesHeading" data-i18n="servicesByCategoryHeading">Erkannte Kategorien</h2>
-        <div id="categoryResult" class="cb-category-list"></div>
+      <section id="deltaResult" class="audit-result" aria-live="polite" aria-atomic="false">
+        <div class="audit-empty-result">
+          <strong data-i18n="auditNoResult">Noch kein Ergebnis</strong>
+          <p data-i18n="auditNoResultDetail">Starte die Prüfung. Technische Details werden erst nach dem Ergebnis eingeblendet.</p>
+        </div>
       </section>
 
-      <div class="cb-actions">
-        <button id="heroScanButton" class="ghost-button" type="button" data-i18n="refreshButton">Neu scannen</button>
-        <button id="deltaButton" class="primary-button" type="button" data-i18n="runDeltaButton">Delta-Check starten</button>
+      <div class="audit-primary-actions">
+        <button id="deltaButton" class="primary-button audit-primary-button" type="button" data-i18n="runAuditButton">Tracking prüfen</button>
+        <button id="heroScanButton" class="ghost-button audit-secondary-button" type="button" data-i18n="refreshButton">Seite neu erfassen</button>
       </div>
       <p class="cb-disclaimer" data-i18n="legalDisclaimer">CookieBuddy liefert technische Review-Signale – keine rechtliche Bewertung.</p>
-      <span class="cb-support-copy" data-i18n="supportPrompt">Like CookieBuddy?</span>
+      <span class="cb-support-copy" data-i18n="supportPrompt">Support CookieBuddy</span>
       <span class="sr-only" data-i18n="supportDescription">Support development with a coffee</span>
 
-      <div class="cb-functional-sections" aria-hidden="true">
+      <div class="cb-functional-sections" hidden>
         <section class="card" id="bannerSection"><div id="bannerResult"></div><button id="refreshButton" type="button"></button><button id="bannerOverviewButton" type="button" data-i18n-title="bannerOverviewTitle"></button><span id="bannerOverviewStatus"></span></section>
         <section class="card"><div id="legendGrid"></div></section>
         <section class="card"><a id="detailsLink" href="details.html"></a><div id="cookieResult"></div><span id="cookieCount"></span></section>
-        <section class="card"><div id="deltaResult"></div></section>
+        <section class="card"><div id="overviewGrid"></div><div id="categoryResult"></div></section>
         <section class="card"><div id="contactResult"></div></section>
         <button id="helpButton" type="button"></button><div id="helpPanel" hidden></div>
         <span id="statusCardTextLegacy"></span><span id="scanStatusTextLegacy"></span>

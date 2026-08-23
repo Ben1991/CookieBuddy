@@ -5,6 +5,7 @@ import {
   buildServiceAudit,
   capitalize,
   cookieKey,
+  deriveAuditVerdict,
   formatCookie,
   formatDeltaReport,
   getBaseDomain,
@@ -252,4 +253,23 @@ test("formats delta report without deny click", () => {
   
   assert.match(report, /HIGH RISK/);
   assert.match(report, /Deny button could NOT be clicked/);
+});
+
+test("derives a positive verdict only when rejection and before/after coverage are verified", () => {
+  const base = {
+    banner: { name: "Cookiebot", confidence: "high" },
+    denyAction: { clicked: true },
+    beforeCounts: { cookies: 1, thirdPartyHosts: 0 },
+    afterDenyCounts: { cookies: 0, thirdPartyHosts: 0, storageEntries: 0 },
+    riskLevel: "low",
+    thirdPartyHosts: [],
+    remainingCookies: [],
+    newCookies: [],
+    nonEssentialStorageEntries: [],
+    serviceAudit: []
+  };
+
+  assert.equal(deriveAuditVerdict(base).status, "positive");
+  assert.equal(deriveAuditVerdict({ ...base, denyAction: { clicked: false } }).status, "incomplete");
+  assert.equal(deriveAuditVerdict({ ...base, riskLevel: "high", thirdPartyHosts: ["tracker.example"] }).status, "negative");
 });

@@ -79,8 +79,8 @@ The source of truth for product acceptance behavior is [`features/cookiebuddy.fe
 4. Click `Load unpacked`.
 5. Select this repository folder.
 6. Open a website and click the CookieBuddy extension icon.
-7. Use `Neu scannen / Refresh` for the current scan.
-8. Use the current `Delta-Check` to compare the state around a rejection attempt.
+7. Use `Seite neu erfassen / Refresh` to capture the current page locally.
+8. Select `Tracking prüfen / Check tracking` to run the guided audit and review the top-level verdict.
 
 The target UX replaces the technical `Delta-Check` framing with a plain-language one-click tracking audit and top-level verdict (UC-22).
 

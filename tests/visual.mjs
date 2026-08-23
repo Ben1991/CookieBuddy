@@ -93,18 +93,23 @@ try {
   await popup.goto(`http://127.0.0.1:${port}/popup.html`);
   await popup.getByText("example.com", { exact: false }).first().waitFor({ state: "visible", timeoutMs: 10000 });
   assert.ok((await popup.screenshot()).length > 10000, "popup screenshot should contain rendered UI");
-  assert.ok(await popup.locator("#deltaButton").isVisible(), "delta action should be visible");
-  assert.ok(await popup.locator("#heroScanButton").isVisible(), "primary scan action should be visible in the redesigned header");
-  assert.ok(await popup.locator("#currentPageLabel").isVisible(), "current page context should be visible in the redesigned header");
-  assert.equal(await popup.locator("#overviewGrid").evaluate((node) => getComputedStyle(node).gridTemplateColumns.split(" ").length), 3, "overview metrics should use the three-column Figma layout");
+  assert.ok(await popup.locator("#deltaButton").isVisible(), "one-click audit action should be visible");
+  assert.ok(await popup.locator("#auditQuestion").isVisible(), "the main popup should lead with the audit question");
+  assert.ok(await popup.locator("#auditSteps").isVisible(), "audit progress steps should be visible");
+  assert.equal(await popup.locator("#overviewGrid").isVisible(), false, "technical metrics should remain progressive disclosure");
   assert.ok((await popup.evaluate(() => document.documentElement.scrollWidth)) <= (await popup.evaluate(() => document.documentElement.clientWidth)) + 1, "popup should not overflow horizontally");
   await popup.locator("#languageSelect").selectOption("de");
-  await popup.getByText("Consent-Delta prüfen", { exact: true }).waitFor({ state: "visible", timeoutMs: 10000 });
+  await popup.getByText("Ist das Tracking technisch korrekt umgesetzt?", { exact: true }).waitFor({ state: "visible", timeoutMs: 10000 });
   assert.equal(await popup.locator("html").getAttribute("lang"), "de", "popup should switch the document language to German");
   assert.equal(await popup.locator("#bannerOverviewButton").getAttribute("title"), "Banner-Einstellungen oder die zweite Ebene des Cookie-Banners anzeigen");
   assert.ok(await popup.getByText("Gefällt dir CookieBuddy?", { exact: true }).isVisible(), "support prompt should be localized");
   assert.doesNotMatch(await popup.locator("body").innerText(), /pr\?ft|Ã|Â/, "German popup should not contain corrupted copy");
   await popup.locator("#languageSelect").selectOption("en");
+  await popup.locator("#deltaButton").click();
+  await popup.getByText("Likely incorrectly implemented", { exact: true }).waitFor({ state: "visible", timeoutMs: 10000 });
+  assert.ok(await popup.locator('[data-verdict="negative"]').isVisible(), "negative audit verdict should be visible");
+  assert.ok(await popup.locator('[data-complaint-action="true"]').isVisible(), "supported negative findings should expose a complaint action");
+  assert.equal(await popup.locator('#auditSteps [data-state="complete"]').count(), 8, "completed audit should mark every progress step complete");
   await captureDocumentationScreenshot(popup, "popup-overview.png", { fullPage: true });
 
   const details = await browser.newPage({ viewport: { width: 1200, height: 900 } });

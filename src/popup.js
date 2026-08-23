@@ -1,5 +1,5 @@
 import { applyI18n, getLanguage, initI18n, setLanguage, t } from "./i18n.js";
-import { buildDelta, capitalize, getBaseDomain, isEssentialCookie, isEssentialHost, normalizeTraffic, serviceForCookie } from "./core.js";
+import { buildDelta, capitalize, deriveAuditVerdict, getBaseDomain, isEssentialCookie, isEssentialHost, normalizeTraffic, serviceForCookie } from "./core.js";
 
 const state = {
   tab: null,
@@ -7,7 +7,9 @@ const state = {
   cookies: [],
   traffic: [],
   statusMode: "ok",
-  statusKey: "statusReady"
+  statusKey: "statusReady",
+  verdict: null,
+  delta: null
 };
 
 const elements = {
@@ -28,6 +30,8 @@ const elements = {
   detailsLink: document.querySelector("#detailsLink"),
   refreshButton: document.querySelector("#refreshButton"),
   deltaButton: document.querySelector("#deltaButton"),
+  auditSteps: document.querySelector("#auditSteps"),
+  auditProgressBar: document.querySelector("#auditProgressBar"),
   languageSelect: document.querySelector("#languageSelect"),
   helpButton: document.querySelector("#helpButton"),
   helpPanel: document.querySelector("#helpPanel")
@@ -48,6 +52,7 @@ elements.languageSelect.addEventListener("change", async (event) => {
   await setLanguage(event.target.value);
   applyLocalizedText();
   if (state.analysis) render();
+  if (state.delta && state.verdict) renderDelta(state.delta, state.verdict);
   setStatus(state.statusKey, state.statusMode);
 });
 
@@ -99,16 +104,29 @@ async function runDeltaCheck() {
   }
 
   setStatus("statusChecking", "busy");
+  resetAuditProgress();
+  setAuditStep("prepare", "active");
   elements.deltaButton.disabled = true;
   elements.deltaButton.title = deltaGuide;
   elements.deltaResult.innerHTML = `<p class="muted">${escapeHtml(t("deltaCheckingDescription"))}</p>`;
 
   try {
     const before = await snapshot(t("snapshotCurrentState"));
+    setAuditStep("prepare", "complete");
+    setAuditStep("consent", "complete");
+    setAuditStep("baseline", "complete");
+    setAuditStep("reject", "active");
     const denyResult = await sendToTab(state.tab.id, { target: "cookiebuddy-content", type: "TRY_DENY_ALL" });
+    setAuditStep("reject", denyResult?.found ? "complete" : "manual", denyResult?.found ? "" : t("auditManualAction"));
+    setAuditStep("verify", denyResult?.clicked ? "complete" : "manual", denyResult?.clicked ? "" : t("auditManualAction"));
+    setAuditStep("observe", "active");
     await chrome.runtime.sendMessage({ target: "cookiebuddy-background", type: "CLEAR_TRAFFIC", tabId: state.tab.id });
     await wait(1800);
+    setAuditStep("observe", "complete");
+    setAuditStep("capture", "active");
     const afterDeny = await snapshot(t("snapshotAfterDenyAll"));
+    setAuditStep("capture", "complete");
+    setAuditStep("analyze", "active");
     const delta = buildDelta({
       beforeCookies: before.cookies,
       afterCookies: afterDeny.cookies,
@@ -126,13 +144,21 @@ async function runDeltaCheck() {
       },
       tabUrl: state.tab.url
     });
+    const verdict = deriveAuditVerdict(delta, { analysisComplete: Boolean(afterDeny.analysis) });
+    delta.verdict = verdict;
+    state.delta = delta;
+    state.verdict = verdict;
+    setAuditStep("analyze", "complete");
 
     await chrome.storage.local.set({ cookiebuddyLastDelta: delta });
-    renderDelta(delta);
+    renderDelta(delta, verdict);
     await openDeltaTab(delta);
     await updateIconStatus(delta);
-    setStatus(delta.riskLevel === "high" ? "statusDeltaFound" : "statusChecked", delta.riskLevel === "high" ? "warn" : "ok");
+    setStatus(verdict.status === "negative" ? "statusDeltaFound" : verdict.status === "incomplete" ? "statusAuditIncomplete" : "statusChecked", verdict.status === "positive" ? "ok" : "warn");
+    renderAuditVerdict(delta, verdict);
   } catch (error) {
+    const activeStep = [...document.querySelectorAll?.("#auditSteps [data-state=active]") || []][0];
+    if (activeStep) setAuditStep(activeStep.dataset.step, "failed");
     elements.deltaResult.innerHTML = `<p class="error">${escapeHtml(error.message || t("deltaCheckFailed"))}</p>`;
     setStatus("statusCheckFailed", "warn");
   } finally {
@@ -187,15 +213,7 @@ function renderStatusCard() {
 
   elements.statusCard.dataset.status = badgeStatus;
   elements.statusCard.querySelector(".status-icon")?.setAttribute("data-status", badgeStatus);
-  if (elements.statusCardText) {
-  elements.statusCardText.innerHTML = `${escapeHtml(t("statusReady"))}: <strong>${escapeHtml(statusMeta.title)}</strong>`;
-    const banner = state.analysis?.banner;
-    if (banner) {
-      elements.statusCardText.textContent = `${t("detectedLabel")}: ${banner.name} · ${t("confidenceLabel")}: ${banner.confidence}`;
-    }
-  }
-  const intro = elements.statusCard.querySelector(".hero-intro");
-  if (intro) intro.textContent = statusMeta.body;
+  if (elements.statusCardText && !state.verdict) elements.statusCardText.textContent = t("auditReadyCopy");
 }
 
 // Renders the compact metric tiles at the top of the popup from the latest scan data.
@@ -444,27 +462,74 @@ function buildMailBody(kind) {
   return templates[kind].filter(Boolean).join("\n");
 }
 
-function renderDelta(delta) {
-  const cookieItems = [...delta.remainingCookies, ...delta.newCookies].slice(0, 8);
-  elements.deltaResult.innerHTML = `
-    <div class="risk ${delta.riskLevel} delta-summary-card">
-      <div>
-        <strong>${delta.riskLevel === "high" ? escapeHtml(t("deltaFoundTitle")) : escapeHtml(t("noObviousDeltaTitle"))}</strong>
-        <p>${escapeHtml(delta.summary)}</p>
+function renderDelta(delta, verdict = delta.verdict || deriveAuditVerdict(delta)) {
+  elements.deltaResult.innerHTML = renderAuditVerdict(delta, verdict);
+}
+
+function renderAuditVerdict(delta, verdict) {
+  if (!elements.deltaResult) return "";
+
+  const meta = {
+    positive: { title: t("auditVerdictPositive"), copy: t("auditVerdictPositiveCopy") },
+    negative: { title: t("auditVerdictNegative"), copy: t("auditVerdictNegativeCopy") },
+    incomplete: { title: t("auditVerdictIncomplete"), copy: t("auditVerdictIncompleteCopy") }
+  }[verdict.status] || { title: t("auditVerdictIncomplete"), copy: t("auditVerdictIncompleteCopy") };
+  const reasonLabels = {
+    "third-party-traffic": t("auditReasonThirdParty"),
+    "non-essential-cookies": t("auditReasonCookies"),
+    "non-essential-storage": t("auditReasonStorage"),
+    "active-service": t("auditReasonActiveService"),
+    "unclear-service": t("auditReasonUnclearService"),
+    "rejection-verification": t("auditCoverageReject"),
+    "consent-surface": t("auditCoverageConsent"),
+    "before-after-observation": t("auditCoverageObservation"),
+    "page-analysis": t("auditCoverageAnalysis"),
+    "no-contradictory-evidence": t("auditReasonNoContradiction")
+  };
+  const reasons = (verdict.reasons || []).map((reason) => `<li>${escapeHtml(reasonLabels[reason] || reason)}</li>`).join("");
+  const cookieCount = (delta.remainingCookies?.length || 0) + (delta.newCookies?.length || 0);
+  const dpoEmail = state.analysis?.contacts?.dpo?.email || "";
+  const complaintBody = dpoEmail ? buildMailBody("access") : "";
+  const complaintHref = dpoEmail ? `mailto:${encodeURIComponent(dpoEmail)}?subject=${encodeURIComponent(t("mailSubject", state.analysis.host))}&body=${encodeURIComponent(complaintBody)}` : "";
+  const detailsHref = chrome.runtime.getURL("details.html?view=delta");
+  const complaintAction = verdict.status === "negative" && complaintHref
+    ? `<a class="primary-button small" href="${complaintHref}" target="_blank" rel="noreferrer" data-complaint-action="true">${escapeHtml(t("auditContactWebsite"))}</a>`
+    : verdict.status === "negative" ? `<span class="audit-recipient-note">${escapeHtml(t("auditRecipientUnclear"))}</span>` : "";
+  const cookieItems = [...(delta.remainingCookies || []), ...(delta.newCookies || [])].slice(0, 8);
+
+  const html = `
+    <article class="audit-verdict" data-verdict="${escapeHtml(verdict.status)}">
+      <div class="audit-verdict-heading">
+        <div>
+          <h2>${escapeHtml(meta.title)}</h2>
+          <p>${escapeHtml(meta.copy)}</p>
+        </div>
+        <span class="audit-confidence">${escapeHtml(t("auditConfidence", verdict.confidence))}</span>
       </div>
-      <span class="status-chevron" aria-hidden="true">›</span>
-    </div>
-    <div class="delta-mini-grid">
-      <span><strong>${escapeHtml(delta.afterDenyCounts.cookies)}</strong>${escapeHtml(t("cookiesStillVisibleMetric"))}</span>
-      <span><strong>${escapeHtml(delta.afterDenyCounts.thirdPartyHosts)}</strong>${escapeHtml(t("thirdPartyStillContactedMetric"))}</span>
-      <span><strong>${escapeHtml(delta.remainingStorageEntries?.length || 0)}</strong>${escapeHtml(t("storageStillVisibleMetric"))}</span>
-    </div>
-    ${delta.denyAction.clicked ? `<p class="muted">${escapeHtml(t("clickedDenyControl", delta.denyAction.label || t("detectedButton")))}</p>` : `<p class="muted">${escapeHtml(t("manualDenyAssumed"))}</p>`}
-    ${cookieItems.length ? `<h3>${escapeHtml(t("nonEssentialCookiesStillPresent"))}</h3>${cookieItems.map((cookie) => `<p class="chip">${escapeHtml(cookie.name)} · ${escapeHtml(cookie.domain)} · ${escapeHtml(cookie.service)}</p>`).join("")}` : ""}
-    ${delta.thirdPartyHosts.length ? `<h3>${escapeHtml(t("nonEssentialThirdPartyTrafficAfterOptOut"))}</h3>${delta.thirdPartyHosts.slice(0, 10).map((host) => `<p class="chip">${escapeHtml(host)}</p>`).join("")}` : ""}
-    ${delta.essentialThirdPartyHosts?.length ? `<h3>${escapeHtml(t("essentialThirdPartyTrafficAllowed"))}</h3>${delta.essentialThirdPartyHosts.slice(0, 10).map((host) => `<p class="chip">${escapeHtml(host)}</p>`).join("")}` : ""}
-    ${delta.serviceAudit?.length ? `<section class="service-audit"><h3>${escapeHtml(t("serviceAuditHeading"))}</h3><p class="muted">${escapeHtml(t("serviceAuditIntro"))}</p>${delta.serviceAudit.map(renderServiceAudit).join("")}</section>` : ""}
+      <ul class="audit-reason-list">${reasons}</ul>
+      <details class="audit-evidence">
+        <summary>${escapeHtml(t("auditShowEvidence"))}</summary>
+        <div class="audit-evidence-grid">
+          <span><strong>${escapeHtml(delta.afterDenyCounts?.cookies || 0)}</strong>${escapeHtml(t("cookiesStillVisibleMetric"))}</span>
+          <span><strong>${escapeHtml(delta.afterDenyCounts?.thirdPartyHosts || 0)}</strong>${escapeHtml(t("thirdPartyStillContactedMetric"))}</span>
+          <span><strong>${escapeHtml(delta.remainingStorageEntries?.length || 0)}</strong>${escapeHtml(t("storageStillVisibleMetric"))}</span>
+        </div>
+        <p class="muted">${escapeHtml(delta.denyAction?.clicked ? t("clickedDenyControl", delta.denyAction.label || t("detectedButton")) : t("manualDenyAssumed"))}</p>
+        ${cookieItems.length ? `<h3>${escapeHtml(t("nonEssentialCookiesStillPresent"))}</h3>${cookieItems.map((cookie) => `<p class="chip">${escapeHtml(cookie.name)} · ${escapeHtml(cookie.domain)} · ${escapeHtml(cookie.service)}</p>`).join("")}` : ""}
+        ${delta.thirdPartyHosts?.length ? `<h3>${escapeHtml(t("nonEssentialThirdPartyTrafficAfterOptOut"))}</h3>${delta.thirdPartyHosts.slice(0, 10).map((host) => `<p class="chip">${escapeHtml(host)}</p>`).join("")}` : ""}
+        ${delta.essentialThirdPartyHosts?.length ? `<h3>${escapeHtml(t("essentialThirdPartyTrafficAllowed"))}</h3>${delta.essentialThirdPartyHosts.slice(0, 10).map((host) => `<p class="chip">${escapeHtml(host)}</p>`).join("")}` : ""}
+        ${delta.serviceAudit?.length ? `<section class="service-audit"><h3>${escapeHtml(t("serviceAuditHeading"))}</h3><p class="muted">${escapeHtml(t("serviceAuditIntro"))}</p>${delta.serviceAudit.map(renderServiceAudit).join("")}</section>` : ""}
+      </details>
+      <div class="audit-result-actions">
+        <a class="ghost-button small" href="${escapeHtml(detailsHref)}" target="_blank" rel="noreferrer">${escapeHtml(t("auditOpenEvidence"))}</a>
+        ${complaintAction}
+      </div>
+      ${verdict.status === "negative" ? `<p class="audit-review-note">${escapeHtml(t("auditComplaintReviewNote"))}</p>` : ""}
+    </article>
   `;
+  elements.deltaResult.innerHTML = html;
+  if (elements.statusCardText) elements.statusCardText.textContent = `${meta.title}. ${meta.copy}`;
+  return html;
 }
 
 function renderCurrentPage() {
@@ -574,6 +639,32 @@ function determineIconStatus(delta = null) {
   return "green";
 }
 
+function resetAuditProgress() {
+  if (!elements.auditSteps) return;
+  elements.auditSteps.querySelectorAll("[data-step]").forEach((step) => {
+    step.dataset.state = "waiting";
+    const note = step.querySelector("small");
+    if (note) note.textContent = "";
+  });
+  if (elements.auditProgressBar) elements.auditProgressBar.style.width = "0%";
+}
+
+function setAuditStep(stepName, mode, note = "") {
+  if (!elements.auditSteps) return;
+  const step = elements.auditSteps.querySelector(`[data-step="${stepName}"]`);
+  if (!step) return;
+  step.dataset.state = mode;
+  const icon = step.querySelector(".audit-step-icon");
+  if (icon && mode === "complete") icon.textContent = "✓";
+  if (icon && mode === "failed") icon.textContent = "!";
+  if (icon && mode === "manual") icon.textContent = "?";
+  const noteElement = step.querySelector("small");
+  if (noteElement) noteElement.textContent = note;
+  const steps = [...elements.auditSteps.querySelectorAll("[data-step]")];
+  const completeCount = steps.filter((item) => ["complete", "manual"].includes(item.dataset.state)).length;
+  if (elements.auditProgressBar) elements.auditProgressBar.style.width = `${Math.round((completeCount / steps.length) * 100)}%`;
+}
+
 async function getCookiesForTab(tab) {
   const url = new URL(tab.url);
   return chrome.cookies.getAll({ domain: url.hostname });
@@ -608,9 +699,11 @@ function setStatus(key, mode) {
           ? t("scanStatusChecking")
           : key === "statusDeltaFound"
             ? t("scanStatusDeltaFound")
-            : key === "statusCheckFailed"
-              ? t("scanStatusFailed")
-              : t("scanStatusChecked");
+              : key === "statusAuditIncomplete"
+                ? t("scanStatusIncomplete")
+                : key === "statusCheckFailed"
+                ? t("scanStatusFailed")
+                : t("scanStatusChecked");
   if (elements.scanStatusText) {
     elements.scanStatusText.textContent = scanMessage;
     elements.scanStatusText.dataset.mode = mode;

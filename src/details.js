@@ -196,7 +196,8 @@ function renderDelta(delta) {
         <div><span>${escapeHtml(t("optOutAttemptLabel"))}</span><strong>${escapeHtml(delta.denyAction?.clicked ? (delta.denyAction.label || t("detectedButton")) : t("noDenyButtonClicked"))}</strong></div>
       </div>
       <section class="delta-detected-box">
-        <h3>${escapeHtml(t("stillDetectedHeading"))}</h3>
+        <h3>${escapeHtml(t("observedFactsHeading"))}</h3>
+        <p class="muted">${escapeHtml(t("stillDetectedHeading"))}</p>
         <div class="metric-row">
           <span><strong>${cookies.length}</strong>${escapeHtml(t("cookiesStillVisibleMetric"))}</span>
           <span><strong>${delta.thirdPartyHosts?.length || 0}</strong>${escapeHtml(t("thirdPartyStillContactedMetric"))}</span>
@@ -230,7 +231,8 @@ function renderDelta(delta) {
             ${renderSimpleList(bannerEvidence)}
           </section>
           <section class="warning-panel">
-            <h3>${escapeHtml(t("importantLimitationsHeading"))}</h3>
+            <h3>${escapeHtml(t("interpretationHeading"))}</h3>
+            <p class="muted">${escapeHtml(t("importantLimitationsHeading"))}</p>
             ${renderSimpleList([t("deltaLimitationBestEffort"), t("deltaLimitationServerSide"), t("deltaLimitationNecessary"), t("deltaLimitationHeuristic")])}
           </section>
         </aside>
