@@ -5,6 +5,7 @@ import { PERFORMANCE_BUDGETS, isWithinBudget, summarizeAuditBudget } from "../sr
 
 const background = await readFile(new URL("../src/background.js", import.meta.url), "utf8");
 const content = await readFile(new URL("../src/content.js", import.meta.url), "utf8");
+const popup = await readFile(new URL("../src/popup.js", import.meta.url), "utf8");
 const manifest = JSON.parse(await readFile(new URL("../manifest.json", import.meta.url), "utf8"));
 const lifecycle = await readFile(new URL("../src/audit-lifecycle.mjs", import.meta.url), "utf8");
 
@@ -61,4 +62,10 @@ test("consent analysis covers all permitted frames and records surface context",
   assert.match(content, /collectConsentSurfaceContexts/);
   assert.match(content, /inaccessibleConsentSurfaces/);
   assert.match(content, /context\.domContext/);
+});
+
+test("cookie evidence queries observed hosts and keeps unavailable coverage explicit", () => {
+  assert.match(popup, /getObservedCookieHosts/);
+  assert.match(popup, /unavailableHosts/);
+  assert.match(popup, /cookieCoverage/);
 });

@@ -42,6 +42,7 @@ const fixtureDelta = {
     { name: "extension.example.net", category: "unlisted", source: "Third-party traffic", listedInBanner: false, essential: false, status: "unclear" }
   ],
   integrity: { status: "clean", uncertain: false, knownStartingState: "clean", limitations: [], evidence: [], recommendation: "none" },
+  cookieCoverage: { complete: true, requestedHosts: ["example.com", "analytics.example.net"], thirdPartyHosts: ["analytics.example.net"], unavailableHosts: [] },
   beforeCounts: { cookies: 2, thirdPartyHosts: 1 },
   afterDenyCounts: { cookies: 1, thirdPartyHosts: 1, storageEntries: 1 },
   auditLifecycle: {

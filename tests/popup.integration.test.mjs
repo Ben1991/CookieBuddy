@@ -155,7 +155,7 @@ test("popup delta view separates non-essential findings from allowed infrastruct
     };
 
     await import(`../src/popup.js?test=${Date.now()}-delta-split`);
-    await flush();
+    for (let attempt = 0; attempt < 5; attempt += 1) await flush();
 
     await document.getElement("deltaButton").click();
 

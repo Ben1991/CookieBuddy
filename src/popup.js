@@ -2,6 +2,7 @@ import { applyI18n, getLanguage, initI18n, setLanguage, t } from "./i18n.js";
 import { buildDelta, capitalize, createCoverageSummary, deriveAuditVerdict, getBaseDomain, isEssentialCookie, isEssentialHost, normalizeTraffic, serviceForCookie } from "./core.js";
 import { AUDIT_LIFECYCLE_STATUS } from "./audit-lifecycle.mjs";
 import { canCaptureVisibleTab, createAuditTimelineEvent, createVisualEvidenceItem, createVisualEvidenceState, sanitizeEvidenceUrl } from "./visual-evidence.mjs";
+import { createCookieCoverage, getObservedCookieHosts } from "./cookie-evidence.mjs";
 
 const state = {
   tab: null,
@@ -44,6 +45,7 @@ const elements = {
 const deltaGuide = "1) Reloads the page without cache.\n2) Tries to find the banner and a reject option.\n3) If no reject option is found, reject cookies manually and run the check again.\n4) Opens the result in a new tab.";
 const DEFAULT_AUDIT_MAX_DURATION_MS = 30_000;
 const DEFAULT_AUDIT_OBSERVATION_WINDOW_MS = 1_800;
+const MAX_COOKIE_HOST_QUERIES = 40;
 const POPUP_INSTANCE_ID = `popup-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 
 class AuditLifecycleError extends Error {
@@ -87,14 +89,15 @@ async function scanCurrentTab() {
     const lifecyclePromise = getAuditLifecycleState(tab.id);
     await ensureContentScript(tab.id);
 
-    const [analysis, cookies, trafficResponse] = await Promise.all([
+    const [analysis, trafficResponse] = await Promise.all([
       sendToTab(tab.id, { target: "cookiebuddy-content", type: "ANALYZE_PAGE" }),
-      getCookiesForTab(tab),
       chrome.runtime.sendMessage({ target: "cookiebuddy-background", type: "GET_TRAFFIC", tabId: tab.id })
     ]);
+    const cookieSnapshot = await getCookiesForTab(tab, trafficResponse?.traffic || [], analysis.resources || []);
 
     state.analysis = analysis;
-    state.cookies = cookies;
+    state.cookies = cookieSnapshot.cookies;
+    state.cookieCoverage = cookieSnapshot.coverage;
     state.traffic = [...(trafficResponse?.traffic || []), ...(analysis.resources || [])];
     state.auditLifecycle = await lifecyclePromise;
     await persistLastScan();
@@ -189,6 +192,8 @@ async function runDeltaCheck() {
     const delta = buildDelta({
       beforeCookies: before.cookies,
       afterCookies: afterDeny.cookies,
+      beforeCookieCoverage: before.cookieCoverage,
+      afterCookieCoverage: afterDeny.cookieCoverage,
       beforeTraffic: before.thirdPartyTraffic,
       afterTraffic: afterDeny.thirdPartyTraffic,
       afterStorageEntries: afterDeny.analysis?.storage?.items || [],
@@ -329,6 +334,7 @@ function createIncompleteAuditDelta(outcome, lifecycleState, summary) {
     serviceAudit: [],
     banner: state.analysis?.banner || null,
     integrity: { status: "unknown", uncertain: true, knownStartingState: "unknown", limitations: ["integrity-not-recorded"], evidence: [], recommendation: "rerun-clean-environment" },
+    cookieCoverage: { complete: false, requestedHosts: [], thirdPartyHosts: [], unavailableHosts: [] },
     beforeCounts: null,
     afterDenyCounts: null,
     auditLifecycle: { ...(lifecycleState || {}), status: outcome.status, reason: outcome.reason, events: lifecycleState?.events || [] }
@@ -336,17 +342,18 @@ function createIncompleteAuditDelta(outcome, lifecycleState, summary) {
 }
 
 async function snapshot(label) {
-  const [analysis, cookies, trafficResponse] = await Promise.all([
+  const [analysis, trafficResponse] = await Promise.all([
     sendToTab(state.tab.id, { target: "cookiebuddy-content", type: "ANALYZE_PAGE" }),
-    getCookiesForTab(state.tab),
     chrome.runtime.sendMessage({ target: "cookiebuddy-background", type: "GET_TRAFFIC", tabId: state.tab.id })
   ]);
+  const cookieSnapshot = await getCookiesForTab(state.tab, trafficResponse?.traffic || [], analysis.resources || []);
   const normalizedTraffic = normalizeTraffic([...(trafficResponse?.traffic || []), ...(analysis.resources || [])], analysis.host);
 
   return {
     label,
     analysis,
-    cookies,
+    cookies: cookieSnapshot.cookies,
+    cookieCoverage: cookieSnapshot.coverage,
     thirdPartyTraffic: normalizedTraffic,
     blockedRequests: normalizedTraffic.filter((item) => item.blocked)
   };
@@ -660,6 +667,7 @@ function renderAuditVerdict(delta, verdict) {
     "consent-surface": t("auditCoverageConsent"),
     "consent-surface-inaccessible": t("auditCoverageConsentInaccessible"),
     "audit-integrity": t("auditCoverageIntegrity"),
+    "cookie-coverage": t("auditCoverageCookies"),
     "before-after-observation": t("auditCoverageObservation"),
     "page-analysis": t("auditCoverageAnalysis"),
     "audit-lifecycle": t("auditCoverageLifecycle"),
@@ -753,6 +761,7 @@ function renderCoverageSummary(coverage) {
     "network-requests": t("coverageTechniqueTraffic"),
     "consent-surface": t("coverageTechniqueConsent"),
     "audit-integrity": t("coverageTechniqueIntegrity"),
+    "cookie-coverage": t("coverageTechniqueCookieCoverage"),
     fingerprinting: t("coverageTechniqueFingerprinting"),
     "server-side-tagging": t("coverageTechniqueServerSide"),
     "backend-enrichment": t("coverageTechniqueBackend"),
@@ -979,9 +988,42 @@ function setAuditStep(stepName, mode, note = "") {
   if (elements.auditProgressBar) elements.auditProgressBar.style.width = `${Math.round((completeCount / steps.length) * 100)}%`;
 }
 
-async function getCookiesForTab(tab) {
-  const url = new URL(tab.url);
-  return chrome.cookies.getAll({ domain: url.hostname });
+async function getCookiesForTab(tab, traffic = [], resources = []) {
+  const pageUrl = sanitizeEvidenceUrl(tab.url);
+  const pageHost = new URL(pageUrl).hostname;
+  const observedHosts = getObservedCookieHosts(pageUrl, traffic, resources);
+  const requestedHosts = observedHosts.slice(0, MAX_COOKIE_HOST_QUERIES);
+  const unavailableHosts = observedHosts.slice(MAX_COOKIE_HOST_QUERIES);
+  const cookies = [];
+  const seen = new Set();
+  const results = await Promise.all(requestedHosts.map(async (host) => {
+    try {
+      return { host, cookies: await chrome.cookies.getAll({ domain: host }) };
+    } catch {
+      return { host, unavailable: true };
+    }
+  }));
+  for (const { host, cookies: hostCookies, unavailable } of results) {
+    if (unavailable) {
+      unavailableHosts.push(host);
+      continue;
+    }
+    try {
+      const result = hostCookies || [];
+      for (const cookie of result || []) {
+        const key = `${cookie.domain}|${cookie.path}|${cookie.name}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        cookies.push(cookie);
+      }
+    } catch {
+      unavailableHosts.push(host);
+    }
+  }
+  return {
+    cookies,
+    coverage: createCookieCoverage({ pageHost, requestedHosts, unavailableHosts })
+  };
 }
 
 async function persistLastScan() {
@@ -989,6 +1031,7 @@ async function persistLastScan() {
     cookiebuddyLastScan: {
       analysis: state.analysis,
       cookies: state.cookies.map(formatCookie),
+      cookieCoverage: state.cookieCoverage,
       traffic: normalizeTraffic(state.traffic, state.analysis.host)
     }
   });
