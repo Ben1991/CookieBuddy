@@ -227,6 +227,40 @@ test("keeps report evidence metadata without cookie, storage, or URL values", ()
   assert.equal(delta.consentEvidence.after.bannerVisible, false);
 });
 
+test("turns a verified optional consent contradiction into a high-confidence negative verdict", () => {
+  const consentState = (value) => ({
+    apiSupport: { tcf: "observed", googleConsentMode: "observed" },
+    frameworks: ["iab-tcf", "google-consent-mode"],
+    signals: [
+      { framework: "iab-tcf", key: "purpose:3", value, optional: true, source: "__tcfapi:getTCData", observedAt: "2026-08-23T10:00:00.000Z" },
+      { framework: "google-consent-mode", key: "analytics_storage", value: "denied", optional: true, source: "dataLayer:update", observedAt: "2026-08-23T10:00:00.000Z" }
+    ]
+  });
+  const delta = buildDelta({
+    beforeCookies: [],
+    afterCookies: [],
+    beforeTraffic: [],
+    afterTraffic: [],
+    beforeAnalysis: { consentState: consentState("granted") },
+    afterAnalysis: { consentState: consentState("granted") },
+    banner: { name: "Test CMP", confidence: "high", evidence: [{ type: "fixture" }] },
+    denyClicked: true,
+    denyVerified: true,
+    labels: { deltaFoundSummary: "found", noDeltaSummary: "none" },
+    tabUrl: "https://example.com"
+  });
+  const verdict = deriveAuditVerdict({
+    ...delta,
+    integrity: { uncertain: false },
+    cookieCoverage: { complete: true },
+    browserStorage: { after: { indexedDB: { status: "observed" }, cacheStorage: { status: "observed" }, serviceWorkers: { status: "observed" } } }
+  });
+
+  assert.equal(delta.consentContradictions[0].key, "purpose:3");
+  assert.equal(verdict.status, "negative");
+  assert.ok(verdict.reasons.includes("consent-signal-contradiction"));
+});
+
 test("keeps extended browser storage metadata as before-and-after evidence", () => {
   const storage = {
     localStorageKeys: [],

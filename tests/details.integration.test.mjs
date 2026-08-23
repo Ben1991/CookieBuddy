@@ -42,6 +42,9 @@ test("details page opens a mail draft from the delta report", async () => {
   assert.match(decodeURIComponent(window.location.lastAssignedUrl), /Not listed in banner/);
 
   assert.match(element(document, "detailsOutput").innerHTML, /Coverage and limits/);
+  assert.match(element(document, "detailsOutput").innerHTML, /Consent-state evidence/);
+  assert.match(element(document, "detailsOutput").innerHTML, /purpose:3/);
+  assert.match(element(document, "detailsOutput").innerHTML, /High-confidence contradiction/);
   assert.match(element(document, "detailsOutput").innerHTML, /Report context/);
   assert.match(element(document, "detailsOutput").innerHTML, /CookieBuddy unknown/);
   assert.match(element(document, "detailsOutput").innerHTML, /Minimized URL evidence/);
@@ -299,6 +302,11 @@ function buildDeltaFixture() {
       reason: "spa-navigation-during-audit",
       events: [{ type: "navigation", kind: "spa", url: "https://example.com/next" }]
     },
+    consentEvidence: {
+      before: { status: "observed", frameworks: ["iab-tcf", "google-consent-mode"], apiSupport: { tcf: "observed", googleConsentMode: "observed" }, signals: [{ framework: "iab-tcf", key: "purpose:3", value: "granted", source: "__tcfapi:getTCData" }], limitations: [] },
+      after: { status: "observed", frameworks: ["iab-tcf", "google-consent-mode"], apiSupport: { tcf: "observed", googleConsentMode: "observed" }, signals: [{ framework: "iab-tcf", key: "purpose:3", value: "granted", optional: true, source: "__tcfapi:getTCData" }, { framework: "google-consent-mode", key: "analytics_storage", value: "denied", optional: true, source: "dataLayer:update" }], limitations: [] }
+    },
+    consentContradictions: [{ framework: "iab-tcf", key: "purpose:3", value: "granted", source: "__tcfapi:getTCData", severity: "high", before: "granted", rationale: "Optional TCF purpose remained granted after verified rejection" }],
     report: { reportVersion: 1, payload: { audit: { hostname: "example.com", extension: { name: "CookieBuddy", version: "unknown" }, browser: { userAgent: "unknown", platform: "unknown" } } }, integrity: { algorithm: "SHA-256", payloadHash: "a".repeat(64) } }
   };
 }

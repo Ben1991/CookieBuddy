@@ -227,6 +227,7 @@ function renderDelta(delta, options = {}) {
       </div>
       ${renderReportContext(delta)}
       ${renderReportIntegrity(delta)}
+      ${renderConsentStateEvidence(delta)}
       <section class="delta-detected-box">
         <h3>${escapeHtml(t("observedFactsHeading"))}</h3>
         <p class="muted">${escapeHtml(t("stillDetectedHeading"))}</p>
@@ -669,6 +670,25 @@ function renderReportContext(delta) {
   const browser = audit.browser || {};
   const browserLabel = [browser.userAgent, browser.platform].filter((value) => value && value !== "unknown").join(" · ") || "unknown";
   return `<section class="report-context"><h3>${escapeHtml(t("reportContextHeading"))}</h3><p><strong>${escapeHtml(t("reportHostnameLabel"))}:</strong> ${escapeHtml(audit.hostname || "unknown")}</p><p><strong>${escapeHtml(t("reportExtensionLabel"))}:</strong> ${escapeHtml(`${audit.extension?.name || "CookieBuddy"} ${audit.extension?.version || "unknown"}`)}</p><p><strong>${escapeHtml(t("reportBrowserLabel"))}:</strong> ${escapeHtml(browserLabel)}</p></section>`;
+}
+
+function renderConsentStateEvidence(delta) {
+  const before = delta.consentEvidence?.before;
+  const after = delta.consentEvidence?.after;
+  if (!before && !after) return "";
+  const beforeSignals = new Map((before?.signals || []).map((signal) => [`${signal.framework}:${signal.key}`, signal.value]));
+  const signals = [...(after?.signals || []), ...(before?.signals || [])]
+    .filter((signal, index, list) => list.findIndex((candidate) => `${candidate.framework}:${candidate.key}` === `${signal.framework}:${signal.key}`) === index)
+    .slice(0, 40);
+  const statusLabel = (status) => t(status === "observed" ? "consentStatusObserved" : status === "unclear" ? "consentStatusUnclear" : "consentStatusUnavailable");
+  const signalValue = (value) => value === "granted" || value === "denied" ? value : "unknown";
+  const apiSupport = Object.entries(after?.apiSupport || before?.apiSupport || {}).map(([key, status]) => `<li>${escapeHtml(t("consentApiSupportRow", [key, statusLabel(status)]))}</li>`).join("");
+  const signalRows = signals.length
+    ? signals.map((signal) => `<li>${escapeHtml(t("consentSignalRow", [`${signal.framework}:${signal.key}`, signalValue(beforeSignals.get(`${signal.framework}:${signal.key}`) || "unknown"), signalValue(signal.value), signal.source || "unknown"]))}</li>`).join("")
+    : `<li>${escapeHtml(t("consentNoSignals"))}</li>`;
+  const limitations = [...new Set([...(before?.limitations || []), ...(after?.limitations || [])])].slice(0, 12);
+  const contradictions = (delta.consentContradictions || []).slice(0, 12).map((signal) => `<li><strong>${escapeHtml(t("consentContradictionLabel"))}:</strong> ${escapeHtml(`${signal.framework}:${signal.key} = ${signal.value}`)}</li>`).join("");
+  return `<section class="consent-state-evidence"><h3>${escapeHtml(t("consentStateEvidenceHeading"))}</h3><p class="muted">${escapeHtml(t("consentStateEvidenceIntro"))}</p><p><strong>${escapeHtml(t("consentFrameworksLabel"))}:</strong> ${escapeHtml((after?.frameworks || before?.frameworks || []).join(", ") || "none")}</p><h4>${escapeHtml(t("consentApiSupportLabel"))}</h4><ul class="coverage-list">${apiSupport || `<li>${escapeHtml(t("consentNoSignals"))}</li>`}</ul><h4>${escapeHtml(t("consentSignalsLabel"))}</h4><ul class="coverage-list">${signalRows}</ul>${limitations.length ? `<h4>${escapeHtml(t("consentLimitationsLabel"))}</h4><ul class="coverage-list">${limitations.map((limitation) => `<li>${escapeHtml(limitation)}</li>`).join("")}</ul>` : ""}${contradictions ? `<ul class="coverage-list warning-list">${contradictions}</ul>` : ""}</section>`;
 }
 
 function renderPossibleCnameTrackers(delta) {

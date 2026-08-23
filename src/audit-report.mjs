@@ -60,6 +60,20 @@ function sanitizeBanner(banner) {
 
 function findingEvidence(delta) {
   const findings = [];
+  if (delta.consentContradictions?.length) findings.push({
+    key: "consent-signal-contradiction",
+    severity: "high",
+    evidence: delta.consentContradictions.slice(0, 20).map((signal) => ({
+      section: "consent.after",
+      framework: signal.framework,
+      key: signal.key,
+      value: signal.value,
+      source: signal.source,
+      observedAt: signal.observedAt,
+      before: signal.before,
+      rationale: signal.rationale
+    }))
+  });
   if (delta.thirdPartyHosts?.length) findings.push({
     key: "third-party-traffic",
     severity: "high",

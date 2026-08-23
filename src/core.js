@@ -1,6 +1,7 @@
 import { minimizeUrlEvidence } from "./url-evidence.mjs";
 import { assessAuditIntegrity } from "./audit-integrity.mjs";
 import { mergeCookieCoverage } from "./cookie-evidence.mjs";
+import { evaluateConsentSignalContradictions, getConsentCoverageMissing, normalizeConsentState } from "./consent-state.mjs";
 import "./domain-rules.js";
 import "./service-rules.js";
 
@@ -105,12 +106,20 @@ function formatTrafficEvidence(traffic = []) {
 
 function formatConsentEvidence(state = null) {
   if (!state) return null;
+  const normalized = normalizeConsentState(state);
   return {
-    bannerVisible: Boolean(state.bannerVisible),
-    bannerSignature: String(state.bannerSignature || "").slice(0, 1200),
-    consentSignalSignature: String(state.consentSignalSignature || "").slice(0, 2400),
-    controlStateSignature: String(state.controlStateSignature || "").slice(0, 2400),
-    rejectCandidateCount: Number.isFinite(state.rejectCandidateCount) ? state.rejectCandidateCount : 0
+    bannerVisible: normalized.bannerVisible,
+    bannerSignature: normalized.bannerSignature,
+    consentSignalSignature: normalized.consentSignalSignature,
+    controlStateSignature: normalized.controlStateSignature,
+    rejectCandidateCount: normalized.rejectCandidateCount,
+    status: normalized.status,
+    observedAt: normalized.observedAt,
+    frameworks: normalized.frameworks,
+    apiSupport: normalized.apiSupport,
+    tcString: normalized.tcString,
+    signals: normalized.signals,
+    limitations: normalized.limitations
   };
 }
 
@@ -332,6 +341,15 @@ export function buildDelta({
   const serviceAudit = buildServiceAudit({ bannerCategories, beforeCookies, afterCookies, beforeTraffic: observedBeforeTraffic, afterTraffic: observedAfterTraffic, afterStorageEntries: remainingStorageEntries });
   const integrity = assessAuditIntegrity({ beforeCookies, beforeStorageEntries: beforeAnalysis?.storage?.items || [], beforeAnalysis, blockedRequests });
   const cookieCoverage = mergeCookieCoverage(beforeCookieCoverage, afterCookieCoverage);
+  const consentEvidence = {
+    before: formatConsentEvidence(beforeAnalysis?.consentState),
+    after: formatConsentEvidence(afterAnalysis?.consentState)
+  };
+  const consentContradictions = evaluateConsentSignalContradictions(
+    consentEvidence.before,
+    consentEvidence.after,
+    { rejectionVerified: Boolean(denyVerified) }
+  );
   const suspiciousCookies = remainingCookies.filter((cookie) => !isEssentialCookie(cookie));
   const cnameCoverage = {
     status: possibleCloakedBefore.length || possibleCloakedAfter.length ? "unknown" : "not-observed",
@@ -380,10 +398,8 @@ export function buildDelta({
       before: formatTrafficEvidence(beforeTraffic),
       after: formatTrafficEvidence(afterTraffic)
     },
-    consentEvidence: {
-      before: formatConsentEvidence(beforeAnalysis?.consentState),
-      after: formatConsentEvidence(afterAnalysis?.consentState)
-    },
+    consentEvidence,
+    consentContradictions,
     browserStorage: {
       before: summarizeBrowserStorage(beforeAnalysis?.storage),
       after: summarizeBrowserStorage(afterStorage)
@@ -456,10 +472,11 @@ export function createCoverageSummary({ delta = {}, analysisComplete = true, heu
   const storageInspectionIncomplete = storageMechanisms.some(({ coverageKey }) => storageCoverage[coverageKey]?.status === "not-inspected");
   const cnameCoverage = delta.cnameCoverage || { status: "not-observed", beforeCount: 0, afterCount: 0 };
   const inaccessibleConsentSurfaces = Array.isArray(delta.inaccessibleConsentSurfaces) ? delta.inaccessibleConsentSurfaces : [];
+  const consentCoverageMissing = getConsentCoverageMissing(delta.consentEvidence?.before, delta.consentEvidence?.after);
   const hasConsentObservation = Boolean(delta.banner && delta.banner.confidence !== "none") && inaccessibleConsentSurfaces.length === 0;
   const hasCookieCoverage = delta.cookieCoverage?.complete === true;
   return {
-    auditComplete: Boolean(analysisComplete && delta.beforeCounts && delta.afterDenyCounts && inaccessibleConsentSurfaces.length === 0 && (!delta.integrity || delta.integrity.uncertain === false) && hasCookieCoverage && !storageInspectionIncomplete && cnameCoverage.status !== "unknown"),
+    auditComplete: Boolean(analysisComplete && delta.beforeCounts && delta.afterDenyCounts && inaccessibleConsentSurfaces.length === 0 && (!delta.integrity || delta.integrity.uncertain === false) && hasCookieCoverage && !storageInspectionIncomplete && cnameCoverage.status !== "unknown" && consentCoverageMissing.length === 0),
     observed: [
       { key: "cookies", state: hasCookieObservation ? "observed" : "not-observed", confidence: hasCookieObservation ? "confirmed" : "limited", evidenceCount: delta.afterDenyCounts?.cookies || 0 },
       { key: "browser-storage", state: storageInspectionIncomplete ? "not-inspected" : hasStorageObservation ? "observed" : "not-observed", confidence: storageInspectionIncomplete ? "limited" : hasStorageObservation ? "confirmed" : "limited", evidenceCount: delta.afterDenyCounts?.storageEntries || 0 },
@@ -475,7 +492,10 @@ export function createCoverageSummary({ delta = {}, analysisComplete = true, heu
         evidenceCount
       }))
     ],
-    limitations: COVERAGE_LIMITATIONS.map((limitation) => ({ ...limitation })),
+    limitations: [
+      ...COVERAGE_LIMITATIONS.map((limitation) => ({ ...limitation })),
+      ...consentCoverageMissing.map((key) => ({ key, state: "not-observed", confidence: "high" }))
+    ],
     heuristicSignals: heuristicSignals || deriveHeuristicSignals(delta)
   };
 }
@@ -501,6 +521,7 @@ export function deriveAuditVerdict(delta, { analysisComplete = true } = {}) {
   if (!delta?.beforeCounts || !delta?.afterDenyCounts) missingCoverage.push("before-after-observation");
   if (!analysisComplete) missingCoverage.push("page-analysis");
   if (delta?.auditLifecycle?.status && delta.auditLifecycle.status !== "completed") missingCoverage.push("audit-lifecycle");
+  missingCoverage.push(...getConsentCoverageMissing(delta?.consentEvidence?.before, delta?.consentEvidence?.after));
 
   const reasons = [];
   if (delta?.thirdPartyHosts?.length) reasons.push("third-party-traffic");
@@ -509,6 +530,7 @@ export function deriveAuditVerdict(delta, { analysisComplete = true } = {}) {
   if (delta?.serviceAudit?.some((service) => service.status === "active")) reasons.push("active-service");
   const unclearServices = (delta?.serviceAudit || []).filter((service) => service.status === "unclear" || (!service.essential && service.confidence === "none" && service.status === "disabled"));
   if (unclearServices.length) reasons.push("unclear-service");
+  if (delta?.consentContradictions?.length) reasons.push("consent-signal-contradiction");
   const unresolvedSignals = [
     ...missingCoverage.map((key) => ({ key, evidence: [] })),
     ...(unclearServices.length ? [{ key: "unclear-service", evidence: unclearServices.map((service) => service.name).filter(Boolean).slice(0, 5) }] : []),
