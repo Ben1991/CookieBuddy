@@ -102,6 +102,7 @@ const DENY_SELECTORS = [
 ];
 
 const consentControls = globalThis.CookieBuddyConsentControls;
+const consentSurfaceCollector = globalThis.CookieBuddyConsentSurfaces;
 
 // These are local collection limits, not telemetry. They keep ordinary page
 // browsing responsive while preserving enough evidence for an audit.
@@ -167,11 +168,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 async function analyzePage() {
   const analysisStartedAt = performance.now();
+  const consentSurfaces = collectConsentSurfaceContexts();
   const pageText = (document.body?.innerText || "").slice(0, PAGE_ANALYSIS_BUDGETS.maxPageTextChars);
   const htmlSample = document.documentElement.outerHTML.slice(0, PAGE_ANALYSIS_BUDGETS.maxHtmlSampleChars).toLowerCase();
   const resources = collectResources();
-  const banner = detectBanner({ htmlSample, pageText, resources });
-  const categories = detectCategories(pageText, htmlSample, resources, collectBannerText());
+  const banner = detectBanner({ htmlSample, pageText, resources }, consentSurfaces);
+  const categories = detectCategories(pageText, htmlSample, resources, collectBannerText(consentSurfaces));
   const contacts = await detectContacts();
   const storage = collectStoredData({ banner, categories, pageText, htmlSample });
 
@@ -184,6 +186,10 @@ async function analyzePage() {
     resources,
     contacts,
     storage,
+    consentSurfaces: consentSurfaces.map(({ context }) => context),
+    inaccessibleConsentSurfaces: consentSurfaces
+      .filter(({ context }) => context.accessible === false)
+      .map(({ context }) => context),
     performance: {
       durationMs: Math.round(performance.now() - analysisStartedAt),
       pageTextChars: pageText.length,
@@ -195,10 +201,10 @@ async function analyzePage() {
   };
 }
 
-function detectBanner({ htmlSample, pageText, resources }) {
+function detectBanner({ htmlSample, pageText, resources }, consentSurfaces = collectConsentSurfaceContexts()) {
   const lowerText = pageText.toLowerCase();
   const scripts = collectScriptSources();
-  const domSignals = collectDomConsentSignals();
+  const domSignals = collectDomConsentSignals(consentSurfaces);
   const sourceSignals = collectConsentSourceSignals([...scripts, ...resources.map((resource) => resource.url)]);
   const haystack = [
     htmlSample,
@@ -236,13 +242,17 @@ function detectBanner({ htmlSample, pageText, resources }) {
   }
 
   matches.sort((a, b) => b.score - a.score);
+  const inaccessibleSignals = consentSurfaces
+    .filter(({ context }) => context.accessible === false)
+    .map(({ context }) => ({ type: "inaccessible-surface", value: context.reason, context }));
 
   if (matches.length > 0) {
     return {
       name: matches[0].name,
       confidence: matches[0].score > 1 ? "high" : "medium",
       source: sourceSignals[0] || null,
-      evidence: matches[0].evidence.slice(0, 8),
+      evidence: [...matches[0].evidence, ...domSignals.slice(0, 4), ...inaccessibleSignals].slice(0, 8),
+      inaccessible: inaccessibleSignals.length > 0,
       alternatives: matches.slice(1, 4).map((match) => ({
         name: match.name,
         confidence: match.score > 1 ? "medium" : "low",
@@ -252,14 +262,17 @@ function detectBanner({ htmlSample, pageText, resources }) {
   }
 
   const genericCookieLanguage = /cookie|consent|privacy settings|datenschutz|einwilligung/i.test(pageText);
-  const source = sourceSignals[0] || domSignals[0] || null;
-  const hasDynamicEvidence = genericCookieLanguage || sourceSignals.length > 0 || domSignals.length > 0;
+  const source = sourceSignals[0] || domSignals[0] || inaccessibleSignals[0] || null;
+  const hasDynamicEvidence = genericCookieLanguage || sourceSignals.length > 0 || domSignals.length > 0 || inaccessibleSignals.length > 0;
 
   return {
-    name: hasDynamicEvidence ? "Unknown or self-made consent banner" : "No visible banner detected",
+    name: inaccessibleSignals.length > 0 && !sourceSignals.length && !domSignals.length
+      ? "Consent surface inaccessible"
+      : hasDynamicEvidence ? "Unknown or self-made consent banner" : "No visible banner detected",
     confidence: sourceSignals.length > 0 || domSignals.length > 0 ? "medium" : genericCookieLanguage ? "low" : "none",
     source,
-    evidence: [...sourceSignals, ...domSignals].slice(0, 8),
+    evidence: [...sourceSignals, ...domSignals, ...inaccessibleSignals].slice(0, 8),
+    inaccessible: inaccessibleSignals.length > 0,
     alternatives: []
   };
 }
@@ -270,7 +283,7 @@ function collectScriptSources() {
     .filter(Boolean);
 }
 
-function collectDomConsentSignals() {
+function collectDomConsentSignals(consentSurfaces = collectConsentSurfaceContexts()) {
   const selectors = [
     "[id*='cookie' i]",
     "[class*='cookie' i]",
@@ -285,27 +298,51 @@ function collectDomConsentSignals() {
   ];
 
   const semanticSelectors = ["button", "a", "[role='button' i]", "[role='menuitem' i]"];
-  const semanticElements = semanticSelectors
-    .flatMap((selector) => Array.from(document.querySelectorAll(selector)).slice(0, 8))
-    .filter((element) => ["deny-all", "essential-only", "settings"].includes(classifyConsentElement(element).kind));
-  const elements = [
-    ...selectors.flatMap((selector) => Array.from(document.querySelectorAll(selector)).slice(0, 8)),
-    ...semanticElements
-  ];
-
-  return Array.from(new Set(elements))
-    .map((element) => ({
-      type: "dom",
-      value: [
-        element.id ? `#${element.id}` : "",
-        element.className && typeof element.className === "string" ? `.${element.className.trim().replace(/\s+/g, ".")}` : "",
-        element.getAttribute("data-testid") ? `[data-testid="${element.getAttribute("data-testid")}"]` : "",
-        element.getAttribute("aria-label") ? `[aria-label="${element.getAttribute("aria-label")}"]` : "",
-        consentControls ? consentControls.getAccessibleName(element) : ""
-      ].filter(Boolean).join(" ")
-    }))
-    .filter((signal, index, list) => signal.value && list.findIndex((item) => item.value === signal.value) === index)
+  return consentSurfaces
+    .filter(({ root }) => root)
+    .flatMap(({ root, context }) => {
+      const semanticElements = semanticSelectors
+        .flatMap((selector) => Array.from(root.querySelectorAll(selector)).slice(0, 8))
+        .filter((element) => ["deny-all", "essential-only", "settings"].includes(classifyConsentElement(element).kind));
+      const elements = [
+        ...selectors.flatMap((selector) => Array.from(root.querySelectorAll(selector)).slice(0, 8)),
+        ...semanticElements
+      ];
+      return Array.from(new Set(elements)).map((element) => ({
+        type: "dom",
+        context,
+        value: [
+          element.id ? `#${element.id}` : "",
+          element.className && typeof element.className === "string" ? `.${element.className.trim().replace(/\s+/g, ".")}` : "",
+          element.getAttribute("data-testid") ? `[data-testid="${element.getAttribute("data-testid")}"]` : "",
+          element.getAttribute("aria-label") ? `[aria-label="${element.getAttribute("aria-label")}"]` : "",
+          consentControls ? consentControls.getAccessibleName(element) : ""
+        ].filter(Boolean).join(" ")
+      }));
+    })
+    .filter((signal, index, list) => signal.value && list.findIndex((item) => item.value === signal.value && item.context?.domContext === signal.context?.domContext) === index)
     .slice(0, PAGE_ANALYSIS_BUDGETS.maxConsentNodes);
+}
+
+function collectConsentSurfaceContexts() {
+  if (consentSurfaceCollector?.collect) {
+    try {
+      return consentSurfaceCollector.collect(document, location);
+    } catch {
+      // Fall back to the top document if a browser implementation blocks a DOM read.
+    }
+  }
+  return [{
+    root: document,
+    context: {
+      rootType: "document",
+      domContext: "top-document",
+      frameUrl: sanitizePageUrl(location.href),
+      frameOrigin: location.origin,
+      framePath: [],
+      accessible: true
+    }
+  }];
 }
 
 function collectConsentSourceSignals(urls) {
@@ -510,6 +547,7 @@ async function tryDenyAll() {
       label: String(label).slice(0, 160),
       source: candidate.classification.source,
       confidence: candidate.classification.confidence,
+      context: candidate.context,
       status: verification.status,
       evidence: verification.evidence
     });
@@ -537,7 +575,7 @@ async function tryDenyAll() {
 
 async function openBannerOverview() {
   const candidates = collectBannerOverviewCandidates();
-  const clicked = candidates.find((element) => {
+  const clicked = candidates.find(({ element }) => {
     try {
       element.click();
       return true;
@@ -550,7 +588,8 @@ async function openBannerOverview() {
   return {
     clicked: Boolean(clicked),
     found: candidates.length > 0,
-    label: clicked && consentControls ? consentControls.getAccessibleName(clicked) : ""
+    label: clicked && consentControls ? consentControls.getAccessibleName(clicked.element) : "",
+    context: clicked?.context || candidates[0]?.context || null
   };
 }
 
@@ -571,38 +610,52 @@ function collectBannerOverviewCandidates() {
     "[role='menuitem' i]"
   ];
 
-  const selectorMatches = selectors.flatMap((selector) => Array.from(document.querySelectorAll(selector)));
-  return Array.from(new Set(selectorMatches))
-    .filter((element) => element instanceof HTMLElement)
-    .filter(isUsableConsentControl)
-    .map((element) => ({ element, classification: classifyConsentElement(element) }))
+  return collectConsentSurfaceContexts()
+    .filter(({ root }) => root)
+    .flatMap(({ root, context }) => selectors
+      .flatMap((selector) => Array.from(root.querySelectorAll(selector)))
+      .map((element) => ({ element, context })))
+    .filter(({ element }) => element?.nodeType === 1)
+    .filter(({ element }) => isUsableConsentControl(element))
+    .map(({ element, context }) => ({ element, context, classification: classifyConsentElement(element) }))
     .filter(({ classification }) => classification.kind === "settings" && classification.canClick)
-    .sort((left, right) => consentControlScore(right.classification) - consentControlScore(left.classification))
-    .map(({ element }) => element);
+    .sort((left, right) => consentControlScore(right.classification) - consentControlScore(left.classification));
 }
 
 function collectDenyCandidates(excluded = new Set()) {
-  const selectorMatches = DENY_SELECTORS.flatMap((selector) => Array.from(document.querySelectorAll(selector)));
-  return Array.from(new Set(selectorMatches))
-    .filter((element) => element instanceof HTMLElement)
-    .filter(isUsableConsentControl)
-    .map((element) => ({ element, classification: classifyConsentElement(element) }))
+  const selectorMatches = collectConsentSurfaceContexts()
+    .filter(({ root }) => root)
+    .flatMap(({ root, context }) => DENY_SELECTORS
+      .flatMap((selector) => Array.from(root.querySelectorAll(selector)))
+      .map((element) => ({ element, context })));
+  const uniqueElements = new Set();
+  return selectorMatches
+    .filter(({ element }) => {
+      if (uniqueElements.has(element)) return false;
+      uniqueElements.add(element);
+      return true;
+    })
+    .filter(({ element }) => element?.nodeType === 1)
+    .filter(({ element }) => isUsableConsentControl(element))
+    .map(({ element, context }) => ({ element, context, classification: classifyConsentElement(element) }))
     .filter(({ classification }) => ["deny-all", "essential-only"].includes(classification.kind) && classification.canClick)
-    .filter(({ element, classification }) => !excluded.has(element) && (isConsentSurfaceElement(element) || classification.source === "cmp"))
+    .filter(({ element, context, classification }) => !excluded.has(element) && (context.rootType === "shadow-root" || isConsentSurfaceElement(element) || classification.source === "cmp"))
     .sort((left, right) => consentControlScore(right.classification) - consentControlScore(left.classification))
     .slice(0, PAGE_ANALYSIS_BUDGETS.maxConsentNodes)
 }
 
 function collectConsentState() {
-  const bannerText = normalizeConsentStateText(collectBannerText());
-  const signals = collectDomConsentSignals().map((signal) => signal.value).sort();
-  const candidates = collectDenyCandidates(excluded);
-  const controls = candidates.map(({ element }) => [
+  const consentSurfaces = collectConsentSurfaceContexts();
+  const bannerText = normalizeConsentStateText(collectBannerText(consentSurfaces));
+  const signals = collectDomConsentSignals(consentSurfaces).map((signal) => `${signal.value}:${signal.context?.domContext || "unknown"}`).sort();
+  const candidates = collectDenyCandidates();
+  const controls = candidates.map(({ element, context }) => [
     consentControls?.getAccessibleName(element) || "",
     element.getAttribute("aria-checked") || "",
     element.getAttribute("aria-pressed") || "",
     element.getAttribute("aria-expanded") || "",
-    element.getAttribute("disabled") || ""
+    element.getAttribute("disabled") || "",
+    context.domContext || ""
   ].join("~")).sort();
   return {
     bannerVisible: Boolean(bannerText || signals.length),
@@ -666,7 +719,7 @@ function isUsableConsentControl(element) {
   return true;
 }
 
-function collectBannerText() {
+function collectBannerText(consentSurfaces = collectConsentSurfaceContexts()) {
   const selectors = [
     "[id*='cookie' i]",
     "[class*='cookie' i]",
@@ -674,8 +727,9 @@ function collectBannerText() {
     "[class*='consent' i]",
     "[role='dialog']"
   ];
-  return selectors
-    .flatMap((selector) => Array.from(document.querySelectorAll(selector)).slice(0, 6))
+  return consentSurfaces
+    .filter(({ root }) => root)
+    .flatMap(({ root }) => selectors.flatMap((selector) => Array.from(root.querySelectorAll(selector)).slice(0, 6)))
     .map((element) => element.innerText || element.textContent || "")
     .join(" ")
     .slice(0, PAGE_ANALYSIS_BUDGETS.maxBannerTextChars);

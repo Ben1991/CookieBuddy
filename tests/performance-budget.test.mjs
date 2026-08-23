@@ -5,6 +5,7 @@ import { PERFORMANCE_BUDGETS, isWithinBudget, summarizeAuditBudget } from "../sr
 
 const background = await readFile(new URL("../src/background.js", import.meta.url), "utf8");
 const content = await readFile(new URL("../src/content.js", import.meta.url), "utf8");
+const manifest = JSON.parse(await readFile(new URL("../manifest.json", import.meta.url), "utf8"));
 const lifecycle = await readFile(new URL("../src/audit-lifecycle.mjs", import.meta.url), "utf8");
 
 test("performance budgets define bounded idle, active-audit, and page-analysis work", () => {
@@ -50,4 +51,12 @@ test("idle monitoring and page analysis enforce their limits in production code"
   assert.match(content, /maxContactResponseChars/);
   assert.match(content, /analysisStartedAt = performance\.now\(\)/);
   assert.match(content, /durationMs: Math\.round\(performance\.now\(\) - analysisStartedAt\)/);
+});
+
+test("consent analysis covers all permitted frames and records surface context", () => {
+  assert.equal(manifest.content_scripts[0].all_frames, true);
+  assert.ok(manifest.content_scripts[0].js.includes("src/consent-surfaces.js"));
+  assert.match(content, /collectConsentSurfaceContexts/);
+  assert.match(content, /inaccessibleConsentSurfaces/);
+  assert.match(content, /context\.domContext/);
 });

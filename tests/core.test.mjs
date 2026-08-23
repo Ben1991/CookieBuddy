@@ -51,6 +51,36 @@ test("keeps observable evidence, scope limitations, and heuristic signals separa
   assert.equal(deriveHeuristicSignals({ thirdPartyHosts: ["analytics.example.net"] }).length, 0);
 });
 
+test("keeps inaccessible consent surfaces incomplete and explicit", () => {
+  const inaccessibleConsentSurfaces = [{
+    domContext: "inaccessible-cross-origin-frame",
+    frameUrl: "https://cmp.example.test/banner",
+    frameOrigin: "https://cmp.example.test",
+    reason: "cross-origin-frame-inaccessible"
+  }];
+  const delta = buildDelta({
+    beforeCookies: [],
+    afterCookies: [],
+    beforeTraffic: [],
+    afterTraffic: [],
+    banner: { confidence: "high", evidence: [{ type: "inaccessible-surface" }] },
+    inaccessibleConsentSurfaces,
+    denyClicked: true,
+    denyVerified: true,
+    labels: { deltaFoundSummary: "found", noDeltaSummary: "none" },
+    tabUrl: "https://example.com"
+  });
+
+  const verdict = deriveAuditVerdict(delta);
+  assert.equal(verdict.status, "incomplete");
+  assert.ok(verdict.reasons.includes("consent-surface-inaccessible"));
+  const coverage = createCoverageSummary({ delta });
+  assert.equal(coverage.auditComplete, false);
+  assert.equal(coverage.observed.find((item) => item.key === "consent-surface").state, "not-technically-inspectable");
+  assert.match(formatDeltaReport(delta), /INACCESSIBLE CONSENT SURFACES/);
+  assert.match(formatDeltaReport(delta), /cmp\.example\.test/);
+});
+
 test("detects essential infrastructure hosts", () => {
   assert.equal(isEssentialHost("static.cloudflare.com"), true);
   assert.equal(isEssentialHost("assets.cloudfront.net"), true);

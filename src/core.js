@@ -169,6 +169,7 @@ export function buildDelta({
   denyVerified = false,
   denyLabel,
   denyVerification = null,
+  inaccessibleConsentSurfaces = [],
   manualConsentConfirmed,
   labels,
   tabUrl
@@ -205,6 +206,7 @@ export function buildDelta({
     essentialCookies,
     essentialThirdPartyHosts,
     banner,
+    inaccessibleConsentSurfaces: inaccessibleConsentSurfaces.slice(0, 12),
     afterStorageEntries: remainingStorageEntries,
     remainingStorageEntries,
     nonEssentialStorageEntries,
@@ -268,14 +270,15 @@ export function createCoverageSummary({ delta = {}, analysisComplete = true, heu
   const hasCookieObservation = Number.isFinite(delta.beforeCounts?.cookies) && Number.isFinite(delta.afterDenyCounts?.cookies);
   const hasTrafficObservation = Number.isFinite(delta.beforeCounts?.thirdPartyHosts) && Number.isFinite(delta.afterDenyCounts?.thirdPartyHosts);
   const hasStorageObservation = Number.isFinite(delta.afterDenyCounts?.storageEntries);
-  const hasConsentObservation = Boolean(delta.banner && delta.banner.confidence !== "none");
+  const inaccessibleConsentSurfaces = Array.isArray(delta.inaccessibleConsentSurfaces) ? delta.inaccessibleConsentSurfaces : [];
+  const hasConsentObservation = Boolean(delta.banner && delta.banner.confidence !== "none") && inaccessibleConsentSurfaces.length === 0;
   return {
-    auditComplete: Boolean(analysisComplete && delta.beforeCounts && delta.afterDenyCounts),
+    auditComplete: Boolean(analysisComplete && delta.beforeCounts && delta.afterDenyCounts && inaccessibleConsentSurfaces.length === 0),
     observed: [
       { key: "cookies", state: hasCookieObservation ? "observed" : "not-observed", confidence: hasCookieObservation ? "confirmed" : "limited", evidenceCount: delta.afterDenyCounts?.cookies || 0 },
       { key: "browser-storage", state: hasStorageObservation ? "observed" : "not-observed", confidence: hasStorageObservation ? "confirmed" : "limited", evidenceCount: delta.afterDenyCounts?.storageEntries || 0 },
       { key: "network-requests", state: hasTrafficObservation ? "observed" : "not-observed", confidence: hasTrafficObservation ? "confirmed" : "limited", evidenceCount: delta.afterDenyCounts?.thirdPartyHosts || 0 },
-      { key: "consent-surface", state: hasConsentObservation ? "observed" : "not-observed", confidence: hasConsentObservation ? (delta.banner.confidence || "confirmed") : "limited", evidenceCount: delta.banner?.evidence?.length || 0 }
+      { key: "consent-surface", state: inaccessibleConsentSurfaces.length ? "not-technically-inspectable" : hasConsentObservation ? "observed" : "not-observed", confidence: inaccessibleConsentSurfaces.length ? "high" : hasConsentObservation ? (delta.banner.confidence || "confirmed") : "limited", evidenceCount: delta.banner?.evidence?.length || 0 }
     ],
     limitations: COVERAGE_LIMITATIONS.map((limitation) => ({ ...limitation })),
     heuristicSignals: heuristicSignals || deriveHeuristicSignals(delta)
@@ -293,6 +296,7 @@ export function deriveAuditVerdict(delta, { analysisComplete = true } = {}) {
   const missingCoverage = [];
   if (!delta?.denyAction?.clicked || !delta?.denyAction?.verified) missingCoverage.push("rejection-verification");
   if (!delta?.banner || delta.banner.confidence === "none") missingCoverage.push("consent-surface");
+  if (delta?.inaccessibleConsentSurfaces?.length) missingCoverage.push("consent-surface-inaccessible");
   if (!delta?.beforeCounts || !delta?.afterDenyCounts) missingCoverage.push("before-after-observation");
   if (!analysisComplete) missingCoverage.push("page-analysis");
   if (delta?.auditLifecycle?.status && delta.auditLifecycle.status !== "completed") missingCoverage.push("audit-lifecycle");
@@ -380,6 +384,14 @@ export function formatDeltaReport(delta, url = "") {
     report += "    - none recorded\n";
   }
   report += "\n";
+
+  if (delta.inaccessibleConsentSurfaces?.length) {
+    report += "INACCESSIBLE CONSENT SURFACES:\n";
+    delta.inaccessibleConsentSurfaces.slice(0, 12).forEach((surface) => {
+      report += `  - ${surface.domContext || "inaccessible frame"}; URL: ${surface.frameUrl || "unknown"}; origin: ${surface.frameOrigin || "unknown"}; reason: ${surface.reason || "inaccessible"}\n`;
+    });
+    report += "  These surfaces were not treated as absent; the audit remains incomplete.\n\n";
+  }
 
   if (delta.auditLifecycle) {
     report += "AUDIT LIFECYCLE:\n";
