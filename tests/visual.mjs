@@ -99,6 +99,7 @@ try {
   assert.equal(await popup.locator("#overviewGrid").isVisible(), false, "technical metrics should remain progressive disclosure");
   assert.ok((await popup.evaluate(() => document.documentElement.scrollWidth)) <= (await popup.evaluate(() => document.documentElement.clientWidth)) + 1, "popup should not overflow horizontally");
   await popup.locator("#languageSelect").selectOption("de");
+  await popup.locator("html[lang='de']").waitFor({ state: "attached", timeout: 10000 });
   await popup.getByText("Ist das Tracking technisch korrekt umgesetzt?", { exact: true }).waitFor({ state: "visible", timeoutMs: 10000 });
   assert.equal(await popup.locator("html").getAttribute("lang"), "de", "popup should switch the document language to German");
   assert.equal(await popup.locator("#bannerOverviewButton").getAttribute("title"), "Banner-Einstellungen oder die zweite Ebene des Cookie-Banners anzeigen");
@@ -124,6 +125,7 @@ try {
   assert.ok(await details.getByText("Unclear", { exact: true }).isVisible(), "unlisted signals should be labeled unclear");
   assert.ok(await details.getByText("Stored locally", { exact: true }).isVisible(), "local-only status should be visible in the redesigned details header");
   await details.locator("#languageSelect").selectOption("de");
+  await details.locator("html[lang='de']").waitFor({ state: "attached", timeout: 10000 });
   await details.getByText("Technische Details", { exact: true }).waitFor({ state: "visible", timeoutMs: 10000 });
   assert.equal(await details.locator("html").getAttribute("lang"), "de", "details should switch the document language to German");
   assert.ok(await details.getByText("Bericht für E-Mail kopieren", { exact: true }).isVisible(), "details actions should be localized");
