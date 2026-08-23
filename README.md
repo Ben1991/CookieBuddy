@@ -66,7 +66,7 @@ The source of truth for product acceptance behavior is [`features/cookiebuddy.fe
 | UC-22 | Present the one-click verdict and audit completeness before technical metrics, with one to three plain-language reasons and progressive evidence. |
 | UC-23 | Support multilingual/accessibility-aware consent controls safely without broad-text false clicks. Consent vocabulary is local, explicit, and extended through locale data; accessible names and roles are used for icon-only controls, while unsupported language stays unresolved. |
 | UC-24 | Explain limits for fingerprinting, server-side tagging, backend enrichment, first-party proxies, and other opaque techniques. |
-| UC-25 | Keep CookieBuddy itself private and performant: justified permissions, local processing, deletion, bounded retention and overhead. |
+| UC-25 | Keep CookieBuddy itself private and performant: justified permissions, on-demand page access, local processing, deletion, bounded retention and overhead. |
 | UC-26 | Keep Gherkin, implementation tests, README, visual tests, and screenshots synchronized for every affected product task. |
 
 `tests/use-cases.test.mjs` checks that every Gherkin use-case ID is represented in this README and that key safety invariants remain present. This is only contract hygiene: each implemented scenario also requires functional/unit/integration coverage of the real behavior.
@@ -148,6 +148,25 @@ CookieBuddy is designed to stay local.
 
 CookieBuddy may inspect the page, cookies, supported browser storage, consent APIs, and browser requests only to perform the user's local audit. Local audit data must have documented retention/deletion behavior.
 
+## Permissions and local data lifecycle
+
+CookieBuddy uses the following capabilities only for the local audit flow:
+
+| Capability | Product need and boundary |
+| --- | --- |
+| `activeTab` | Grants temporary access after the user opens the extension action on the current tab. |
+| `cookies` | Reads cookie metadata for the visited page and observed services; cookie values are not stored or exported. |
+| `scripting` | Injects the analysis scripts on demand into the active tab and accessible frames. CookieBuddy no longer installs persistent all-page content scripts. |
+| `storage` | Keeps only the latest scan and delta in local storage; request traffic, icon status, and lifecycle state use session storage. |
+| `webRequest` | Observes minimized request metadata only while an audit is active. |
+| HTTP(S) host access | Retained for HTTP(S) third-party cookie metadata and subresource requests; it is not used for idle collection. |
+
+The `tabs` permission and persistent all-page content-script registration are not requested. The details page is opened as an extension page and does not need broad web-accessible resources. HTTP(S) host access remains a deliberate trade-off for reliable third-party cookie and request coverage; removing it would silently reduce the evidence promised by UC-09 and UC-25.
+
+The popup's **Delete local audit data** action removes `cookiebuddyLastScan` and `cookiebuddyLastDelta` from `chrome.storage.local` and clears the session traffic, icon status, and lifecycle state. The latest scan and delta remain on the device until the user deletes them. CookieBuddy never deletes a website's own localStorage, cookies, or other browser data.
+
+Reports and details views escape page-provided text, URLs, cookie names, and service labels before inserting HTML. Plain-text and mail exports use the same minimized evidence and do not add remote lookups.
+
 ## Performance budgets
 
 The budgets are local safeguards, not telemetry:
@@ -219,6 +238,7 @@ GitHub Actions should run the automated checks on pushes and pull requests. A fe
 - `popup.html`: main popup
 - `details.html`: audit details and evidence actions
 - `src/background.js`: request capture and extension status
+- `src/audit-storage.mjs`: explicit local/session audit retention keys
 - `src/content.js`: page/CMP analysis and consent actions
 - `src/popup.js`: popup and audit orchestration
 - `src/core.js`: shared classification/delta helpers

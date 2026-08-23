@@ -40,6 +40,8 @@ test("idle monitoring and page analysis enforce their limits in production code"
   assert.match(background, /minimizeUrlEvidence/);
   assert.match(background, /onErrorOccurred/);
   assert.match(background, /isBlockedRequestError/);
+  assert.match(background, /CLEAR_LOCAL_AUDIT_DATA/);
+  assert.match(background, /SESSION_AUDIT_STORAGE_KEYS/);
   assert.doesNotMatch(background, /url: details\.url/);
   assert.match(content, /AUDIT_NAVIGATION/);
   assert.match(content, /sanitizePageUrl/);
@@ -56,12 +58,17 @@ test("idle monitoring and page analysis enforce their limits in production code"
   assert.match(content, /durationMs: Math\.round\(performance\.now\(\) - analysisStartedAt\)/);
   assert.match(content, /CookieBuddyServiceRules/);
   assert.doesNotMatch(content, /SERVICE_HINTS/);
-  assert.ok(manifest.content_scripts[0].js.includes("src/service-rules.js"));
+  assert.equal(manifest.content_scripts, undefined);
+  assert.equal(manifest.web_accessible_resources, undefined);
+  assert.equal(manifest.permissions.includes("tabs"), false);
+  assert.deepEqual(manifest.host_permissions, ["http://*/*", "https://*/*"]);
+  assert.match(background, /if \(sender\?\.tab\) return false/);
+  assert.match(popup, /files: \["src\/service-rules\.js"/);
 });
 
 test("consent analysis covers all permitted frames and records surface context", () => {
-  assert.equal(manifest.content_scripts[0].all_frames, true);
-  assert.ok(manifest.content_scripts[0].js.includes("src/consent-surfaces.js"));
+  assert.match(popup, /allFrames: true/);
+  assert.match(popup, /src\/consent-surfaces\.js/);
   assert.match(content, /collectConsentSurfaceContexts/);
   assert.match(content, /inaccessibleConsentSurfaces/);
   assert.match(content, /context\.domContext/);

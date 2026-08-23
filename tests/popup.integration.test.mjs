@@ -294,6 +294,23 @@ test("cookies and traffic show an empty state when nothing is found", async () =
   assert.match(document.getElement("cookieResult").textContent, /No visible cookies or locally stored data were found|Für diese Seite wurden keine sichtbaren Cookies oder lokal gespeicherten Daten gefunden/);
 });
 
+test("popup deletes local audit data and resets the visible result", async () => {
+  const document = createDocument();
+  const window = { Node: class {}, HTMLElement: FakeElement, URL };
+
+  setupChromeMock("en");
+  setupDomGlobals({ document, window });
+
+  await import(`../src/popup.js?test=${Date.now()}-delete-local-audit-data`);
+  await flush();
+  document.getElement("deleteLocalAuditDataButton").click();
+  await flush();
+
+  assert.deepEqual(globalThis.chrome.storage.local.removedKeys, ["cookiebuddyLastScan", "cookiebuddyLastDelta"]);
+  assert.match(document.getElement("deleteLocalAuditDataStatus").textContent, /Local audit data deleted/);
+  assert.match(document.getElement("deltaResult").innerHTML, /Stored scan and delta data were removed/);
+});
+
 function createDocument() {
   const elements = new Map();
   const defs = [
@@ -321,6 +338,8 @@ function createDocument() {
     "languageSelect",
     "helpButton",
     "helpPanel",
+    "deleteLocalAuditDataButton",
+    "deleteLocalAuditDataStatus",
     "mockBannerSettings"
   ];
   for (const id of defs) elements.set(id, new FakeElement(id));
@@ -394,7 +413,8 @@ function setupChromeMock(locale) {
     storage: {
       local: {
         get: async () => ({ cookiebuddyLanguage: locale }),
-        set: async () => {}
+        set: async () => {},
+        remove: async (keys) => { globalThis.chrome.storage.local.removedKeys = keys; }
       }
     },
     tabs: {

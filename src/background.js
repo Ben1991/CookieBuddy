@@ -2,6 +2,7 @@ import { PERFORMANCE_BUDGETS } from "./performance-budgets.mjs";
 import { createAuditLifecycleState, getAuditLifecycleEvidence, transitionAuditLifecycle } from "./audit-lifecycle.mjs";
 import { minimizeUrlEvidence } from "./url-evidence.mjs";
 import { isBlockedRequestError } from "./audit-integrity.mjs";
+import { SESSION_AUDIT_STORAGE_KEYS } from "./audit-storage.mjs";
 
 const TRAFFIC_STORAGE_KEY = "cookiebuddyTraffic";
 const ICON_STATUS_STORAGE_KEY = "cookiebuddyIconStatus";
@@ -97,6 +98,14 @@ async function clearTabIconStatus(tabId) {
   const iconStatusByTab = data[ICON_STATUS_STORAGE_KEY] || {};
   delete iconStatusByTab[tabId];
   await chrome.storage.session.set({ [ICON_STATUS_STORAGE_KEY]: iconStatusByTab });
+}
+
+async function clearLocalAuditData() {
+  await chrome.storage.session.remove(SESSION_AUDIT_STORAGE_KEYS);
+  activeAuditTabs.clear();
+  for (const timer of auditExpiryTimers.values()) clearTimeout(timer);
+  auditExpiryTimers.clear();
+  await applyIconStatus("neutral");
 }
 
 chrome.webRequest.onBeforeRequest.addListener(
@@ -273,6 +282,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === "CLEAR_TRAFFIC") {
     (async () => {
       await clearTabTraffic(message.tabId);
+      sendResponse({ ok: true });
+    })();
+    return true;
+  }
+
+  if (message.type === "CLEAR_LOCAL_AUDIT_DATA") {
+    if (sender?.tab) return false;
+    (async () => {
+      await clearLocalAuditData();
       sendResponse({ ok: true });
     })();
     return true;
