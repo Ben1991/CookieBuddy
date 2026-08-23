@@ -229,6 +229,9 @@ Feature: One-click consent and tracking audit
     And no audit data, browsing data, analytics, telemetry, or identifiers are sent to a remote service
     And retained local audit data can be deleted by the user
     And idle and active audit work stays within documented performance and evidence-retention budgets
+    And idle request monitoring records no requests and performs no session-storage writes
+    And an active audit is bounded to 30 seconds and 500 requests per tab
+    And page analysis caps text, HTML, resources, stored entries, and contact-page work
 
   @UC-26 @documentation @contract
   Scenario: Keep product specification, tests, README, and visible documentation in sync

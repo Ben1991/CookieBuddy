@@ -55,6 +55,7 @@
   "auditContactWebsite": { "message": "Website / DSB kontaktieren" },
   "auditRecipientUnclear": { "message": "Empfänger nicht bestätigt; prüfe die Belege und wähle den Kontakt manuell." },
   "auditComplaintReviewNote": { "message": "Prüfe den sachlichen Entwurf vor dem Versand. CookieBuddy stellt keinen Rechtsverstoß fest." },
+  "auditDurationExceeded": { "message": "Der Audit hat sein lokales Zeitlimit überschritten und wurde als unvollständig markiert." },
   "auditReasonThirdParty": { "message": "Drittanbieter-Traffic blieb nach dem Opt-out bestehen." },
   "auditReasonCookies": { "message": "Nicht-essenzielle Cookies blieben bestehen oder wurden nach dem Opt-out gesetzt." },
   "auditReasonStorage": { "message": "Nicht-essenzielle Browserdaten blieben nach dem Opt-out gespeichert." },

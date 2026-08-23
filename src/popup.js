@@ -38,6 +38,7 @@ const elements = {
 };
 
 const deltaGuide = "1) Reloads the page without cache.\n2) Tries to find the banner and a reject option.\n3) If no reject option is found, reject cookies manually and run the check again.\n4) Opens the result in a new tab.";
+const DEFAULT_AUDIT_MAX_DURATION_MS = 30_000;
 
 elements.refreshButton.addEventListener("click", () => scanCurrentTab());
 document.querySelector("#heroScanButton")?.addEventListener("click", () => scanCurrentTab());
@@ -78,7 +79,7 @@ async function scanCurrentTab() {
 
     state.analysis = analysis;
     state.cookies = cookies;
-    state.traffic = trafficResponse?.traffic || [];
+    state.traffic = [...(trafficResponse?.traffic || []), ...(analysis.resources || [])];
     await persistLastScan();
     await updateIconStatus();
     render();
@@ -109,9 +110,15 @@ async function runDeltaCheck() {
   elements.deltaButton.disabled = true;
   elements.deltaButton.title = deltaGuide;
   elements.deltaResult.innerHTML = `<p class="muted">${escapeHtml(t("deltaCheckingDescription"))}</p>`;
+  const auditStartedAt = Date.now();
+  let auditMaxDurationMs = DEFAULT_AUDIT_MAX_DURATION_MS;
 
   try {
+    const auditStartResponse = await chrome.runtime.sendMessage({ target: "cookiebuddy-background", type: "START_AUDIT", tabId: state.tab.id });
+    auditMaxDurationMs = auditStartResponse?.maxDurationMs || DEFAULT_AUDIT_MAX_DURATION_MS;
+    assertAuditBudget(auditStartedAt, auditMaxDurationMs);
     const before = await snapshot(t("snapshotCurrentState"));
+    assertAuditBudget(auditStartedAt, auditMaxDurationMs);
     setAuditStep("prepare", "complete");
     setAuditStep("consent", "complete");
     setAuditStep("baseline", "complete");
@@ -122,9 +129,11 @@ async function runDeltaCheck() {
     setAuditStep("observe", "active");
     await chrome.runtime.sendMessage({ target: "cookiebuddy-background", type: "CLEAR_TRAFFIC", tabId: state.tab.id });
     await wait(1800);
+    assertAuditBudget(auditStartedAt, auditMaxDurationMs);
     setAuditStep("observe", "complete");
     setAuditStep("capture", "active");
     const afterDeny = await snapshot(t("snapshotAfterDenyAll"));
+    assertAuditBudget(auditStartedAt, auditMaxDurationMs);
     setAuditStep("capture", "complete");
     setAuditStep("analyze", "active");
     const delta = buildDelta({
@@ -162,6 +171,11 @@ async function runDeltaCheck() {
     elements.deltaResult.innerHTML = `<p class="error">${escapeHtml(error.message || t("deltaCheckFailed"))}</p>`;
     setStatus("statusCheckFailed", "warn");
   } finally {
+    try {
+      await chrome.runtime.sendMessage({ target: "cookiebuddy-background", type: "STOP_AUDIT", tabId: state.tab?.id });
+    } catch {
+      // The service worker may have restarted; the next audit starts cleanly.
+    }
     elements.deltaButton.disabled = false;
   }
 }
@@ -177,7 +191,7 @@ async function snapshot(label) {
     label,
     analysis,
     cookies,
-    thirdPartyTraffic: normalizeTraffic(trafficResponse?.traffic || [], analysis.host)
+    thirdPartyTraffic: normalizeTraffic([...(trafficResponse?.traffic || []), ...(analysis.resources || [])], analysis.host)
   };
 }
 
@@ -736,6 +750,12 @@ function escapeHtml(value) {
 
 function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function assertAuditBudget(startedAt, maxDurationMs) {
+  if (Date.now() - startedAt > maxDurationMs) {
+    throw new Error(t("auditDurationExceeded"));
+  }
 }
 
 function applyLocalizedText() {
