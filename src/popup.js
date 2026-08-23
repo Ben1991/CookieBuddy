@@ -241,7 +241,7 @@ async function runDeltaCheck() {
     renderDelta(persistedDelta, verdict);
     await openDeltaTab(persistedDelta);
     await updateIconStatus(persistedDelta);
-    setStatus(verdict.status === "negative" ? "statusDeltaFound" : verdict.status === "incomplete" ? "statusAuditIncomplete" : "statusChecked", verdict.status === "positive" ? "ok" : "warn");
+    setStatus(verdict.status === "negative" ? "statusDeltaFound" : verdict.status === "incomplete" ? "statusAuditIncomplete" : verdict.status === "review" ? "statusReviewRecommended" : "statusChecked", verdict.status === "positive" ? "ok" : "warn");
     renderAuditVerdict(persistedDelta, verdict);
   } catch (error) {
     const activeStep = [...document.querySelectorAll?.("#auditSteps [data-state=active]") || []][0];
@@ -694,6 +694,7 @@ function renderAuditVerdict(delta, verdict) {
   const meta = {
     positive: { title: t("auditVerdictPositive"), copy: t("auditVerdictPositiveCopy") },
     negative: { title: t("auditVerdictNegative"), copy: t("auditVerdictNegativeCopy") },
+    review: { title: t("auditVerdictReview"), copy: t("auditVerdictReviewCopy") },
     incomplete: { title: t("auditVerdictIncomplete"), copy: t("auditVerdictIncompleteCopy") }
   }[verdict.status] || { title: t("auditVerdictIncomplete"), copy: t("auditVerdictIncompleteCopy") };
   const reasonLabels = {
@@ -702,6 +703,7 @@ function renderAuditVerdict(delta, verdict) {
     "non-essential-storage": t("auditReasonStorage"),
     "active-service": t("auditReasonActiveService"),
     "unclear-service": t("auditReasonUnclearService"),
+    "heuristic-signal": t("auditReasonHeuristic"),
     "rejection-verification": t("auditCoverageReject"),
     "consent-surface": t("auditCoverageConsent"),
     "consent-surface-inaccessible": t("auditCoverageConsentInaccessible"),
@@ -713,9 +715,11 @@ function renderAuditVerdict(delta, verdict) {
     "no-contradictory-evidence": t("auditReasonNoContradiction")
   };
   const reasons = (verdict.reasons || []).slice(0, 3).map((reason) => `<li>${escapeHtml(reasonLabels[reason] || reason)}</li>`).join("");
+  const unresolvedSignals = renderUnresolvedSignals(verdict.unresolvedSignals, reasonLabels);
   const complete = verdict.coverage?.complete === true;
   const cookieCount = (delta.remainingCookies?.length || 0) + (delta.newCookies?.length || 0);
-  const detailsHref = chrome.runtime.getURL(verdict.status === "negative" ? "details.html?view=delta&focus=complaint" : "details.html?view=delta");
+  const evidenceHref = verdict.evidenceLinks?.[0]?.href || "details.html?view=delta";
+  const detailsHref = chrome.runtime.getURL(verdict.status === "negative" ? `${evidenceHref}&focus=complaint` : evidenceHref);
   const complaintAction = verdict.status === "negative"
     ? `<a class="primary-button small" href="${escapeHtml(detailsHref)}" target="_blank" rel="noreferrer" data-complaint-action="true">${escapeHtml(t("auditContactWebsite"))}</a><a class="ghost-button small" href="${escapeHtml(detailsHref)}" target="_blank" rel="noreferrer" data-authority-complaint-action="true">${escapeHtml(t("auditPrepareAuthority"))}</a>`
     : "";
@@ -734,6 +738,7 @@ function renderAuditVerdict(delta, verdict) {
         </div>
       </div>
       <ul class="audit-reason-list">${reasons}</ul>
+      ${unresolvedSignals}
       <details class="audit-evidence">
         <summary>${escapeHtml(t("auditShowEvidence"))}</summary>
         <div class="audit-evidence-grid">
@@ -762,6 +767,16 @@ function renderAuditVerdict(delta, verdict) {
   elements.deltaResult.innerHTML = html;
   if (elements.statusCardText) elements.statusCardText.textContent = `${meta.title}. ${meta.copy}`;
   return html;
+}
+
+function renderUnresolvedSignals(signals = [], reasonLabels = {}) {
+  if (!signals.length) return "";
+  const items = signals.slice(0, 5).map((signal) => {
+    const label = reasonLabels[signal.key] || signal.key;
+    const evidence = Array.isArray(signal.evidence) && signal.evidence.length ? `: ${signal.evidence.join(", ")}` : "";
+    return `<li>${escapeHtml(label)}${escapeHtml(evidence)}</li>`;
+  }).join("");
+  return `<section class="audit-unresolved"><h3>${escapeHtml(t("auditUnresolvedHeading"))}</h3><ul class="audit-reason-list">${items}</ul></section>`;
 }
 
 function renderRejectVerification(denyAction = {}) {
@@ -1095,6 +1110,8 @@ function setStatus(key, mode) {
           ? t("scanStatusChecking")
           : key === "statusDeltaFound"
             ? t("scanStatusDeltaFound")
+              : key === "statusReviewRecommended"
+                ? t("scanStatusReviewRecommended")
               : key === "statusAuditIncomplete"
                 ? t("scanStatusIncomplete")
                 : key === "statusCheckFailed"

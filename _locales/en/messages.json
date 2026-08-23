@@ -66,10 +66,13 @@
   "auditManualAction": { "message": "Manual action required" },
   "statusAuditIncomplete": { "message": "Audit incomplete" },
   "scanStatusIncomplete": { "message": "The audit is incomplete; no positive verdict was issued." },
+  "scanStatusReviewRecommended": { "message": "The audit found ambiguous signals; review the evidence." },
   "auditVerdictPositive": { "message": "Looks technically correct" },
   "auditVerdictPositiveCopy": { "message": "The required checks completed and no contradictory browser evidence was observed." },
   "auditVerdictNegative": { "message": "Likely incorrectly implemented" },
   "auditVerdictNegativeCopy": { "message": "The audit found tracking signals that remained after the verified rejection." },
+  "auditVerdictReview": { "message": "Review recommended" },
+  "auditVerdictReviewCopy": { "message": "The audit completed, but some observed signals remain ambiguous or unknown." },
   "auditVerdictIncomplete": { "message": "Unclear or incomplete" },
   "auditVerdictIncompleteCopy": { "message": "CookieBuddy could not verify every required step, so this is not a green result." },
   "auditConfidence": { "message": "Confidence: $1" },
@@ -88,7 +91,9 @@
   "auditReasonStorage": { "message": "Non-essential browser storage remained after opt-out." },
   "auditReasonActiveService": { "message": "A mapped service was still active after opt-out." },
   "auditReasonUnclearService": { "message": "Some observed signals could not be classified confidently." },
+  "auditReasonHeuristic": { "message": "A heuristic indicator needs review; it is not confirmed evidence." },
   "auditReasonNoContradiction": { "message": "No contradictory browser evidence was observed." },
+  "auditUnresolvedHeading": { "message": "Unresolved signals" },
   "auditCoverageReject": { "message": "The rejection could not be verified." },
   "auditCoverageConsent": { "message": "No usable consent surface was detected." },
   "auditCoverageConsentInaccessible": { "message": "A relevant consent surface could not be inspected." },
@@ -169,6 +174,9 @@
   },
   "statusChecked": {
     "message": "Checked"
+  },
+  "statusReviewRecommended": {
+    "message": "Review recommended"
   },
   "statusCheckFailed": {
     "message": "Check failed"

@@ -65,11 +65,17 @@ const server = createServer(async (request, response) => {
   }
 });
 
-function chromeFixtureScript() {
+function chromeFixtureScript(mode = "negative") {
   return `
     (() => {
+      const reviewMode = ${JSON.stringify(mode === "review")};
       const analysis = ${JSON.stringify(fixtureAnalysis)};
       const cookies = ${JSON.stringify(fixtureCookies)};
+      if (reviewMode) {
+        analysis.resources = [];
+        analysis.categories = { ...analysis.categories, analytics: { services: [{ name: "Unmapped analytics service", count: 1 }] } };
+        cookies.splice(0, cookies.length);
+      }
       const delta = ${JSON.stringify(fixtureDelta)};
       const storage = { cookiebuddyLanguage: "en", cookiebuddyLastScan: { analysis, cookies, traffic: [] }, cookiebuddyLastDelta: delta };
       globalThis.chrome = {
@@ -124,6 +130,18 @@ try {
   assert.ok(await popup.locator('[data-authority-complaint-action="true"]').isVisible(), "negative findings should expose the authority preparation action");
   assert.equal(await popup.locator('#auditSteps [data-state="complete"]').count(), 8, "completed audit should mark every progress step complete");
   await captureDocumentationScreenshot(popup, "popup-overview.png", { fullPage: true });
+
+  const reviewPopup = await browser.newPage({ viewport: { width: 460, height: 900 } });
+  await reviewPopup.addInitScript({ content: chromeFixtureScript("review") });
+  await reviewPopup.goto(`http://127.0.0.1:${port}/popup.html?review=1`);
+  await reviewPopup.locator("#deltaButton").waitFor({ state: "visible", timeoutMs: 10000 });
+  await reviewPopup.locator("#deltaButton").click();
+  await reviewPopup.getByRole("heading", { name: "Review recommended", exact: true }).waitFor({ state: "visible", timeoutMs: 10000 });
+  assert.ok(await reviewPopup.locator('[data-verdict="review"]').isVisible(), "ambiguous complete findings should use the review verdict");
+  assert.ok(await reviewPopup.getByText("Unresolved signals", { exact: true }).isVisible(), "review verdict should expose unresolved signals");
+  assert.match(await reviewPopup.locator('[data-verdict="review"] a').first().getAttribute("href"), /details\.html\?view=delta/);
+  await captureDocumentationScreenshot(reviewPopup, "popup-review.png", { fullPage: true });
+  await reviewPopup.close();
 
   const details = await browser.newPage({ viewport: { width: 1200, height: 900 } });
   await details.addInitScript({ content: chromeFixtureScript() });

@@ -66,10 +66,13 @@
   "auditManualAction": { "message": "Manuelle Aktion erforderlich" },
   "statusAuditIncomplete": { "message": "Audit unvollständig" },
   "scanStatusIncomplete": { "message": "Der Audit ist unvollständig; es wurde kein positives Ergebnis ausgegeben." },
+  "scanStatusReviewRecommended": { "message": "Der Audit enthält mehrdeutige Signale; prüfe die Belege." },
   "auditVerdictPositive": { "message": "Sieht technisch korrekt aus" },
   "auditVerdictPositiveCopy": { "message": "Die erforderlichen Prüfungen sind abgeschlossen und es wurden keine widersprüchlichen Browser-Signale beobachtet." },
   "auditVerdictNegative": { "message": "Wahrscheinlich fehlerhaft umgesetzt" },
   "auditVerdictNegativeCopy": { "message": "Nach der verifizierten Ablehnung wurden weiterhin Tracking-Signale beobachtet." },
+  "auditVerdictReview": { "message": "Prüfung empfohlen" },
+  "auditVerdictReviewCopy": { "message": "Der Audit ist abgeschlossen, aber einige beobachtete Signale bleiben mehrdeutig oder unbekannt." },
   "auditVerdictIncomplete": { "message": "Unklar oder unvollständig" },
   "auditVerdictIncompleteCopy": { "message": "Nicht jeder erforderliche Schritt konnte verifiziert werden. Deshalb ist dies kein grünes Ergebnis." },
   "auditConfidence": { "message": "Sicherheit: $1" },
@@ -88,7 +91,9 @@
   "auditReasonStorage": { "message": "Nicht-essenzielle Browserdaten blieben nach dem Opt-out gespeichert." },
   "auditReasonActiveService": { "message": "Ein zugeordneter Dienst war nach dem Opt-out weiterhin aktiv." },
   "auditReasonUnclearService": { "message": "Einige Signale konnten nicht sicher klassifiziert werden." },
+  "auditReasonHeuristic": { "message": "Ein heuristischer Hinweis muss geprüft werden; er ist kein bestätigter Beleg." },
   "auditReasonNoContradiction": { "message": "Es wurden keine widersprüchlichen Browser-Signale beobachtet." },
+  "auditUnresolvedHeading": { "message": "Offene Signale" },
   "auditCoverageReject": { "message": "Die Ablehnung konnte nicht verifiziert werden." },
   "auditCoverageConsent": { "message": "Keine nutzbare Einwilligungsoberfläche erkannt." },
   "auditCoverageConsentInaccessible": { "message": "Eine relevante Einwilligungsoberfläche konnte nicht inspiziert werden." },
@@ -169,6 +174,9 @@
   },
   "statusChecked": {
     "message": "Geprüft"
+  },
+  "statusReviewRecommended": {
+    "message": "Prüfung empfohlen"
   },
   "statusCheckFailed": {
     "message": "Prüfung fehlgeschlagen"
