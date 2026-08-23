@@ -3,7 +3,7 @@
     "message": "CookieBuddy"
   },
   "extensionDescription": {
-    "message": "Review cookie banners, cookies, and traffic after a reject attempt."
+    "message": "Review cookie consent, browser storage, and third-party traffic locally before and after rejecting optional tracking."
   },
   "popupTitle": {
     "message": "Cookie review"

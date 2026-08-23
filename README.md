@@ -8,6 +8,8 @@ CookieBuddy provides technical review signals, not legal advice or a legal compl
 
 Accessibility is part of the product contract. See [ACCESSIBILITY.md](ACCESSIBILITY.md) for supported interaction goals, known limitations, the verification checklist, and the dedicated reporting path. CookieBuddy does not claim complete WCAG conformance; unsupported or unverified accessibility behavior remains explicitly documented.
 
+The Chrome Web Store release kit is maintained in [`docs/chrome-web-store/`](docs/chrome-web-store/). It contains the store listing copy, privacy-disclosure answers, reviewer test instructions, and the release checklist. The public privacy policy is [`PRIVACY.md`](PRIVACY.md).
+
 ## Product Principle
 
 The intended product flow is:
@@ -273,4 +275,6 @@ GitHub Actions should run the automated checks on pushes and pull requests. A fe
 ## Links
 
 - Repository: https://github.com/Ben1991/CookieBuddy
+- Privacy policy: https://github.com/Ben1991/CookieBuddy/blob/main/PRIVACY.md
+- Support: https://github.com/Ben1991/CookieBuddy/issues
 - Donate: https://buymeacoffee.com/thenext1991
