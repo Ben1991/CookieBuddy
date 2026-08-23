@@ -570,6 +570,8 @@
     "message": "Nach dem Opt-out-Versuch hat CookieBuddy weiterhin erkannt:"
   },
   "observedFactsHeading": { "message": "Beobachtete Fakten" },
+  "urlMinimizationHeading": { "message": "Minimierte URL-Belege" },
+  "urlMinimizationCopy": { "message": "Request-, Seiten- und Kontaktquellen-URLs werden bereits bei der Erfassung minimiert. Query-Werte, Fragmente und URL-Zugangsdaten werden entfernt; Parameternamen können für die lokale Klassifizierung erhalten bleiben." },
   "interpretationHeading": { "message": "Einordnung und Grenzen" },
   "cookiesStillVisibleMetric": {
     "message": " Cookies weiterhin sichtbar"

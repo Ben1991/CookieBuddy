@@ -8,6 +8,19 @@ import {
   removeVisualEvidenceItem,
   sanitizeEvidenceUrl
 } from "../src/visual-evidence.mjs";
+import { minimizeUrlEvidence } from "../src/url-evidence.mjs";
+
+test("retains only bounded query-key names and no sensitive URL values", () => {
+  const evidence = minimizeUrlEvidence("https://user:pass@example.com/search?q=private%20term&email=alice%40example.com&token=secret#results");
+  assert.deepEqual(evidence, {
+    url: "https://example.com/search",
+    protocol: "https:",
+    host: "example.com",
+    path: "/search",
+    queryKeys: ["q", "email", "token"]
+  });
+  assert.doesNotMatch(JSON.stringify(evidence), /private|alice|secret|results|pass/);
+});
 
 test("minimizes screenshot metadata URLs before local persistence", () => {
   assert.equal(sanitizeEvidenceUrl("https://example.com/page?email=secret#banner"), "https://example.com/page");

@@ -1,3 +1,5 @@
+import { sanitizeEvidenceUrl } from "./url-evidence.mjs";
+
 export const AUDIT_LIFECYCLE_VERSION = 1;
 
 export const AUDIT_LIFECYCLE_STATUS = Object.freeze({
@@ -10,14 +12,7 @@ export const AUDIT_LIFECYCLE_STATUS = Object.freeze({
 const TERMINAL_STATUSES = new Set([AUDIT_LIFECYCLE_STATUS.completed, AUDIT_LIFECYCLE_STATUS.incomplete, AUDIT_LIFECYCLE_STATUS.failed]);
 
 function safeAuditUrl(value = "") {
-  try {
-    const url = new URL(value);
-    url.search = "";
-    url.hash = "";
-    return url.toString();
-  } catch {
-    return "";
-  }
+  return sanitizeEvidenceUrl(value);
 }
 
 function safeText(value, maxLength = 160) {

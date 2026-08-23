@@ -9,7 +9,14 @@ function getContactLinkMetadata(href, text, inFooter = false) {
   const value = `${href || ""} ${text || ""}`;
   const sourceType = classifySourceType(value);
   if (!sourceType) return null;
-  return { href, text: String(text || "").trim().toLowerCase(), inFooter: Boolean(inFooter), sourceType, source: sourceLabel(sourceType) };
+  return {
+    href: sanitizeContactSourceUrl(href),
+    requestHref: href,
+    text: String(text || "").trim().toLowerCase(),
+    inFooter: Boolean(inFooter),
+    sourceType,
+    source: sourceLabel(sourceType)
+  };
 }
 
 function classifyPageSource(sourceUrl, pageTitle = "") {
@@ -33,10 +40,23 @@ function extractContactsFromText(text, sourceUrl, source, sourceType) {
     const context = `${before} ${after}`;
     const localPart = email.split("@", 1)[0];
     const kind = DPO_CONTEXT_PATTERN.test(context) || /^(dpo|datenschutz|data[-_.]?protection)/i.test(localPart) ? "dpo" : "contact";
-    emails.push({ kind, email, phone: "", source: source || "Visited page", sourceUrl, sourceType: sourceType || "page" });
+    emails.push({ kind, email, phone: "", source: source || "Visited page", sourceUrl: sanitizeContactSourceUrl(sourceUrl), sourceType: sourceType || "page" });
   }
   const phoneMatches = Array.from(new Set(value.match(/(?:\+|00)\d[\d\s()./-]{6,}\d/g) || []));
   return emails.map((contact) => ({ ...contact, phone: phoneMatches[0] || "" }));
+}
+
+function sanitizeContactSourceUrl(value) {
+  try {
+    const url = new URL(value);
+    url.username = "";
+    url.password = "";
+    url.search = "";
+    url.hash = "";
+    return url.href;
+  } catch {
+    return "";
+  }
 }
 
 function dedupeContacts(contacts) {

@@ -1,3 +1,5 @@
+import { minimizeUrlEvidence } from "./url-evidence.mjs";
+
 export function capitalize(value) {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
@@ -47,14 +49,17 @@ export function normalizeTraffic(traffic, firstPartyHost) {
   const firstPartyBase = getBaseDomain(firstPartyHost);
   return traffic
     .map((item) => {
+      const minimized = minimizeUrlEvidence(item.url);
+      if (!minimized?.url) return null;
       try {
-        const url = new URL(item.url);
         return {
-          host: url.hostname || url.protocol,
-          url: url.href,
-          protocol: url.protocol,
+          host: minimized.host || minimized.protocol,
+          url: minimized.url,
+          protocol: minimized.protocol,
+          path: minimized.path,
+          queryKeys: minimized.queryKeys,
           type: item.type,
-          thirdParty: getBaseDomain(url.hostname) !== firstPartyBase
+          thirdParty: getBaseDomain(minimized.host) !== firstPartyBase
         };
       } catch {
         return null;
@@ -182,7 +187,7 @@ export function buildDelta({
 
   return {
     checkedAt: new Date().toISOString(),
-    url: tabUrl,
+    url: minimizeUrlEvidence(tabUrl, { retainQueryKeys: false })?.url || "",
     denyAction: {
       clicked: Boolean(denyClicked),
       label: denyLabel || "",
@@ -330,7 +335,7 @@ export function deriveAuditVerdict(delta, { analysisComplete = true } = {}) {
  */
 export function formatDeltaReport(delta, url = "") {
   const date = new Date(delta.checkedAt).toLocaleString();
-  const website = url || delta.url || "unknown";
+  const website = minimizeUrlEvidence(url || delta.url, { retainQueryKeys: false })?.url || "unknown";
   
   let report = "═════════════════════════════════════════\n";
   report += "       COOKIE CONSENT DELTA REPORT\n";
@@ -347,6 +352,9 @@ export function formatDeltaReport(delta, url = "") {
 
   report += "SUMMARY:\n";
   report += `  ${delta.summary}\n\n`;
+
+  report += "URL DATA MINIMIZATION:\n";
+  report += "  Request, page, and contact-source URLs were minimized when captured. Query values, fragments, and URL credentials were removed; query key names may remain for local classification.\n\n";
 
   const coverage = delta.coverage || createCoverageSummary({ delta });
   report += "COVERAGE AND LIMITATIONS:\n";

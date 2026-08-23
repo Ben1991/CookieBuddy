@@ -221,6 +221,10 @@ function renderDelta(delta, options = {}) {
           <span><strong>${storageEntries.length}</strong>${escapeHtml(t("storageStillVisibleMetric"))}</span>
         </div>
       </section>
+      <section class="privacy-note">
+        <h3>${escapeHtml(t("urlMinimizationHeading"))}</h3>
+        <p class="muted">${escapeHtml(t("urlMinimizationCopy"))}</p>
+      </section>
       <div class="delta-content-grid">
         <div class="delta-findings">
           <section>
@@ -401,6 +405,8 @@ function buildDeltaMailBody(delta, target = "dpo") {
     values.pageUrl,
     "",
     t("deltaMailObservation"),
+    "",
+    t("urlMinimizationCopy"),
     "",
     t("deltaMailItemsIntro"),
     "",

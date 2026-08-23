@@ -42,6 +42,7 @@ test("details page opens a mail draft from the delta report", async () => {
   assert.match(decodeURIComponent(window.location.lastAssignedUrl), /Not listed in banner/);
 
   assert.match(element(document, "detailsOutput").innerHTML, /Coverage and limits/);
+  assert.match(element(document, "detailsOutput").innerHTML, /Minimized URL evidence/);
   assert.match(element(document, "detailsOutput").innerHTML, /Not technically inspectable/);
   assert.match(element(document, "detailsOutput").innerHTML, /Heuristic indicators/);
   assert.match(element(document, "detailsOutput").innerHTML, /Audit lifecycle evidence/);

@@ -131,6 +131,7 @@ try {
   assert.ok(await details.getByText("Still active", { exact: true }).isVisible(), "active services should be labeled");
   assert.ok(await details.getByText("Unclear", { exact: true }).isVisible(), "unlisted signals should be labeled unclear");
   assert.ok(await details.getByText("Coverage and limits", { exact: true }).isVisible(), "coverage limits should be visible in the evidence report");
+  assert.ok(await details.getByText("Minimized URL evidence", { exact: true }).isVisible(), "URL minimization should be disclosed in the evidence report");
   assert.ok(await details.getByText("Not technically inspectable", { exact: false }).count() > 0, "unsupported techniques should be labeled as not technically inspectable");
   assert.ok(await details.getByText("Heuristic indicators (not confirmed evidence)", { exact: true }).isVisible(), "heuristics should be separated from confirmed evidence");
   assert.ok(await details.getByText("Audit lifecycle evidence", { exact: true }).isVisible(), "lifecycle evidence should be visible in the report");

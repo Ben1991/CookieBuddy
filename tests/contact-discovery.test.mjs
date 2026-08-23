@@ -21,6 +21,15 @@ test("classifies a page URL as privacy policy or imprint", () => {
   assert.deepEqual(classifyPageSource("https://example.de/impressum", "Impressum"), { sourceType: "imprint", source: "Imprint" });
 });
 
+test("minimizes contact source URLs without changing source classification", () => {
+  const link = getContactLinkMetadata("https://example.de/datenschutz?email=alice%40example.com#dpo", "Datenschutz", true);
+  const contacts = extractContactsFromText("Datenschutzbeauftragter: dpo@example.com", "https://example.de/impressum?token=secret#contact", "Imprint", "imprint");
+
+  assert.equal(link.href, "https://example.de/datenschutz");
+  assert.equal(contacts[0].sourceUrl, "https://example.de/impressum");
+  assert.doesNotMatch(JSON.stringify({ link, contacts }), /alice|secret|#dpo|#contact/);
+});
+
 test("classifies the DPO email from its local context instead of the whole page", () => {
   const contacts = extractContactsFromText(
     "Allgemeine Anfragen: hello@example.com. Datenschutzbeauftragter: dpo@example.com.",
