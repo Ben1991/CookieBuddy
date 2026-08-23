@@ -6,7 +6,7 @@ const ICON_STATUS_STORAGE_KEY = "cookiebuddyIconStatus";
 const AUDIT_STATE_STORAGE_KEY = "cookiebuddyAuditLifecycle";
 const activeAuditTabs = new Map();
 const auditExpiryTimers = new Map();
-const WORKER_SESSION_ID = `worker-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+const WORKER_SESSION_ID = `worker-${Date.now()}`;
 
 /**
  * Helper to get traffic data from session storage
