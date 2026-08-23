@@ -198,6 +198,7 @@ async function runDeltaCheck() {
       afterCookies: afterDeny.cookies,
       beforeCookieCoverage: before.cookieCoverage,
       afterCookieCoverage: afterDeny.cookieCoverage,
+      afterStorage: afterDeny.analysis?.storage || null,
       beforeTraffic: before.thirdPartyTraffic,
       afterTraffic: afterDeny.thirdPartyTraffic,
       afterStorageEntries: afterDeny.analysis?.storage?.items || [],
@@ -564,6 +565,8 @@ function renderCookies() {
         <span>${escapeHtml(t("storageCount", [state.analysis.storage?.localStorageKeys?.length || 0, state.analysis.storage?.sessionStorageKeys?.length || 0]))}</span>
       </div>
       <p class="muted">${escapeHtml(t("storageOverview", [state.analysis.storage?.localStorageKeys?.length || 0, state.analysis.storage?.sessionStorageKeys?.length || 0, state.analysis.storage?.indexedDbNames?.length || 0]))}</p>
+      <p class="muted">${escapeHtml(t("storageExtendedOverview", [state.analysis.storage?.indexedDb?.databases?.length || state.analysis.storage?.indexedDbNames?.length || 0, state.analysis.storage?.cacheStorage?.caches?.length || 0, state.analysis.storage?.serviceWorkers?.registrations?.length || 0]))}</p>
+      <p class="muted">${escapeHtml(t("storageInspectionStatus", [storageStatusLabel(state.analysis.storage?.coverage?.indexedDB), storageStatusLabel(state.analysis.storage?.coverage?.cacheStorage), storageStatusLabel(state.analysis.storage?.coverage?.serviceWorkers)]))}</p>
     </div>
     <div class="storage-columns">
       <div>
@@ -595,7 +598,28 @@ function renderCookies() {
           : `<p class="muted">${escapeHtml(t("noLocalStorageVisible"))}</p>`}
       </div>
     </div>
+    ${renderExtendedStorageMetadata(storage)}
   `;
+}
+
+function storageStatusLabel(status) {
+  return status === "observed" ? t("storageStatusObserved") : status === "not-inspected" ? t("storageStatusNotInspected") : t("storageStatusNotRecorded");
+}
+
+function renderExtendedStorageMetadata(storage = {}) {
+  const indexedDb = storage.indexedDb?.databases || (storage.indexedDbNames || []).map((name) => ({ name }));
+  const cacheStorage = storage.cacheStorage || { status: storage.coverage?.cacheStorage, caches: [] };
+  const serviceWorkers = storage.serviceWorkers || { status: storage.coverage?.serviceWorkers, registrations: [] };
+  const indexedContent = indexedDb.length
+    ? indexedDb.map((database) => `<div class="list-row"><strong>${escapeHtml(database.name)}</strong><span>${database.version ? `v${escapeHtml(database.version)}` : escapeHtml(t("indexedDbHeading"))}</span></div>`).join("")
+    : `<p class="muted">${escapeHtml(storageStatusLabel(storage.coverage?.indexedDB) === t("storageStatusNotInspected") ? t("storageStatusNotInspected") : t("noIndexedDbDatabases"))}</p>`;
+  const cacheContent = cacheStorage.caches?.length
+    ? cacheStorage.caches.map((cache) => `<div class="list-row"><div><strong>${escapeHtml(cache.name)}</strong>${cache.keys?.length ? `<ul class="storage-key-list">${cache.keys.slice(0, 8).map((key) => `<li>${escapeHtml(key.method || "GET")} ${escapeHtml(key.url)}</li>`).join("")}</ul>` : ""}</div><span>${escapeHtml(t("cacheKeyCount", cache.keys?.length || 0))}</span></div>`).join("")
+    : `<p class="muted">${escapeHtml(cacheStorage.status === "not-inspected" ? t("storageStatusNotInspected") : t("noCacheStorageCaches"))}</p>`;
+  const workerContent = serviceWorkers.registrations?.length
+    ? serviceWorkers.registrations.map((registration) => `<div class="list-row"><div><strong>${escapeHtml(registration.scope || t("serviceWorkersHeading"))}</strong><span>${escapeHtml(registration.scriptUrl || registration.state || "unknown")}</span></div><span>${escapeHtml(t("serviceWorkerScopeLabel"))}</span></div>`).join("")
+    : `<p class="muted">${escapeHtml(serviceWorkers.status === "not-inspected" ? t("storageStatusNotInspected") : t("noServiceWorkerRegistrations"))}</p>`;
+  return `<section class="storage-metadata"><h3>${escapeHtml(t("browserStorageMetadataHeading"))}</h3><div class="storage-metadata-grid"><div><h4>${escapeHtml(t("indexedDbHeading"))}</h4>${indexedContent}</div><div><h4>${escapeHtml(t("cacheStorageHeading"))}</h4>${cacheContent}</div><div><h4>${escapeHtml(t("serviceWorkersHeading"))}</h4>${workerContent}</div></div></section>`;
 }
 
 function renderContacts() {
@@ -709,6 +733,7 @@ function renderAuditVerdict(delta, verdict) {
     "consent-surface-inaccessible": t("auditCoverageConsentInaccessible"),
     "audit-integrity": t("auditCoverageIntegrity"),
     "cookie-coverage": t("auditCoverageCookies"),
+    "storage-coverage": t("auditCoverageStorage"),
     "before-after-observation": t("auditCoverageObservation"),
     "page-analysis": t("auditCoverageAnalysis"),
     "audit-lifecycle": t("auditCoverageLifecycle"),
@@ -804,11 +829,15 @@ function renderCoverageSummary(coverage) {
     observed: t("coverageStateObserved"),
     "not-observed": t("coverageStateNotObserved"),
     "not-detected": t("coverageStateNotDetected"),
+    "not-inspected": t("coverageStateNotInspected"),
     "not-technically-inspectable": t("coverageStateNotInspectable")
   };
   const techniqueLabels = {
     cookies: t("coverageTechniqueCookies"),
     "browser-storage": t("coverageTechniqueStorage"),
+    indexeddb: t("coverageTechniqueIndexedDb"),
+    "cache-storage": t("coverageTechniqueCacheStorage"),
+    "service-workers": t("coverageTechniqueServiceWorkers"),
     "network-requests": t("coverageTechniqueTraffic"),
     "consent-surface": t("coverageTechniqueConsent"),
     "audit-integrity": t("coverageTechniqueIntegrity"),

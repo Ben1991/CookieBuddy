@@ -118,6 +118,8 @@ test("popup overview includes the storage tile from the merged delta UX", async 
   const overviewHtml = document.getElement("overviewGrid").innerHTML;
   assert.match(overviewHtml, /localStorage/i);
   assert.match(overviewHtml, /storage/i);
+  assert.match(document.getElement("cookieResult").innerHTML, /Cache Storage/);
+  assert.match(document.getElement("cookieResult").innerHTML, /Service workers/);
 });
 
 test("popup delta view separates non-essential findings from allowed infrastructure", async () => {
@@ -465,6 +467,10 @@ function setupChromeMockAnalysis() {
       localStorageKeys: ["consent_state"],
       sessionStorageKeys: ["session_prefs"],
       indexedDbNames: [],
+      indexedDb: { status: "observed", databases: [] },
+      cacheStorage: { status: "observed", caches: [{ name: "app-shell", status: "observed", keys: [{ url: "https://example.com/app.js", method: "GET", queryKeys: [] }] }] },
+      serviceWorkers: { status: "observed", registrations: [{ scope: "https://example.com/", scriptUrl: "https://example.com/sw.js", state: "activated" }] },
+      coverage: { indexedDB: "observed", cacheStorage: "observed", serviceWorkers: "observed" },
       items: [
         {
           key: "consent_state",

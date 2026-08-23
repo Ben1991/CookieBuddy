@@ -48,6 +48,10 @@ test("details page opens a mail draft from the delta report", async () => {
   assert.match(element(document, "detailsOutput").innerHTML, /Heuristic indicators/);
   assert.match(element(document, "detailsOutput").innerHTML, /Audit lifecycle evidence/);
   assert.match(element(document, "detailsOutput").innerHTML, /Navigation interrupted the audit/);
+  assert.match(element(document, "detailsOutput").innerHTML, /Extended browser storage metadata/);
+  assert.match(element(document, "detailsOutput").innerHTML, /app-shell/);
+  assert.match(element(document, "detailsOutput").innerHTML, /consent-db/);
+  assert.match(element(document, "detailsOutput").innerHTML, /Service worker registrations/);
 
   element(document, "sendDeltaMailActions").querySelector("#downloadDeltaHtmlButton").click();
   await flush();
@@ -273,6 +277,13 @@ function buildDeltaFixture() {
       { name: "Google Analytics", source: "analytics.example.net", listedInBanner: false, status: "active" },
       { name: "Essential services", source: "Banner text", listedInBanner: true, status: "allowed-essential" }
     ],
+    browserStorage: {
+      after: {
+        indexedDB: { status: "observed", names: ["consent-db"] },
+        cacheStorage: { status: "observed", caches: [{ name: "app-shell", status: "observed", keys: [{ url: "https://example.com/app.js", method: "GET", queryKeys: [] }] }] },
+        serviceWorkers: { status: "observed", registrations: [{ scope: "https://example.com/", scriptUrl: "https://example.com/sw.js", state: "activated" }] }
+      }
+    },
     auditLifecycle: {
       status: "incomplete",
       reason: "spa-navigation-during-audit",
