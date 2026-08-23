@@ -50,7 +50,7 @@ The source of truth for product acceptance behavior is [`features/cookiebuddy.fe
 | UC-06 | Detect supported CMP APIs in the page main world and inspect IAB TCF / Google Consent Mode where available. |
 | UC-07 | Flag consent signals that contradict the rejected UI state as high-confidence technical findings. |
 | UC-08 | Preserve concurrent network evidence without request-loss race conditions. |
-| UC-09 | Capture relevant first-party and observable third-party cookie metadata without dumping unrelated cookies or values. |
+| UC-09 | Capture relevant first-party, subdomain, and observed third-party cookie metadata without dumping unrelated cookies or values; unavailable hosts remain an explicit coverage limitation. |
 | UC-10 | Include supported localStorage, sessionStorage, IndexedDB, Cache Storage, and service-worker metadata. |
 | UC-11 | Classify endpoint relationships with Public Suffix List compatible registrable-domain logic. |
 | UC-12 | Classify necessity conservatively with rationale and confidence; names/CDNs alone cannot prove necessity. |

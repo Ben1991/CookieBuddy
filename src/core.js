@@ -1,5 +1,6 @@
 import { minimizeUrlEvidence } from "./url-evidence.mjs";
 import { assessAuditIntegrity } from "./audit-integrity.mjs";
+import { mergeCookieCoverage } from "./cookie-evidence.mjs";
 
 export function capitalize(value) {
   return value.charAt(0).toUpperCase() + value.slice(1);
@@ -166,6 +167,8 @@ export function buildDelta({
   beforeTraffic,
   afterTraffic,
   afterStorageEntries = [],
+  beforeCookieCoverage = null,
+  afterCookieCoverage = null,
   banner = null,
   bannerCategories = {},
   denyClicked,
@@ -193,6 +196,7 @@ export function buildDelta({
   const essentialStorageEntries = remainingStorageEntries.filter(isEssentialStorageEntry);
   const serviceAudit = buildServiceAudit({ bannerCategories, beforeCookies, afterCookies, beforeTraffic: observedBeforeTraffic, afterTraffic: observedAfterTraffic, afterStorageEntries: remainingStorageEntries });
   const integrity = assessAuditIntegrity({ beforeCookies, beforeStorageEntries: beforeAnalysis?.storage?.items || [], beforeAnalysis, blockedRequests });
+  const cookieCoverage = mergeCookieCoverage(beforeCookieCoverage, afterCookieCoverage);
   const suspiciousCookies = remainingCookies.filter((cookie) => !isEssentialCookie(cookie));
   const hasDelta = suspiciousCookies.length > 0 || newCookies.length > 0 || thirdPartyHosts.length > 0 || nonEssentialStorageEntries.length > 0 || serviceAudit.some((service) => service.status === "active") || (!denyClicked && !manualConsentConfirmed);
 
@@ -215,6 +219,7 @@ export function buildDelta({
     essentialThirdPartyHosts,
     banner,
     integrity,
+    cookieCoverage,
     inaccessibleConsentSurfaces: inaccessibleConsentSurfaces.slice(0, 12),
     afterStorageEntries: remainingStorageEntries,
     remainingStorageEntries,
@@ -281,14 +286,16 @@ export function createCoverageSummary({ delta = {}, analysisComplete = true, heu
   const hasStorageObservation = Number.isFinite(delta.afterDenyCounts?.storageEntries);
   const inaccessibleConsentSurfaces = Array.isArray(delta.inaccessibleConsentSurfaces) ? delta.inaccessibleConsentSurfaces : [];
   const hasConsentObservation = Boolean(delta.banner && delta.banner.confidence !== "none") && inaccessibleConsentSurfaces.length === 0;
+  const hasCookieCoverage = delta.cookieCoverage?.complete === true;
   return {
-    auditComplete: Boolean(analysisComplete && delta.beforeCounts && delta.afterDenyCounts && inaccessibleConsentSurfaces.length === 0 && (!delta.integrity || delta.integrity.uncertain === false)),
+    auditComplete: Boolean(analysisComplete && delta.beforeCounts && delta.afterDenyCounts && inaccessibleConsentSurfaces.length === 0 && (!delta.integrity || delta.integrity.uncertain === false) && hasCookieCoverage),
     observed: [
       { key: "cookies", state: hasCookieObservation ? "observed" : "not-observed", confidence: hasCookieObservation ? "confirmed" : "limited", evidenceCount: delta.afterDenyCounts?.cookies || 0 },
       { key: "browser-storage", state: hasStorageObservation ? "observed" : "not-observed", confidence: hasStorageObservation ? "confirmed" : "limited", evidenceCount: delta.afterDenyCounts?.storageEntries || 0 },
       { key: "network-requests", state: hasTrafficObservation ? "observed" : "not-observed", confidence: hasTrafficObservation ? "confirmed" : "limited", evidenceCount: delta.afterDenyCounts?.thirdPartyHosts || 0 },
       { key: "consent-surface", state: inaccessibleConsentSurfaces.length ? "not-technically-inspectable" : hasConsentObservation ? "observed" : "not-observed", confidence: inaccessibleConsentSurfaces.length ? "high" : hasConsentObservation ? (delta.banner.confidence || "confirmed") : "limited", evidenceCount: delta.banner?.evidence?.length || 0 },
-      { key: "audit-integrity", state: delta.integrity?.uncertain === false ? "observed" : "not-observed", confidence: delta.integrity?.uncertain === false ? "confirmed" : "limited", evidenceCount: delta.integrity?.evidence?.length || 0 }
+      { key: "audit-integrity", state: delta.integrity?.uncertain === false ? "observed" : "not-observed", confidence: delta.integrity?.uncertain === false ? "confirmed" : "limited", evidenceCount: delta.integrity?.evidence?.length || 0 },
+      { key: "cookie-coverage", state: delta.cookieCoverage?.complete ? "observed" : "not-observed", confidence: delta.cookieCoverage?.complete ? "confirmed" : "limited", evidenceCount: delta.cookieCoverage?.requestedHosts?.length || 0 }
     ],
     limitations: COVERAGE_LIMITATIONS.map((limitation) => ({ ...limitation })),
     heuristicSignals: heuristicSignals || deriveHeuristicSignals(delta)
@@ -308,6 +315,7 @@ export function deriveAuditVerdict(delta, { analysisComplete = true } = {}) {
   if (!delta?.banner || delta.banner.confidence === "none") missingCoverage.push("consent-surface");
   if (delta?.inaccessibleConsentSurfaces?.length) missingCoverage.push("consent-surface-inaccessible");
   if (!delta?.integrity || delta.integrity.uncertain) missingCoverage.push("audit-integrity");
+  if (!delta?.cookieCoverage || !delta.cookieCoverage.complete) missingCoverage.push("cookie-coverage");
   if (!delta?.beforeCounts || !delta?.afterDenyCounts) missingCoverage.push("before-after-observation");
   if (!analysisComplete) missingCoverage.push("page-analysis");
   if (delta?.auditLifecycle?.status && delta.auditLifecycle.status !== "completed") missingCoverage.push("audit-lifecycle");
@@ -395,6 +403,14 @@ export function formatDeltaReport(delta, url = "") {
     report += "    - none recorded\n";
   }
   report += "\n";
+
+  if (delta.cookieCoverage) {
+    report += "COOKIE COVERAGE:\n";
+    report += `  Requested hosts: ${(delta.cookieCoverage.requestedHosts || []).join(", ") || "none recorded"}\n`;
+    report += `  Observed third-party hosts: ${(delta.cookieCoverage.thirdPartyHosts || []).join(", ") || "none recorded"}\n`;
+    report += `  Unavailable hosts: ${(delta.cookieCoverage.unavailableHosts || []).join(", ") || "none"}\n`;
+    report += `  Coverage complete: ${delta.cookieCoverage.complete ? "yes" : "no"}\n\n`;
+  }
 
   if (delta.inaccessibleConsentSurfaces?.length) {
     report += "INACCESSIBLE CONSENT SURFACES:\n";

@@ -82,6 +82,8 @@ Feature: One-click consent and tracking audit
     Given observed services use cookies during the tested flow
     When CookieBuddy captures cookie state before and after rejection
     Then relevant first-party, subdomain, and observable third-party cookie metadata is included
+    And cookie queries are limited to the visited host and hosts observed in the tested flow
+    And an unobservable third-party cookie host is recorded as incomplete coverage
     And unrelated cookies from other browsing contexts are excluded
     And cookie values are not stored or exported by default
 

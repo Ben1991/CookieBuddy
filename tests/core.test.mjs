@@ -37,12 +37,13 @@ test("keeps observable evidence, scope limitations, and heuristic signals separa
       banner: { confidence: "high", evidence: [{ source: "DOM marker" }] },
       beforeCounts: { cookies: 2, thirdPartyHosts: 1 },
       afterDenyCounts: { cookies: 1, thirdPartyHosts: 1, storageEntries: 0 },
+      cookieCoverage: { complete: true, requestedHosts: ["example.test"], unavailableHosts: [], thirdPartyHosts: [] },
       thirdPartyHosts: ["fpjs.example.net"]
     }
   });
 
   assert.equal(coverage.auditComplete, true);
-  assert.deepEqual(coverage.observed.map((item) => item.state), ["observed", "observed", "observed", "observed", "not-observed"]);
+  assert.deepEqual(coverage.observed.map((item) => item.state), ["observed", "observed", "observed", "observed", "not-observed", "observed"]);
   assert.equal(coverage.limitations.find((item) => item.key === "server-side-tagging").state, "not-technically-inspectable");
   assert.equal(coverage.limitations.find((item) => item.key === "first-party-proxy").state, "not-detected");
   assert.equal(coverage.limitations.find((item) => item.key === "opaque-client-signal").state, "not-observed");
@@ -335,7 +336,8 @@ test("derives a positive verdict only when rejection and before/after coverage a
     newCookies: [],
     nonEssentialStorageEntries: [],
     serviceAudit: [],
-    integrity: { status: "clean", uncertain: false, evidence: [] }
+    integrity: { status: "clean", uncertain: false, evidence: [] },
+    cookieCoverage: { complete: true, requestedHosts: ["example.test"], unavailableHosts: [], thirdPartyHosts: [] }
   };
 
   const positive = deriveAuditVerdict(base);
@@ -344,5 +346,6 @@ test("derives a positive verdict only when rejection and before/after coverage a
   assert.equal(deriveAuditVerdict({ ...base, denyAction: { clicked: false } }).status, "incomplete");
   assert.equal(deriveAuditVerdict({ ...base, denyAction: { clicked: true, verified: false } }).status, "incomplete");
   assert.equal(deriveAuditVerdict({ ...base, integrity: { status: "contaminated", uncertain: true } }).status, "incomplete");
+  assert.equal(deriveAuditVerdict({ ...base, cookieCoverage: { complete: false, requestedHosts: ["tracker.example"], unavailableHosts: ["tracker.example"] } }).status, "incomplete");
   assert.equal(deriveAuditVerdict({ ...base, riskLevel: "high", thirdPartyHosts: ["tracker.example"] }).status, "negative");
 });

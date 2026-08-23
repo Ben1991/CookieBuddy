@@ -322,6 +322,7 @@ function renderCoverage(coverage) {
     "browser-storage": t("coverageTechniqueStorage"),
     "network-requests": t("coverageTechniqueTraffic"),
     "consent-surface": t("coverageTechniqueConsent"),
+    "cookie-coverage": t("coverageTechniqueCookieCoverage"),
     fingerprinting: t("coverageTechniqueFingerprinting"),
     "server-side-tagging": t("coverageTechniqueServerSide"),
     "backend-enrichment": t("coverageTechniqueBackend"),
