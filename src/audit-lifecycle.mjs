@@ -54,6 +54,7 @@ export function createAuditLifecycleState({
     updatedAt: startedAt,
     maxDurationMs,
     revision: 0,
+    controlledReload: false,
     events: [createEvent("started", { phase: "prepare", url: tabUrl }, startedAt)]
   };
 }
@@ -79,6 +80,19 @@ export function transitionAuditLifecycle(state, type, payload = {}, at = new Dat
     case "step":
     case "observation-progress":
       if (payload.phase) next.phase = safeText(payload.phase, 48);
+      break;
+    case "controlled-reload-start":
+      next.phase = safeText(payload.phase || "reload", 48);
+      next.controlledReload = true;
+      next.reason = "";
+      break;
+    case "controlled-reload-loading":
+      next.phase = safeText(payload.phase || next.phase || "reload", 48);
+      next.controlledReload = true;
+      break;
+    case "controlled-reload-complete":
+      next.phase = safeText(payload.phase || next.phase || "reload", 48);
+      next.controlledReload = false;
       break;
     case "tab-switched":
       break;
@@ -134,6 +148,7 @@ export function getAuditLifecycleEvidence(state) {
     startedAt: state.startedAt,
     updatedAt: state.updatedAt,
     revision: state.revision,
+    controlledReload: Boolean(state.controlledReload),
     events: (state.events || []).slice(-40)
   };
 }

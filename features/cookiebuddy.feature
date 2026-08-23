@@ -42,7 +42,10 @@ Feature: One-click consent and tracking audit
     And reloads the tested page in a controlled way
     And observes a defined post-rejection window
     Then CookieBuddy compares consent state, cookies, storage, and network evidence before and after rejection
+    And separates initial-load evidence from post-rejection reload evidence
+    And records both controlled reload boundaries and the requested and observed window duration
     And records every completed and incomplete audit step
+    And an incomplete reload or observation window cannot produce a green result
 
   @UC-05 @issue-56 @p1
   Scenario: Verify that reject-all actually changed consent

@@ -193,14 +193,26 @@ chrome.tabs.onActivated.addListener(async ({ tabId }) => {
 
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
   if (changeInfo.status === "loading") {
-    await transitionStoredAuditState(tabId, "navigation", {
+    const state = await getStoredAuditState({ tabId });
+    const eventType = state?.controlledReload ? "controlled-reload-loading" : "navigation";
+    await transitionStoredAuditState(tabId, eventType, {
+      phase: state?.phase || "reload",
       kind: changeInfo.url ? "redirect" : "reload",
       url: changeInfo.url,
       reason: changeInfo.url ? "redirect-during-audit" : "reload-during-audit"
     });
-    await clearTabTraffic(tabId);
+    // The popup clears traffic immediately before a controlled reload. Avoid
+    // another asynchronous clear here, which could race with initial-load
+    // requests arriving just after the loading event.
+    if (!state?.controlledReload) await clearTabTraffic(tabId);
     await clearTabIconStatus(tabId);
     await applyIconStatus("neutral");
+  }
+  if (changeInfo.status === "complete") {
+    const state = await getStoredAuditState({ tabId });
+    if (state?.controlledReload) {
+      await transitionStoredAuditState(tabId, "controlled-reload-complete", { phase: state.phase || "reload" });
+    }
   }
 });
 
@@ -260,6 +272,24 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       const next = state?.status === "running" ? transitionAuditLifecycle(state, eventType, message) : state;
       await setStoredAuditState(next);
       sendResponse({ ok: Boolean(next), state: getAuditLifecycleEvidence(next) });
+    })();
+    return true;
+  }
+
+  if (message.type === "CONTROLLED_RELOAD") {
+    (async () => {
+      const tabId = Number(message.tabId);
+      const state = await getStoredAuditState({ tabId });
+      if (!state || state.status !== "running") {
+        sendResponse({ ok: false, error: "audit is not running" });
+        return;
+      }
+      const next = transitionAuditLifecycle(state, "controlled-reload-start", {
+        phase: message.phase || "reload",
+        url: message.url
+      });
+      await setStoredAuditState(next);
+      sendResponse({ ok: true, state: getAuditLifecycleEvidence(next) });
     })();
     return true;
   }

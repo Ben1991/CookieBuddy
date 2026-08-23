@@ -109,7 +109,7 @@ function chromeFixtureScript(mode = "negative") {
         runtime: { getURL: (path) => path, onMessage: { addListener: () => {} }, sendMessage: async () => ({ traffic: [] }) },
         i18n: { getUILanguage: () => "en-US" },
         storage: { local: { get: async (key) => typeof key === "string" ? { [key]: storage[key] } : storage, set: async (values) => Object.assign(storage, values) } },
-        tabs: { query: async () => [{ id: 1, url: analysis.url }], sendMessage: async (_id, message) => message.type === "TRY_DENY_ALL" ? { found: true, clicked: true, verified: true, label: "Reject all", verification: { status: "verified", evidence: ["banner-state-changed"] } } : analysis, create: async () => {} },
+        tabs: (() => { const listeners = new Set(); return { query: async () => [{ id: 1, url: analysis.url }], onUpdated: { addListener: (listener) => listeners.add(listener), removeListener: (listener) => listeners.delete(listener) }, reload: async (tabId) => { for (const listener of listeners) await listener(tabId, { status: "loading" }, { id: tabId }); for (const listener of listeners) await listener(tabId, { status: "complete" }, { id: tabId }); }, sendMessage: async (_id, message) => message.type === "TRY_DENY_ALL" ? { found: true, clicked: true, verified: true, label: "Reject all", verification: { status: "verified", evidence: ["banner-state-changed"] } } : analysis, create: async () => {} }; })(),
         cookies: { getAll: async () => cookies },
         scripting: { executeScript: async () => {} }
       };

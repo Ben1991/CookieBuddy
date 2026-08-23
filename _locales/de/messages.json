@@ -86,6 +86,10 @@
   "auditComplaintReviewNote": { "message": "Prüfe den sachlichen Entwurf vor dem Versand. CookieBuddy stellt keinen Rechtsverstoß fest." },
   "auditDurationExceeded": { "message": "Der Audit hat sein lokales Zeitlimit überschritten und wurde als unvollständig markiert." },
   "auditObservationProgress": { "message": "Spät ladende Tracker werden bis zu $1 Sekunden beobachtet." },
+  "auditReloadBaselineProgress": { "message": "Die Seite wird für eine saubere Baseline mit Requests vom initialen Laden neu geladen." },
+  "auditReloadAfterRejectProgress": { "message": "Die Seite wird nach der Ablehnung neu geladen, um den Zustand danach zu prüfen." },
+  "auditReloadUnavailable": { "message": "Ein kontrollierter Seiten-Reload konnte nicht beobachtet werden; der Audit ist unvollständig." },
+  "auditReloadTimeout": { "message": "Der kontrollierte Seiten-Reload wurde nicht innerhalb des Audit-Zeitbudgets abgeschlossen." },
   "auditReasonThirdParty": { "message": "Drittanbieter-Traffic blieb nach dem Opt-out bestehen." },
   "auditReasonCookies": { "message": "Nicht-essenzielle Cookies blieben bestehen oder wurden nach dem Opt-out gesetzt." },
   "auditReasonStorage": { "message": "Nicht-essenzielle Browserdaten blieben nach dem Opt-out gespeichert." },
@@ -132,9 +136,14 @@
   "auditLifecycleTabSwitch": { "message": "Während des Audits wurde der Tab gewechselt" },
   "auditLifecyclePopupReopened": { "message": "Das Popup wurde während des laufenden Audits erneut geöffnet" },
   "auditLifecycleWorkerRestarted": { "message": "Der Service Worker wurde während des Audits neu gestartet" },
+  "auditLifecycleControlledReloadStart": { "message": "Kontrollierter Reload gestartet" },
+  "auditLifecycleControlledReloadLoading": { "message": "Kontrollierter Reload lädt" },
+  "auditLifecycleControlledReloadComplete": { "message": "Kontrollierter Reload abgeschlossen" },
   "auditLifecycleTimeout": { "message": "Das Beobachtungsfenster des Audits ist abgelaufen" },
   "auditLifecycleTabClosed": { "message": "Der geprüfte Tab wurde geschlossen" },
   "auditLifecycleNoInterruptions": { "message": "Es wurde keine Lifecycle-Unterbrechung erfasst." },
+  "auditObservationWindowEvidence": { "message": "Beobachtungsfenster nach der Ablehnung: $1 ms angefordert, $2 ms beobachtet." },
+  "auditControlledReloadEvidence": { "message": "$1 kontrollierte Reloads wurden abgeschlossen und erfasst." },
   "languageLabel": {
     "message": "Sprache"
   },
@@ -403,6 +412,9 @@
   },
   "snapshotCurrentState": {
     "message": "Aktueller Zustand"
+  },
+  "snapshotBaselineAfterReload": {
+    "message": "Baseline nach kontrolliertem Reload"
   },
   "snapshotAfterDenyAll": {
     "message": "Nach Alle ablehnen"

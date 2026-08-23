@@ -130,10 +130,7 @@ test("popup delta view keeps generic infrastructure visible for review", async (
   setupDomGlobals({ document, window });
   const originalSetTimeout = globalThis.setTimeout;
   const originalClearTimeout = globalThis.clearTimeout;
-  globalThis.setTimeout = (callback) => {
-    callback();
-    return 0;
-  };
+  globalThis.setTimeout = (callback, delay) => delay > 100 ? originalSetTimeout(callback, 0) : (callback(), 0);
   globalThis.clearTimeout = () => {};
 
   try {
@@ -171,6 +168,7 @@ test("popup delta view keeps generic infrastructure visible for review", async (
     assert.match(deltaHtml, /non-essential cookies still present/i);
     assert.match(deltaHtml, /non-essential third-party traffic after opt-out/i);
     assert.match(deltaHtml, /static\.cloudflare\.com/i);
+    assert.equal(globalThis.chrome.tabs.reloadCount, 2, "the controlled audit should reload for baseline and post-rejection evidence");
     assert.doesNotMatch(deltaHtml, /data-complaint-action="true"/, "incomplete findings must not invite a complaint workflow");
     assert.doesNotMatch(deltaHtml, /data-authority-complaint-action="true"/, "incomplete findings must not invite an authority complaint workflow");
     assert.doesNotMatch(deltaHtml, /focus=complaint/, "incomplete findings must open the evidence view without complaint focus");
@@ -402,6 +400,8 @@ function setupDomGlobals({ document, window }) {
 
 function setupChromeMock(locale) {
   const analysis = setupChromeMockAnalysis();
+  const tabUpdateListeners = new Set();
+  let reloadCount = 0;
 
   globalThis.chrome = {
     i18n: {
@@ -425,6 +425,16 @@ function setupChromeMock(locale) {
     tabs: {
       query: async () => [{ id: 1, url: analysis.url, title: analysis.title }],
       create: async () => {},
+      onUpdated: {
+        addListener: (listener) => tabUpdateListeners.add(listener),
+        removeListener: (listener) => tabUpdateListeners.delete(listener)
+      },
+      reload: async (tabId) => {
+        reloadCount += 1;
+        globalThis.chrome.tabs.reloadCount = reloadCount;
+        for (const listener of tabUpdateListeners) await listener(tabId, { status: "loading" }, { id: tabId });
+        for (const listener of tabUpdateListeners) await listener(tabId, { status: "complete" }, { id: tabId });
+      },
       sendMessage: async (_, message) => {
         globalThis.chrome.tabs.lastMessage = message;
         if (message.type === "ANALYZE_PAGE") return analysis;
