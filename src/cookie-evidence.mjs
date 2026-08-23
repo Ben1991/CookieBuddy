@@ -1,3 +1,5 @@
+import "./domain-rules.js";
+
 export function getObservedCookieHosts(pageUrl, traffic = [], resources = []) {
   const hosts = new Set();
   try {
@@ -49,7 +51,7 @@ export function isThirdPartyHost(host, pageHost) {
   const normalizedHost = normalizeHost(host);
   const normalizedPageHost = normalizeHost(pageHost);
   if (!normalizedHost || !normalizedPageHost) return false;
-  return registrableDomain(normalizedHost) !== registrableDomain(normalizedPageHost);
+  return globalThis.CookieBuddyDomainRules?.classifyEndpointRelationship({ host: normalizedHost, pageHost: normalizedPageHost }).relationship === "third-party";
 }
 
 function hostFromUrl(value) {
@@ -65,5 +67,5 @@ function normalizeHost(value) {
 }
 
 function registrableDomain(host) {
-  return normalizeHost(host).split(".").slice(-2).join(".");
+  return globalThis.CookieBuddyDomainRules?.registrableDomain(host) || "";
 }

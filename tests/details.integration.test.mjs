@@ -52,6 +52,7 @@ test("details page opens a mail draft from the delta report", async () => {
   assert.match(element(document, "detailsOutput").innerHTML, /app-shell/);
   assert.match(element(document, "detailsOutput").innerHTML, /consent-db/);
   assert.match(element(document, "detailsOutput").innerHTML, /Service worker registrations/);
+  assert.match(element(document, "detailsOutput").innerHTML, /Possible first-party-cloaked trackers/);
 
   element(document, "sendDeltaMailActions").querySelector("#downloadDeltaHtmlButton").click();
   await flush();
@@ -264,6 +265,8 @@ function buildDeltaFixture() {
     remainingCookies: [{ name: "_ga", domain: ".example.com", service: "Google Analytics" }],
     newCookies: [{ name: "_hjSessionUser_123", domain: ".example.com", service: "Hotjar" }],
     thirdPartyHosts: ["tracker.example.net"],
+    possibleCloakedTrackers: [{ host: "metrics.example.com", path: "/collect", cnameRule: { id: "analytics-host-label" } }],
+    cnameCoverage: { status: "unknown", reason: "browser-dns-unavailable", beforeCount: 0, afterCount: 1 },
     remainingStorageEntries: [
       { key: "consent_state", scope: "localStorage", inBanner: true },
       { key: "session_prefs", scope: "sessionStorage", inBanner: false }

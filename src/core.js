@@ -1,6 +1,7 @@
 import { minimizeUrlEvidence } from "./url-evidence.mjs";
 import { assessAuditIntegrity } from "./audit-integrity.mjs";
 import { mergeCookieCoverage } from "./cookie-evidence.mjs";
+import "./domain-rules.js";
 import "./service-rules.js";
 
 export function capitalize(value) {
@@ -8,8 +9,7 @@ export function capitalize(value) {
 }
 
 export function getBaseDomain(hostname) {
-  const parts = hostname.split(".").filter(Boolean);
-  return parts.slice(-2).join(".");
+  return globalThis.CookieBuddyDomainRules?.registrableDomain(hostname) || "";
 }
 
 export function cookieKey(cookie) {
@@ -54,12 +54,17 @@ export function formatCookie(cookie, unknownServiceLabel = "Unknown service") {
 }
 
 export function normalizeTraffic(traffic, firstPartyHost) {
-  const firstPartyBase = getBaseDomain(firstPartyHost);
   return traffic
     .map((item) => {
       const minimized = minimizeUrlEvidence(item.url);
       if (!minimized?.url) return null;
       try {
+        const relationship = globalThis.CookieBuddyDomainRules?.classifyEndpointRelationship({
+          host: minimized.host,
+          pageHost: firstPartyHost,
+          path: minimized.path
+        }) || { relationship: "unknown", cnameStatus: "unknown", cnameRule: null };
+        if (!["third-party", "possible-cloaked-tracker"].includes(relationship.relationship)) return null;
         return {
           host: minimized.host || minimized.protocol,
           url: minimized.url,
@@ -69,14 +74,16 @@ export function normalizeTraffic(traffic, firstPartyHost) {
           type: item.type,
           blocked: Boolean(item.blocked),
           error: item.blocked ? String(item.error || "blocked").slice(0, 100) : "",
-          thirdParty: getBaseDomain(minimized.host) !== firstPartyBase
+          thirdParty: relationship.relationship === "third-party",
+          relationship: relationship.relationship,
+          cnameStatus: relationship.cnameStatus,
+          cnameRule: relationship.cnameRule
         };
       } catch {
         return null;
       }
     })
-    .filter(Boolean)
-    .filter((item) => item.thirdParty);
+    .filter(Boolean);
 }
 
 export function buildServiceAudit({
@@ -250,7 +257,10 @@ export function buildDelta({
   const essentialCookies = afterCookies.filter((cookie) => isEssentialCookie(cookie));
   const observedBeforeTraffic = beforeTraffic.filter((item) => !item.blocked);
   const observedAfterTraffic = afterTraffic.filter((item) => !item.blocked);
-  const allThirdPartyHosts = Array.from(new Set(observedAfterTraffic.map((item) => item.host))).sort();
+  const isConfirmedThirdParty = (item) => item.relationship ? item.relationship === "third-party" : item.thirdParty !== false;
+  const possibleCloakedBefore = observedBeforeTraffic.filter((item) => item.relationship === "possible-cloaked-tracker");
+  const possibleCloakedAfter = observedAfterTraffic.filter((item) => item.relationship === "possible-cloaked-tracker");
+  const allThirdPartyHosts = Array.from(new Set(observedAfterTraffic.filter(isConfirmedThirdParty).map((item) => item.host))).sort();
   const thirdPartyHosts = allThirdPartyHosts.filter((host) => !isEssentialHost(host));
   const essentialThirdPartyHosts = allThirdPartyHosts.filter((host) => isEssentialHost(host));
   const remainingStorageEntries = afterStorageEntries.filter(Boolean);
@@ -260,7 +270,13 @@ export function buildDelta({
   const integrity = assessAuditIntegrity({ beforeCookies, beforeStorageEntries: beforeAnalysis?.storage?.items || [], beforeAnalysis, blockedRequests });
   const cookieCoverage = mergeCookieCoverage(beforeCookieCoverage, afterCookieCoverage);
   const suspiciousCookies = remainingCookies.filter((cookie) => !isEssentialCookie(cookie));
-  const hasDelta = suspiciousCookies.length > 0 || newCookies.length > 0 || thirdPartyHosts.length > 0 || nonEssentialStorageEntries.length > 0 || serviceAudit.some((service) => service.status === "active") || (!denyClicked && !manualConsentConfirmed);
+  const cnameCoverage = {
+    status: possibleCloakedBefore.length || possibleCloakedAfter.length ? "unknown" : "not-observed",
+    reason: possibleCloakedBefore.length || possibleCloakedAfter.length ? "browser-dns-unavailable" : "no-known-pattern-observed",
+    beforeCount: possibleCloakedBefore.length,
+    afterCount: possibleCloakedAfter.length
+  };
+  const hasDelta = suspiciousCookies.length > 0 || newCookies.length > 0 || thirdPartyHosts.length > 0 || possibleCloakedAfter.length > 0 || nonEssentialStorageEntries.length > 0 || serviceAudit.some((service) => service.status === "active") || (!denyClicked && !manualConsentConfirmed);
 
   return {
     checkedAt: new Date().toISOString(),
@@ -277,6 +293,8 @@ export function buildDelta({
     remainingCookies: suspiciousCookies,
     newCookies,
     thirdPartyHosts,
+    possibleCloakedTrackers: possibleCloakedAfter,
+    cnameCoverage,
     essentialCookies,
     essentialThirdPartyHosts,
     banner,
@@ -294,7 +312,7 @@ export function buildDelta({
     serviceAudit,
     beforeCounts: {
       cookies: beforeCookies.length,
-      thirdPartyHosts: Array.from(new Set(observedBeforeTraffic.map((item) => item.host))).length
+      thirdPartyHosts: Array.from(new Set(observedBeforeTraffic.filter(isConfirmedThirdParty).map((item) => item.host))).length
     },
     afterDenyCounts: {
       cookies: afterCookies.length,
@@ -357,11 +375,12 @@ export function createCoverageSummary({ delta = {}, analysisComplete = true, heu
     { key: "service-workers", coverageKey: "serviceWorkers", evidenceCount: storageCoverage.serviceWorkers?.registrations?.length || 0 }
   ] : [];
   const storageInspectionIncomplete = storageMechanisms.some(({ coverageKey }) => storageCoverage[coverageKey]?.status === "not-inspected");
+  const cnameCoverage = delta.cnameCoverage || { status: "not-observed", beforeCount: 0, afterCount: 0 };
   const inaccessibleConsentSurfaces = Array.isArray(delta.inaccessibleConsentSurfaces) ? delta.inaccessibleConsentSurfaces : [];
   const hasConsentObservation = Boolean(delta.banner && delta.banner.confidence !== "none") && inaccessibleConsentSurfaces.length === 0;
   const hasCookieCoverage = delta.cookieCoverage?.complete === true;
   return {
-    auditComplete: Boolean(analysisComplete && delta.beforeCounts && delta.afterDenyCounts && inaccessibleConsentSurfaces.length === 0 && (!delta.integrity || delta.integrity.uncertain === false) && hasCookieCoverage && !storageInspectionIncomplete),
+    auditComplete: Boolean(analysisComplete && delta.beforeCounts && delta.afterDenyCounts && inaccessibleConsentSurfaces.length === 0 && (!delta.integrity || delta.integrity.uncertain === false) && hasCookieCoverage && !storageInspectionIncomplete && cnameCoverage.status !== "unknown"),
     observed: [
       { key: "cookies", state: hasCookieObservation ? "observed" : "not-observed", confidence: hasCookieObservation ? "confirmed" : "limited", evidenceCount: delta.afterDenyCounts?.cookies || 0 },
       { key: "browser-storage", state: storageInspectionIncomplete ? "not-inspected" : hasStorageObservation ? "observed" : "not-observed", confidence: storageInspectionIncomplete ? "limited" : hasStorageObservation ? "confirmed" : "limited", evidenceCount: delta.afterDenyCounts?.storageEntries || 0 },
@@ -369,6 +388,7 @@ export function createCoverageSummary({ delta = {}, analysisComplete = true, heu
       { key: "consent-surface", state: inaccessibleConsentSurfaces.length ? "not-technically-inspectable" : hasConsentObservation ? "observed" : "not-observed", confidence: inaccessibleConsentSurfaces.length ? "high" : hasConsentObservation ? (delta.banner.confidence || "confirmed") : "limited", evidenceCount: delta.banner?.evidence?.length || 0 },
       { key: "audit-integrity", state: delta.integrity?.uncertain === false ? "observed" : "not-observed", confidence: delta.integrity?.uncertain === false ? "confirmed" : "limited", evidenceCount: delta.integrity?.evidence?.length || 0 },
       { key: "cookie-coverage", state: delta.cookieCoverage?.complete ? "observed" : "not-observed", confidence: delta.cookieCoverage?.complete ? "confirmed" : "limited", evidenceCount: delta.cookieCoverage?.requestedHosts?.length || 0 },
+      { key: "cname-routing", state: cnameCoverage.status === "unknown" ? "unknown" : "not-observed", confidence: cnameCoverage.status === "unknown" ? "limited" : "medium", evidenceCount: (cnameCoverage.beforeCount || 0) + (cnameCoverage.afterCount || 0) },
       ...storageMechanisms.map(({ key, coverageKey, evidenceCount }) => ({
         key,
         state: storageCoverage[coverageKey]?.status === "observed" ? "observed" : "not-inspected",
@@ -396,6 +416,7 @@ export function deriveAuditVerdict(delta, { analysisComplete = true } = {}) {
   if (delta?.inaccessibleConsentSurfaces?.length) missingCoverage.push("consent-surface-inaccessible");
   if (!delta?.integrity || delta.integrity.uncertain) missingCoverage.push("audit-integrity");
   if (!delta?.cookieCoverage || !delta.cookieCoverage.complete) missingCoverage.push("cookie-coverage");
+  if (delta?.cnameCoverage?.status === "unknown") missingCoverage.push("cname-routing");
   const storageCoverage = delta?.browserStorage?.after;
   if (storageCoverage && ["indexedDB", "cacheStorage", "serviceWorkers"].some((key) => storageCoverage[key]?.status === "not-inspected")) missingCoverage.push("storage-coverage");
   if (!delta?.beforeCounts || !delta?.afterDenyCounts) missingCoverage.push("before-after-observation");
@@ -516,6 +537,15 @@ export function formatDeltaReport(delta, url = "") {
     report += `  Observed third-party hosts: ${(delta.cookieCoverage.thirdPartyHosts || []).join(", ") || "none recorded"}\n`;
     report += `  Unavailable hosts: ${(delta.cookieCoverage.unavailableHosts || []).join(", ") || "none"}\n`;
     report += `  Coverage complete: ${delta.cookieCoverage.complete ? "yes" : "no"}\n\n`;
+  }
+
+  if (delta.cnameCoverage?.status === "unknown") {
+    report += "CNAME ROUTING COVERAGE:\n";
+    report += "  Status: unknown; browser APIs do not provide a local DNS CNAME resolution result.\n";
+    (delta.possibleCloakedTrackers || []).slice(0, 8).forEach((item) => {
+      report += `  - Possible cloaked tracker: ${item.host || "unknown"}${item.path ? `; path: ${item.path}` : ""}${item.cnameRule?.id ? `; rule: ${item.cnameRule.id}` : ""}\n`;
+    });
+    report += "  These endpoints are not treated as confirmed third-party traffic, but the audit cannot produce a positive result from this unknown state.\n\n";
   }
 
   if (delta.inaccessibleConsentSurfaces?.length) {

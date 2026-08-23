@@ -52,7 +52,7 @@ The source of truth for product acceptance behavior is [`features/cookiebuddy.fe
 | UC-08 | Preserve concurrent network evidence without request-loss race conditions. |
 | UC-09 | Capture relevant first-party, subdomain, and observed third-party cookie metadata without dumping unrelated cookies or values; unavailable hosts remain an explicit coverage limitation. |
 | UC-10 | Include localStorage/sessionStorage plus supported IndexedDB, Cache Storage, and service-worker metadata; show unsupported inspection explicitly and never export stored values or response bodies. |
-| UC-11 | Classify endpoint relationships with Public Suffix List compatible registrable-domain logic. |
+| UC-11 | Classify endpoint relationships with offline Public Suffix List compatible registrable-domain logic; possible first-party-cloaked trackers remain unknown rather than safe. |
 | UC-12 | Classify necessity conservatively with rationale and confidence; names/CDNs alone cannot prove necessity. |
 | UC-13 | Recognize services from versioned maintainable offline rule data, expose the matching evidence/version/confidence, and keep unknown signals visible. |
 | UC-14 | Detect and operate supported consent controls in the top document, same-origin frames, and open shadow roots; inaccessible cross-origin surfaces remain explicit and incomplete. |
@@ -194,7 +194,7 @@ Important limitations include:
 - server-side tagging or forwarding that produces no distinguishable browser-side destination
 - backend enrichment or profiling
 - opaque first-party proxy endpoints
-- some CNAME-cloaked or first-party-looking tracking
+- CNAME-cloaked or first-party-looking tracking that cannot be resolved through browser-visible evidence; matching local heuristics remain unknown and block a positive result
 - fingerprinting that leaves no reliable identifiable client-side signal
 - inaccessible cross-origin consent UI or browser APIs
 - interference from blockers, browser tracking protection, prior consent, login state, or other contaminated browser state
