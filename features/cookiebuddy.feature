@@ -202,10 +202,12 @@ Feature: One-click consent and tracking audit
   Scenario: Prepare a complaint from a supported negative finding
     Given an audit contains a supported negative technical finding
     When the user chooses to prepare a complaint or contact the website
-    Then CookieBuddy creates a reviewable factual draft using only evidence present in the audit
-    And includes the tested website, date, opt-out action, observed post-rejection findings, and evidence report
+    Then CookieBuddy opens a reviewable factual draft using only evidence present in the audit
+    And includes the tested website, date, opt-out action, observed consent state, post-rejection findings, detected services, and evidence report
+    And lets the user edit the draft before opening a mail client or authority details
     And avoids inventing a legal violation or unsupported accusation
     And uncertain recipients or authorities are presented as candidates rather than guessed
+    And supports the workflow in German and English
 
   @UC-22 @issue-57 @p2
   Scenario: Present the one-click verdict before technical detail

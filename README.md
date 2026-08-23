@@ -62,7 +62,7 @@ The source of truth for product acceptance behavior is [`features/cookiebuddy.fe
 | UC-18 | Build an evidence-grade report with timeline, coverage, observed facts, interpretation, and machine-readable export. |
 | UC-19 | Minimize sensitive URL data at capture time; exclude query values and fragments by default. |
 | UC-20 | Optionally capture user-controlled visual evidence with preview/removal before export. Screenshots are off by default, limited to the tested active tab, linked to audit steps, and recorded as unavailable when browser permissions prevent capture. |
-| UC-21 | Prepare a factual complaint/escalation draft using only evidence actually present in the audit. |
+| UC-21 | Prepare an editable factual complaint/escalation draft from a negative audit, with evidence export and uncertain recipients/authorities shown as candidates. |
 | UC-22 | Present the one-click verdict and audit completeness before technical metrics, with one to three plain-language reasons and progressive evidence. |
 | UC-23 | Support multilingual/accessibility-aware consent controls safely without broad-text false clicks. Consent vocabulary is local, explicit, and extended through locale data; accessible names and roles are used for icon-only controls, while unsupported language stays unresolved. |
 | UC-24 | Explain limits for fingerprinting, server-side tagging, backend enrichment, first-party proxies, and other opaque techniques. |

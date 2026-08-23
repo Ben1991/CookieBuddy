@@ -17,7 +17,7 @@ const fixtureAnalysis = {
     essential: { services: [{ name: "Essential infrastructure", count: 1 }] }
   },
   resources: [{ url: "https://analytics.example.net/script.js", host: "analytics.example.net", thirdParty: true }],
-  contacts: { dpo: { kind: "dpo", email: "privacy@example.com", source: "Privacy policy", sourceUrl: "https://example.com/privacy" }, authority: { name: "Federal data protection authority", key: "fallback", note: "Review the privacy notice." } },
+  contacts: { dpo: { kind: "dpo", email: "privacy@example.com", source: "Privacy policy", sourceUrl: "https://example.com/privacy" }, authority: { name: "Federal data protection authority", key: "fallback", note: "Review the privacy notice.", url: "https://authority.example.test/complaints" } },
   storage: { items: [{ key: "session_state", scope: "localStorage", valuePreview: "active", inBanner: false }] }
 };
 const fixtureCookies = [
@@ -121,6 +121,7 @@ try {
   assert.ok(await popup.locator('[data-verdict="negative"]').isVisible(), "negative audit verdict should be visible");
   assert.ok(await popup.getByText("Audit complete", { exact: true }).isVisible(), "verdict should disclose audit completeness");
   assert.ok(await popup.locator('[data-complaint-action="true"]').isVisible(), "supported negative findings should expose a complaint action");
+  assert.ok(await popup.locator('[data-authority-complaint-action="true"]').isVisible(), "negative findings should expose the authority preparation action");
   assert.equal(await popup.locator('#auditSteps [data-state="complete"]').count(), 8, "completed audit should mark every progress step complete");
   await captureDocumentationScreenshot(popup, "popup-overview.png", { fullPage: true });
 
@@ -130,6 +131,9 @@ try {
   await details.getByText("Technische Details", { exact: true }).waitFor({ state: "visible", timeoutMs: 10000 });
   assert.ok((await details.screenshot()).length > 10000, "details screenshot should contain rendered UI");
   assert.ok(await details.locator("#copyDeltaReportButton").isVisible(), "copy-for-email action should be visible");
+  assert.ok(await details.locator("#complaintDraft").isVisible(), "details should expose an editable complaint draft");
+  assert.ok(await details.getByText("Candidate only", { exact: true }).isVisible(), "uncertain authority should be labeled as a candidate");
+  assert.ok(await details.getByText("Open authority details", { exact: true }).isVisible(), "uncertain authority should be shown as a candidate");
   assert.ok(await details.locator("#downloadDeltaHtmlButton").isVisible(), "HTML export action should be visible");
   assert.ok(await details.locator("#downloadDeltaPdfButton").isVisible(), "print/PDF export action should be visible");
   assert.ok(await details.getByText("Still active", { exact: true }).isVisible(), "active services should be labeled");

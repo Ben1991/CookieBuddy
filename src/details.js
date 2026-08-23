@@ -9,6 +9,7 @@ const downloadDeltaHtmlButton = document.querySelector("#downloadDeltaHtmlButton
 const downloadDeltaPdfButton = document.querySelector("#downloadDeltaPdfButton");
 let detailsPayload = null;
 const isDeltaView = new URLSearchParams(window.location.search).get("view") === "delta";
+const focusComplaint = new URLSearchParams(window.location.search).get("focus") === "complaint";
 let currentDeltaTarget = null;
 
 await initI18n();
@@ -47,6 +48,7 @@ function renderDetails() {
       button.addEventListener("click", () => void removeScreenshot(button.dataset.visualEvidenceRemove));
     });
     renderDeltaMailActions();
+    if (focusComplaint) sendDeltaMailActions?.scrollIntoView?.({ block: "start" });
     return;
   }
 
@@ -77,6 +79,7 @@ function renderDeltaMailActions() {
   const contacts = detailsPayload?.cookiebuddyLastScan?.analysis?.contacts || detailsPayload?.cookiebuddyLastScan?.contacts || {};
   const dpoEmail = contacts?.dpo?.email || "";
   const authorityEmail = contacts?.authority?.email || "";
+  const authority = contacts?.authority || {};
   const delta = detailsPayload?.cookiebuddyLastDelta;
   const website = delta?.url || t("unknownWebsite");
   const mailCards = [];
@@ -104,13 +107,18 @@ function renderDeltaMailActions() {
     }));
   }
 
+  const authorityCandidate = !authorityEmail && authority.url
+    ? `<div class="delta-authority-candidate"><div class="delta-authority-candidate-heading"><strong>${escapeHtml(authority.name || t("authorityLabel"))}</strong><span class="audit-badge unclear">${escapeHtml(t("authorityCandidateLabel"))}</span></div><p class="muted">${escapeHtml(authority.note || t("authorityCandidateHint"))}</p><a class="text-link" href="${escapeHtml(authority.url)}" target="_blank" rel="noreferrer">${escapeHtml(t("openAuthorityDetails"))}</a></div>`
+    : "";
+
   if (!sendDeltaMailActions) return;
 
   currentDeltaTarget = {
     dpoEmail,
     authorityEmail,
     dpoName: contacts?.dpo?.name || t("dpoLabel"),
-    authorityName: contacts?.authority?.name || t("authorityLabel")
+    authorityName: contacts?.authority?.name || t("authorityLabel"),
+    authorityUrl: authority.url || ""
   };
 
   sendDeltaMailActions.hidden = false;
@@ -119,10 +127,12 @@ function renderDeltaMailActions() {
       <h3 id="sendDeltaMailHeading" data-i18n="sendDeltaMailHeading">${escapeHtml(t("sendDeltaMailHeading"))}</h3>
       <p id="sendDeltaMailHint" class="muted" data-i18n="sendDeltaMailHint">${escapeHtml(t("sendDeltaMailHint"))}</p>
       ${mailCards.length ? "" : `<p class="muted">${escapeHtml(t("noDeltaMailRecipient"))}</p>`}
+      ${authorityCandidate}
     </div>
     <div class="delta-template-grid">
       ${mailCards.join("")}
     </div>
+    <label class="complaint-draft-field" for="complaintDraft"><span>${escapeHtml(t("complaintDraftLabel"))}</span><textarea id="complaintDraft" rows="18">${escapeHtml(buildDeltaMailBody(delta, dpoEmail ? "dpo" : "authority"))}</textarea></label>
     <div class="contact-actions">
       <button id="downloadDeltaHtmlButton" class="ghost-button small" type="button" data-i18n="downloadDeltaHtmlButton">${escapeHtml(t("downloadDeltaHtmlButton"))}</button>
       <button id="downloadDeltaPdfButton" class="ghost-button small" type="button" data-i18n="downloadDeltaPdfButton">${escapeHtml(t("downloadDeltaPdfButton"))}</button>
@@ -146,7 +156,7 @@ async function copyDeltaReport() {
   const button = sendDeltaMailActions?.querySelector("#copyDeltaReportButton");
   if (!delta || !button) return;
 
-  const report = buildDeltaMailBody(delta, "dpo");
+  const report = sendDeltaMailActions?.querySelector("#complaintDraft")?.value || buildDeltaMailBody(delta, "dpo");
   try {
     if (navigator.clipboard?.writeText) {
       await navigator.clipboard.writeText(report);
@@ -399,7 +409,7 @@ function openDeltaMailDraft(target = "dpo") {
 
   const website = delta.url || "";
   const subject = t(target === "authority" ? "deltaAuthorityReportSubject" : "deltaReportSubject", website || "unknown website");
-  const body = buildDeltaMailBody(delta, target);
+  const body = sendDeltaMailActions?.querySelector("#complaintDraft")?.value || buildDeltaMailBody(delta, target);
   const contacts = currentDeltaTarget || {};
   const recipient = target === "authority" ? contacts.authorityEmail : contacts.dpoEmail;
   const mailto = `mailto:${recipient ? encodeURIComponent(recipient) : ""}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
@@ -410,6 +420,9 @@ function buildDeltaMailBody(delta, target = "dpo") {
   const banner = delta.banner || detailsPayload?.cookiebuddyLastScan?.analysis?.banner || null;
   const values = {
     pageUrl: delta.url || t("unknownWebsite"),
+    checkedAt: formatDate(delta.checkedAt),
+    optOutAction: delta.denyAction?.clicked ? (delta.denyAction.label || t("detectedButton")) : t("noDenyButtonClicked"),
+    verification: delta.denyAction?.verified ? t("deltaMailVerificationVerified") : t("deltaMailVerificationUnclear"),
     remainingCookies: formatMailList([...(delta.remainingCookies || []), ...(delta.newCookies || [])].map(formatCookieForMail), t("noneObserved")),
     thirdPartyHosts: formatMailList(delta.thirdPartyHosts || [], t("noneObserved")),
     storageEntries: formatMailList((delta.remainingStorageEntries || []).map(formatStorageForMail), t("noneObserved")),
@@ -426,7 +439,10 @@ function buildDeltaMailBody(delta, target = "dpo") {
     "",
     intro,
     "",
-    values.pageUrl,
+    `${t("deltaMailWebsiteLabel")}: ${values.pageUrl}`,
+    `${t("deltaMailCheckedAtLabel")}: ${values.checkedAt}`,
+    `${t("deltaMailOptOutLabel")}: ${values.optOutAction}`,
+    `${t("deltaMailVerificationLabel")}: ${values.verification}`,
     "",
     t("deltaMailObservation"),
     "",
@@ -467,6 +483,7 @@ function buildDeltaMailBody(delta, target = "dpo") {
     t("visualEvidenceMailNote", values.visualEvidence),
     "",
     t("deltaMailNoLegalClaim"),
+    t("deltaMailReportExportNote"),
     "",
     t("mailClosing"),
     values.senderName
