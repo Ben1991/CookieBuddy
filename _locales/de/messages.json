@@ -3,7 +3,7 @@
     "message": "CookieBuddy"
   },
   "extensionDescription": {
-    "message": "Prüft Cookie-Banner, Einwilligungskategorien, Cookies und Abweichungen nach dem Opt-out."
+    "message": "Cookie-Einwilligung, Browser-Speicher und Drittanbieter-Anfragen lokal vor und nach der Ablehnung optionalen Trackings prüfen."
   },
   "popupTitle": {
     "message": "Consent-Delta prüfen"
@@ -993,6 +993,15 @@
   },
   "detailsDocumentTitle": {
     "message": "CookieBuddy – Scan-Details"
+  },
+  "detailsHeading": {
+    "message": "Technische Details"
+  },
+  "detailsIntro": {
+    "message": "Nachweise zuerst · Scan lokal gespeichert"
+  },
+  "localOnlyBadge": {
+    "message": "Lokal gespeichert"
   },
   "currentPageAriaLabel": {
     "message": "Aktuelle Seite"

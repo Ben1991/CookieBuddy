@@ -3,7 +3,7 @@
     "message": "CookieBuddy"
   },
   "extensionDescription": {
-    "message": "Review cookie banners, cookies, and traffic after a reject attempt."
+    "message": "Review cookie consent, browser storage, and third-party traffic locally before and after rejecting optional tracking."
   },
   "popupTitle": {
     "message": "Cookie review"
@@ -993,6 +993,15 @@
   },
   "detailsDocumentTitle": {
     "message": "CookieBuddy – Scan details"
+  },
+  "detailsHeading": {
+    "message": "Evidence details"
+  },
+  "detailsIntro": {
+    "message": "Evidence first · Scan stored locally"
+  },
+  "localOnlyBadge": {
+    "message": "Stored locally"
   },
   "currentPageAriaLabel": {
     "message": "Current page"

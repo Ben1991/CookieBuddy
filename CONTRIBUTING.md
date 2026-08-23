@@ -109,4 +109,6 @@ Reviews prioritize:
 - maintainability
 - user comprehension and accessibility
 
+For accessibility-related changes, use the checklist and reporting guidance in [`ACCESSIBILITY.md`](ACCESSIBILITY.md). Reviewers should distinguish verified behavior from open limitations and request keyboard, screen-reader, zoom/reflow, contrast, or reduced-motion evidence when the change affects those areas.
+
 A change that makes the UI look more certain than the underlying evidence is not an improvement.

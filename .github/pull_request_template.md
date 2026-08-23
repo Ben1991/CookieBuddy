@@ -38,3 +38,12 @@ Related issue(s):
 ## Remaining limitations
 
 <!-- Be explicit. Unknown or unsupported behavior must not be hidden by a positive verdict. -->
+
+## Accessibility review
+
+- [ ] Keyboard-only flow was checked for affected UI.
+- [ ] Focus is visible and the tab order is logical.
+- [ ] Labels, roles, names, language, and dynamic status announcements were checked.
+- [ ] Color is not the only way meaning is conveyed.
+- [ ] Reduced motion, zoom/reflow, and contrast behavior were checked where applicable.
+- [ ] A screen-reader or accessibility scanner check was run, or the remaining limitation is documented above.

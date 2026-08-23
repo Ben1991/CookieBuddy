@@ -6,6 +6,10 @@ The product direction is a one-click technical audit that answers a simple quest
 
 CookieBuddy provides technical review signals, not legal advice or a legal compliance verdict.
 
+Accessibility is part of the product contract. See [ACCESSIBILITY.md](ACCESSIBILITY.md) for supported interaction goals, known limitations, the verification checklist, and the dedicated reporting path. CookieBuddy does not claim complete WCAG conformance; unsupported or unverified accessibility behavior remains explicitly documented.
+
+The Chrome Web Store release kit is maintained in [`docs/chrome-web-store/`](docs/chrome-web-store/). It contains the store listing copy, privacy-disclosure answers, reviewer test instructions, and the release checklist. The public privacy policy is [`PRIVACY.md`](PRIVACY.md).
+
 ## Product Principle
 
 The intended product flow is:
@@ -229,6 +233,8 @@ For every task that changes product behavior, detection, classification, verdict
 
 See [`agent.md`](agent.md) for the full implementation rules.
 
+Accessibility-related UI changes must also follow [ACCESSIBILITY.md](ACCESSIBILITY.md), including keyboard, focus, language, screen-reader, zoom/reflow, contrast, reduced-motion, and automated-check review where applicable.
+
 ## Development Checks
 
 CookieBuddy has no production build step. Development checks use the packages in `package.json`.
@@ -269,4 +275,6 @@ GitHub Actions should run the automated checks on pushes and pull requests. A fe
 ## Links
 
 - Repository: https://github.com/Ben1991/CookieBuddy
+- Privacy policy: https://github.com/Ben1991/CookieBuddy/blob/main/PRIVACY.md
+- Support: https://github.com/Ben1991/CookieBuddy/issues
 - Donate: https://buymeacoffee.com/thenext1991
