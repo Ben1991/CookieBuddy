@@ -111,6 +111,7 @@ Feature: One-click consent and tracking audit
     Given CookieBuddy observes a cookie, storage entry, request, or service
     When it determines whether the item appears necessary or optional
     Then a cookie name or CDN hostname alone cannot prove necessity
+    And the classification distinguishes known necessary, likely necessary, non-essential, and unknown items
     And the classification includes rationale and confidence
     And unknown items remain unknown or unclear rather than being silently treated as necessary
 

@@ -819,6 +819,9 @@
   "serviceStatusEssential": {
     "message": "Notwendig / erlaubt"
   },
+  "serviceStatusLikelyNecessary": {
+    "message": "Wahrscheinlich notwendig / prüfen"
+  },
   "serviceStatusDisabled": {
     "message": "Erfolgreich deaktiviert"
   },
@@ -1002,5 +1005,8 @@
   },
   "serviceRuleUnknown": {
     "message": "Keine passende lokale Regel"
+  },
+  "serviceClassification": {
+    "message": "Einstufung: $1 · Konfidenz: $2 · $3"
   }
 }

@@ -46,7 +46,7 @@ const fixtureDelta = {
   thirdPartyHosts: ["analytics.example.net"],
   essentialThirdPartyHosts: [],
   serviceAudit: [
-    { name: "Essential services", category: "essential", source: "Banner text", listedInBanner: true, essential: true, status: "allowed-essential" },
+    { name: "Essential services", category: "essential", source: "Banner text", listedInBanner: true, essential: false, confidence: "medium", classification: { classification: "likely-necessary", confidence: "medium", rationale: "The site consent banner labels this item essential; the banner declaration is not independent proof of necessity." }, status: "allowed-likely-necessary" },
     { name: "Google Analytics", category: "analytics", source: "Google Analytics domain or cookie signature", ruleId: "google-analytics", ruleVersion: "2026-08-23", confidence: "high", evidence: { source: "Google Analytics domain or cookie signature", version: "2026-08-23", matchedBy: "domain" }, listedInBanner: false, essential: false, status: "active" },
     { name: "extension.example.net", category: "unlisted", source: "Third-party traffic", listedInBanner: false, essential: false, status: "unclear" }
   ],
