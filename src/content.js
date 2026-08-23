@@ -91,8 +91,15 @@ const DENY_SELECTORS = [
   "[data-testid*='reject' i]",
   "[aria-label*='deny' i]",
   "[aria-label*='reject' i]",
-  "button"
+  "button",
+  "[role='button' i]",
+  "[role='menuitem' i]",
+  "input[type='button' i]",
+  "input[type='submit' i]",
+  "a"
 ];
+
+const consentControls = globalThis.CookieBuddyConsentControls;
 
 // These are local collection limits, not telemetry. They keep ordinary page
 // browsing responsive while preserving enough evidence for an audit.
@@ -257,15 +264,24 @@ function collectDomConsentSignals() {
     "[aria-label*='consent' i]"
   ];
 
-  return selectors
+  const semanticSelectors = ["button", "a", "[role='button' i]", "[role='menuitem' i]"];
+  const semanticElements = semanticSelectors
     .flatMap((selector) => Array.from(document.querySelectorAll(selector)).slice(0, 8))
+    .filter((element) => ["deny-all", "essential-only", "settings"].includes(classifyConsentElement(element).kind));
+  const elements = [
+    ...selectors.flatMap((selector) => Array.from(document.querySelectorAll(selector)).slice(0, 8)),
+    ...semanticElements
+  ];
+
+  return Array.from(new Set(elements))
     .map((element) => ({
       type: "dom",
       value: [
         element.id ? `#${element.id}` : "",
         element.className && typeof element.className === "string" ? `.${element.className.trim().replace(/\s+/g, ".")}` : "",
         element.getAttribute("data-testid") ? `[data-testid="${element.getAttribute("data-testid")}"]` : "",
-        element.getAttribute("aria-label") ? `[aria-label="${element.getAttribute("aria-label")}"]` : ""
+        element.getAttribute("aria-label") ? `[aria-label="${element.getAttribute("aria-label")}"]` : "",
+        consentControls ? consentControls.getAccessibleName(element) : ""
       ].filter(Boolean).join(" ")
     }))
     .filter((signal, index, list) => signal.value && list.findIndex((item) => item.value === signal.value) === index)
@@ -453,8 +469,9 @@ async function tryDenyAll() {
   await wait(1400);
   return {
     clicked: Boolean(clicked),
-    label: clicked?.innerText?.trim() || clicked?.getAttribute("aria-label") || "",
-    found: candidates.length > 0
+    label: clicked && consentControls ? consentControls.getAccessibleName(clicked) : "",
+    found: candidates.length > 0,
+    reason: clicked ? "semantic-control-clicked" : candidates.length > 0 ? "safe-control-not-clickable" : "no-safe-control"
   };
 }
 
@@ -473,7 +490,7 @@ async function openBannerOverview() {
   return {
     clicked: Boolean(clicked),
     found: candidates.length > 0,
-    label: clicked?.innerText?.trim() || clicked?.getAttribute("aria-label") || ""
+    label: clicked && consentControls ? consentControls.getAccessibleName(clicked) : ""
   };
 }
 
@@ -489,52 +506,63 @@ function collectBannerOverviewCandidates() {
     "[aria-label*='manage' i]",
     "[aria-label*='consent' i]",
     "button",
-    "a"
-  ];
-
-  const textMatchers = [
-    /settings/i,
-    /preferences/i,
-    /manage/i,
-    /customi[sz]e/i,
-    /cookie settings/i,
-    /privacy settings/i,
-    /consent/i,
-    /show details/i,
-    /anzeigen/i,
-    /einstellungen/i,
-    /präferenzen/i,
-    /verwalten/i
+    "a",
+    "[role='button' i]",
+    "[role='menuitem' i]"
   ];
 
   const selectorMatches = selectors.flatMap((selector) => Array.from(document.querySelectorAll(selector)));
   return Array.from(new Set(selectorMatches))
     .filter((element) => element instanceof HTMLElement)
-    .filter((element) => {
-      const label = `${element.innerText || ""} ${element.getAttribute("aria-label") || ""}`.trim();
-      return textMatchers.some((matcher) => matcher.test(label));
-    });
+    .filter(isUsableConsentControl)
+    .map((element) => ({ element, classification: classifyConsentElement(element) }))
+    .filter(({ classification }) => classification.kind === "settings" && classification.canClick)
+    .sort((left, right) => consentControlScore(right.classification) - consentControlScore(left.classification))
+    .map(({ element }) => element);
 }
 
 function collectDenyCandidates() {
-  const textMatchers = [
-    /reject all/i,
-    /deny all/i,
-    /decline all/i,
-    /only necessary/i,
-    /essential only/i,
-    /alle ablehnen/i,
-    /ablehnen/i,
-    /nur notwendige/i
-  ];
-
   const selectorMatches = DENY_SELECTORS.flatMap((selector) => Array.from(document.querySelectorAll(selector)));
   return Array.from(new Set(selectorMatches))
     .filter((element) => element instanceof HTMLElement)
-    .filter((element) => {
-      const label = `${element.innerText || ""} ${element.getAttribute("aria-label") || ""}`.trim();
-      return textMatchers.some((matcher) => matcher.test(label));
-    });
+    .filter(isUsableConsentControl)
+    .map((element) => ({ element, classification: classifyConsentElement(element) }))
+    .filter(({ classification }) => ["deny-all", "essential-only"].includes(classification.kind) && classification.canClick)
+    .sort((left, right) => consentControlScore(right.classification) - consentControlScore(left.classification))
+    .slice(0, PAGE_ANALYSIS_BUDGETS.maxConsentNodes)
+    .map(({ element }) => element);
+}
+
+function classifyConsentElement(element) {
+  if (!consentControls) return { kind: "unknown", confidence: "none", canClick: false };
+  const details = consentControls.getAccessibleNameDetails(element);
+  const role = element.getAttribute("role") || "";
+  const tagName = element.tagName || "";
+  const type = element.getAttribute("type") || "";
+  const declaredLanguage = element.closest?.("[lang]")?.getAttribute("lang") || document.documentElement.lang || "";
+  const cmpHint = /onetrust|optanon|cookiebot|didomi|trustarc|sourcepoint|quantcast|osano|axeptio|complianz|consentmanager|klaro|cookieyes|cookiehub|ketch|gdpr-cookie/i.test(
+    [element.id, element.className, element.getAttribute("data-testid")].filter(Boolean).join(" ")
+  );
+  return consentControls.classifyConsentControl({
+    name: details.name,
+    nameSource: details.source,
+    role,
+    tagName,
+    type,
+    declaredLanguage,
+    cmpHint
+  });
+}
+
+function consentControlScore(classification) {
+  return { cmp: 4, accessibility: 3, locale: 2, text: 1 }[classification.source] || 0;
+}
+
+function isUsableConsentControl(element) {
+  if (element.disabled || element.getAttribute("aria-disabled") === "true" || element.getAttribute("aria-hidden") === "true") return false;
+  if (element.closest?.("[aria-hidden='true'], [hidden]")) return false;
+  if (typeof element.getClientRects === "function" && element.isConnected && element.getClientRects().length === 0) return false;
+  return true;
 }
 
 function collectBannerText() {

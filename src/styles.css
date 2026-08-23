@@ -55,7 +55,8 @@ a {
 }
 
 button:focus-visible,
-a:focus-visible {
+a:focus-visible,
+select:focus-visible {
   outline: 3px solid color-mix(in srgb, var(--accent) 70%, white);
   outline-offset: 3px;
 }
@@ -1036,7 +1037,7 @@ body,
 .cb-functional-sections { display: none; }
 .cb-popup .primary-button, .cb-popup .ghost-button { min-height: 40px; border-radius: 10px; padding: 10px 14px; font-size: 13px; }
 .cb-popup .primary-button { background: var(--cb-brand); border-color: var(--cb-brand); }
-.cb-popup button:focus-visible, .cb-popup a:focus-visible, .cb-details button:focus-visible, .cb-details a:focus-visible { outline: 2px solid var(--cb-brand); outline-offset: 2px; }
+.cb-popup button:focus-visible, .cb-popup a:focus-visible, .cb-popup select:focus-visible, .cb-details button:focus-visible, .cb-details a:focus-visible, .cb-details select:focus-visible { outline: 2px solid var(--cb-brand); outline-offset: 2px; }
 
 .cb-details { max-width: 760px; padding: 18px; }
 .cb-details-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 13px; }

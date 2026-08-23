@@ -209,9 +209,11 @@ Feature: One-click consent and tracking audit
   Scenario: Support multilingual and accessible consent controls safely
     Given a consent control uses supported non-English or non-German text, an accessible name, or an icon-only semantic control
     When CookieBuddy searches for consent actions
-    Then it uses CMP-specific and accessibility semantics before broad text heuristics
+    Then it recognizes maintained locale vocabulary such as French, Spanish, Polish, and Japanese rejection labels
+    And it checks CMP-specific selectors, roles, accessible names, and associated labels before visible button text
+    And broad or unsupported language text is never treated as a safe consent action
     And language uncertainty cannot be interpreted as successful rejection
-    And CookieBuddy's own result flow remains keyboard and screen-reader accessible
+    And CookieBuddy's own result flow has localized screen-reader labels, natural focus order, and visible focus
 
   @UC-24 @issue-60 @p2
   Scenario: Explain tracking techniques outside reliable browser-side coverage
