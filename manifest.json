@@ -36,6 +36,7 @@
       ],
       "js": [
         "src/contact-discovery-content.js",
+        "src/consent-controls.js",
         "src/content.js"
       ],
       "run_at": "document_idle"

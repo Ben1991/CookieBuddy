@@ -64,7 +64,7 @@ The source of truth for product acceptance behavior is [`features/cookiebuddy.fe
 | UC-20 | Optionally capture user-controlled visual evidence with preview/removal before export. |
 | UC-21 | Prepare a factual complaint/escalation draft using only evidence actually present in the audit. |
 | UC-22 | Present the one-click verdict before technical metrics and expose evidence progressively. |
-| UC-23 | Support multilingual/accessibility-aware consent controls safely without broad-text false clicks. |
+| UC-23 | Support multilingual/accessibility-aware consent controls safely without broad-text false clicks. Consent vocabulary is local, explicit, and extended through locale data; accessible names and roles are used for icon-only controls, while unsupported language stays unresolved. |
 | UC-24 | Explain limits for fingerprinting, server-side tagging, backend enrichment, first-party proxies, and other opaque techniques. |
 | UC-25 | Keep CookieBuddy itself private and performant: justified permissions, local processing, deletion, bounded retention and overhead. |
 | UC-26 | Keep Gherkin, implementation tests, README, visual tests, and screenshots synchronized for every affected product task. |
