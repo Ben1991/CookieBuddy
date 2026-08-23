@@ -351,6 +351,7 @@ export function buildDelta({
   beforeAnalysis = null,
   afterAnalysis = null,
   blockedRequests = [],
+  trafficCapture = { status: "complete" },
   controlledReloads = [],
   observationWindow = null,
   manualConsentConfirmed,
@@ -379,6 +380,12 @@ export function buildDelta({
   const essentialStorageEntries = remainingStorageEntries.filter((entry) => classifyStorage(entry).classification === "known-necessary");
   const serviceAudit = buildServiceAudit({ bannerCategories, beforeCookies, afterCookies, beforeTraffic: observedBeforeTraffic, afterTraffic: observedAfterTraffic, afterStorageEntries: remainingStorageEntries });
   const integrity = assessAuditIntegrity({ beforeCookies, beforeStorageEntries: beforeAnalysis?.storage?.items || [], beforeAnalysis, blockedRequests });
+  if (trafficCapture.status !== "complete") {
+    integrity.status = "unknown";
+    integrity.uncertain = true;
+    integrity.limitations = [...new Set([...(integrity.limitations || []), "traffic-capture-failed"])].slice(0, 12);
+    integrity.recommendation = "rerun-clean-environment";
+  }
   const cookieCoverage = mergeCookieCoverage(beforeCookieCoverage, afterCookieCoverage);
   const consentEvidence = {
     before: formatConsentEvidence(beforeAnalysis?.consentState),
@@ -440,6 +447,7 @@ export function buildDelta({
       before: formatTrafficEvidence(beforeTraffic),
       after: formatTrafficEvidence(afterTraffic)
     },
+    trafficCapture,
     consentEvidence,
     consentContradictions,
     controlledReloads: controlledReloads.slice(0, 4),
@@ -558,6 +566,7 @@ export function deriveAuditVerdict(delta, { analysisComplete = true } = {}) {
   if (!delta?.banner || delta.banner.confidence === "none") missingCoverage.push("consent-surface");
   if (delta?.inaccessibleConsentSurfaces?.length) missingCoverage.push("consent-surface-inaccessible");
   if (!delta?.integrity || delta.integrity.uncertain) missingCoverage.push("audit-integrity");
+  if (delta?.trafficCapture?.status && delta.trafficCapture.status !== "complete") missingCoverage.push("audit-integrity");
   if (!delta?.cookieCoverage || !delta.cookieCoverage.complete) missingCoverage.push("cookie-coverage");
   if (delta?.cnameCoverage?.status === "unknown") missingCoverage.push("cname-routing");
   const storageCoverage = delta?.browserStorage?.after;

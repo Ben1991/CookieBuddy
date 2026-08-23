@@ -512,6 +512,7 @@ test("derives a positive verdict only when rejection and before/after coverage a
   assert.equal(deriveAuditVerdict({ ...base, denyAction: { clicked: false } }).status, "incomplete");
   assert.equal(deriveAuditVerdict({ ...base, denyAction: { clicked: true, verified: false } }).status, "incomplete");
   assert.equal(deriveAuditVerdict({ ...base, integrity: { status: "contaminated", uncertain: true } }).status, "incomplete");
+  assert.equal(deriveAuditVerdict({ ...base, trafficCapture: { status: "failed", reason: "traffic-capture-persistence-failed" } }).status, "incomplete");
   assert.equal(deriveAuditVerdict({ ...base, cookieCoverage: { complete: false, requestedHosts: ["tracker.example"], unavailableHosts: ["tracker.example"] } }).status, "incomplete");
   const unsupportedStorage = deriveAuditVerdict({
     ...base,
