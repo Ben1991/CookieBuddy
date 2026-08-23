@@ -54,7 +54,7 @@ The source of truth for product acceptance behavior is [`features/cookiebuddy.fe
 | UC-10 | Include supported localStorage, sessionStorage, IndexedDB, Cache Storage, and service-worker metadata. |
 | UC-11 | Classify endpoint relationships with Public Suffix List compatible registrable-domain logic. |
 | UC-12 | Classify necessity conservatively with rationale and confidence; names/CDNs alone cannot prove necessity. |
-| UC-13 | Recognize services from versioned maintainable offline rule data while keeping unknown signals visible. |
+| UC-13 | Recognize services from versioned maintainable offline rule data, expose the matching evidence/version/confidence, and keep unknown signals visible. |
 | UC-14 | Detect and operate supported consent controls in the top document, same-origin frames, and open shadow roots; inaccessible cross-origin surfaces remain explicit and incomplete. |
 | UC-15 | Detect and report prior consent, prior opt-out, observable blocker interference, and unknown audit integrity; uncertain runs cannot be green and recommend a clean rerun. |
 | UC-16 | Handle SPA navigation, redirects, popup closure, service-worker restart, reload, tab closure, and delayed trackers deterministically; persist lifecycle evidence and never render interrupted work as green. |
@@ -127,7 +127,7 @@ Observed evidence may include:
 - supported browser-storage metadata
 - request host/path/type/timestamp with sensitive URL values removed by default
 - optional before/after screenshots of the tested tab, with minimized URL metadata and explicit local review/removal
-- service/rule mapping and confidence
+- service/rule mapping with local rule version, matching evidence, and confidence
 - explicit unsupported or incomplete checks
 
 Interpretations must link back to the evidence that produced them.

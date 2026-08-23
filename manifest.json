@@ -35,6 +35,7 @@
         "<all_urls>"
       ],
       "js": [
+        "src/service-rules.js",
         "src/contact-discovery-content.js",
         "src/consent-controls.js",
         "src/consent-surfaces.js",

@@ -75,17 +75,6 @@ const CATEGORY_KEYWORDS = {
   social: ["social", "media", "embed", "video"]
 };
 
-const SERVICE_HINTS = [
-  { name: "Google Analytics", patterns: ["_ga", "_gid", "google-analytics.com", "googletagmanager.com"], category: "analytics" },
-  { name: "Google Ads", patterns: ["_gcl", "doubleclick.net", "googleadservices.com"], category: "marketing" },
-  { name: "Meta Pixel", patterns: ["_fbp", "facebook.com", "connect.facebook.net"], category: "marketing" },
-  { name: "Hotjar", patterns: ["_hj", "hotjar.com"], category: "analytics" },
-  { name: "HubSpot", patterns: ["hubspot", "__hstc", "hs-"], category: "marketing" },
-  { name: "LinkedIn Insight", patterns: ["linkedin.com", "li_gc", "bcookie"], category: "marketing" },
-  { name: "YouTube", patterns: ["youtube.com", "ytimg.com"], category: "social" },
-  { name: "Vimeo", patterns: ["vimeo.com", "player.vimeo.com"], category: "social" }
-];
-
 const DENY_SELECTORS = [
   "#onetrust-reject-all-handler",
   ".ot-pc-refuse-all-handler",
@@ -403,7 +392,11 @@ function detectCategories(pageText, htmlSample, resources, bannerText = "") {
     if (!categories[category].services.some((service) => service.name === matchedService.name)) {
       categories[category].services.push({
         name: matchedService.name,
-        source: resource.host
+        source: matchedService.evidence.source,
+        ruleId: matchedService.id,
+        ruleVersion: matchedService.ruleVersion,
+        evidence: matchedService.evidence,
+        confidence: matchedService.confidence
       });
       categories[category].count += 1;
     }
@@ -773,8 +766,7 @@ function inferAuthority(hostname) {
 }
 
 function matchService(value) {
-  const lower = value.toLowerCase();
-  return SERVICE_HINTS.find((service) => service.patterns.some((pattern) => lower.includes(pattern)));
+  return globalThis.CookieBuddyServiceRules?.match({ url: value }) || null;
 }
 
 function safeUrl(value) {

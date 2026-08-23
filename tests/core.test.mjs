@@ -14,7 +14,8 @@ import {
   isEssentialCookie,
   isEssentialHost,
   normalizeTraffic,
-  serviceForCookie
+  serviceForCookie,
+  serviceRuleForCookie
 } from "../src/core.js";
 
 test("capitalizes labels for category headings", () => {
@@ -92,11 +93,14 @@ test("detects essential infrastructure hosts", () => {
 test("maps known cookie services and falls back cleanly", () => {
   assert.equal(serviceForCookie({ name: "_ga", domain: ".example.com" }, "Unknown service"), "Google Analytics");
   assert.equal(serviceForCookie({ name: "x", domain: ".example.com" }, "Unknown service"), "Unknown service");
+  assert.equal(serviceRuleForCookie({ name: "_ga", domain: ".example.com" }).evidence.matchedBy, "cookie-name");
 });
 
 test("formats cookies with service labels", () => {
   const result = formatCookie({ name: "_hjSession", domain: ".example.com", path: "/", secure: true, sameSite: "Lax" }, "Unknown service");
   assert.equal(result.service, "Hotjar");
+  assert.equal(result.serviceRuleId, "hotjar");
+  assert.equal(result.serviceEvidence.matchedBy, "cookie-name");
   assert.equal(result.path, "/");
 });
 
