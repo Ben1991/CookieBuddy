@@ -256,6 +256,7 @@ function renderDelta(delta, options = {}) {
             <p class="muted">${escapeHtml(t("importantLimitationsHeading"))}</p>
             ${renderSimpleList([t("deltaLimitationBestEffort"), t("deltaLimitationServerSide"), t("deltaLimitationNecessary"), t("deltaLimitationHeuristic")])}
           </section>
+          ${renderRejectVerification(delta.denyAction)}
           ${renderLifecycleEvidence(delta)}
           ${renderCoverage(coverage)}
         </aside>
@@ -263,6 +264,25 @@ function renderDelta(delta, options = {}) {
       ${renderVisualEvidence(delta, options)}
     </div>
   `;
+}
+
+function renderRejectVerification(denyAction = {}) {
+  const verification = denyAction.verification || {};
+  const statusCopy = denyAction.verified
+    ? t("rejectVerificationVerified")
+    : denyAction.clicked ? t("rejectVerificationUnclear") : t("rejectVerificationNotAttempted");
+  const firstAction = verification.actions?.[0];
+  const evidenceLabels = {
+    "reject-control-removed": t("rejectEvidenceControlRemoved"),
+    "consent-signals-changed": t("rejectEvidenceConsentSignals"),
+    "banner-state-changed": t("rejectEvidenceBannerChanged"),
+    "consent-control-state-changed": t("rejectEvidenceControlState")
+  };
+  const evidence = (verification.evidence || []).map((item) => `<li>${escapeHtml(evidenceLabels[item] || item)}</li>`).join("");
+  const selection = firstAction?.label
+    ? `<p class="muted">${escapeHtml(t("rejectControlSelected", [firstAction.label, firstAction.source || "unknown", firstAction.confidence || "unknown"]))}</p>`
+    : "";
+  return `<section class="reject-verification"><h3>${escapeHtml(t("rejectVerificationHeading"))}</h3><p class="muted">${escapeHtml(statusCopy)}</p>${selection}${evidence ? `<ul class="coverage-list">${evidence}</ul>` : ""}</section>`;
 }
 
 function renderLifecycleEvidence(delta) {

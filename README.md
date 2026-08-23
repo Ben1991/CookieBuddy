@@ -46,7 +46,7 @@ The source of truth for product acceptance behavior is [`features/cookiebuddy.fe
 | UC-02 | Prefer a DPO contact found in the visited site's privacy policy over a generic contact. |
 | UC-03 | Fall back to a clearly labeled DPO contact in the site's imprint when appropriate. |
 | UC-04 | Run a controlled before/after rejection audit with explicit observation windows and reload. |
-| UC-05 | Verify that reject-all actually changed consent; a successful DOM click alone is insufficient. |
+| UC-05 | Verify that reject-all actually changed consent; a successful DOM click alone is insufficient, and the report records the selected control plus verification evidence. |
 | UC-06 | Detect supported CMP APIs in the page main world and inspect IAB TCF / Google Consent Mode where available. |
 | UC-07 | Flag consent signals that contradict the rejected UI state as high-confidence technical findings. |
 | UC-08 | Preserve concurrent network evidence without request-loss race conditions. |

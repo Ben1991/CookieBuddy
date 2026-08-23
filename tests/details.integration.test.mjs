@@ -43,6 +43,7 @@ test("details page opens a mail draft from the delta report", async () => {
 
   assert.match(element(document, "detailsOutput").innerHTML, /Coverage and limits/);
   assert.match(element(document, "detailsOutput").innerHTML, /Minimized URL evidence/);
+  assert.match(element(document, "detailsOutput").innerHTML, /Reject action verification/);
   assert.match(element(document, "detailsOutput").innerHTML, /Not technically inspectable/);
   assert.match(element(document, "detailsOutput").innerHTML, /Heuristic indicators/);
   assert.match(element(document, "detailsOutput").innerHTML, /Audit lifecycle evidence/);
@@ -182,7 +183,7 @@ function buildDeltaFixture() {
     url: "https://example.com",
     riskLevel: "high",
     summary: "Cookie consent delta report with suspicious findings.",
-    denyAction: { clicked: true, label: "Reject all" },
+    denyAction: { clicked: true, verified: true, label: "Reject all", verification: { status: "verified", evidence: ["banner-state-changed"], actions: [{ label: "Reject all", source: "locale", confidence: "medium" }] } },
     beforeCounts: { cookies: 5, thirdPartyHosts: 2 },
     afterDenyCounts: { cookies: 4, thirdPartyHosts: 1 },
     remainingCookies: [{ name: "_ga", domain: ".example.com", service: "Google Analytics" }],

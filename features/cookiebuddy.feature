@@ -51,6 +51,7 @@ Feature: One-click consent and tracking audit
     Then a successful DOM click alone is not treated as successful rejection
     And CookieBuddy verifies the resulting consent state using available CMP state, consent signals, or UI state changes
     And an ambiguous or unverifiable rejection makes the audit incomplete or unclear
+    And the report records the selected control and the verification evidence
 
   @UC-06 @issue-40 @issue-44 @p1
   Scenario: Detect CMP APIs and validate consent signals in the page main world

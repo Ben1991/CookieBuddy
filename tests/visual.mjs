@@ -30,7 +30,7 @@ const fixtureDelta = {
   riskLevel: "high",
   summary: "Review signal: non-essential activity remained after opt-out.",
   banner: fixtureAnalysis.banner,
-  denyAction: { clicked: true, label: "Reject all" },
+  denyAction: { clicked: true, verified: true, label: "Reject all", verification: { status: "verified", evidence: ["banner-state-changed"], actions: [{ label: "Reject all", source: "locale", confidence: "medium" }] } },
   remainingCookies: [{ name: "_ga", domain: "example.com", service: "Google Analytics" }],
   newCookies: [],
   remainingStorageEntries: fixtureAnalysis.storage.items,
@@ -74,7 +74,7 @@ function chromeFixtureScript() {
         runtime: { getURL: (path) => path, onMessage: { addListener: () => {} }, sendMessage: async () => ({ traffic: [] }) },
         i18n: { getUILanguage: () => "en-US" },
         storage: { local: { get: async (key) => typeof key === "string" ? { [key]: storage[key] } : storage, set: async (values) => Object.assign(storage, values) } },
-        tabs: { query: async () => [{ id: 1, url: analysis.url }], sendMessage: async (_id, message) => message.type === "TRY_DENY_ALL" ? { found: true, clicked: true, label: "Reject all" } : analysis, create: async () => {} },
+        tabs: { query: async () => [{ id: 1, url: analysis.url }], sendMessage: async (_id, message) => message.type === "TRY_DENY_ALL" ? { found: true, clicked: true, verified: true, label: "Reject all", verification: { status: "verified", evidence: ["banner-state-changed"] } } : analysis, create: async () => {} },
         cookies: { getAll: async () => cookies },
         scripting: { executeScript: async () => {} }
       };
@@ -132,6 +132,7 @@ try {
   assert.ok(await details.locator("#downloadDeltaPdfButton").isVisible(), "print/PDF export action should be visible");
   assert.ok(await details.getByText("Still active", { exact: true }).isVisible(), "active services should be labeled");
   assert.ok(await details.getByText("Unclear", { exact: true }).isVisible(), "unlisted signals should be labeled unclear");
+  assert.ok(await details.getByText("Reject action verification", { exact: true }).isVisible(), "the report should show rejection verification evidence");
   assert.ok(await details.getByText("Coverage and limits", { exact: true }).isVisible(), "coverage limits should be visible in the evidence report");
   assert.ok(await details.getByText("Minimized URL evidence", { exact: true }).isVisible(), "URL minimization should be disclosed in the evidence report");
   assert.ok(await details.getByText("Not technically inspectable", { exact: false }).count() > 0, "unsupported techniques should be labeled as not technically inspectable");

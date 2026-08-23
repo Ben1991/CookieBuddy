@@ -1,5 +1,7 @@
 // Fallback embedded CMP signatures for when external fetch unavailable
 // Reviewed against common operational CMPs and IAB Europe TCF resources in June 2026.
+// Consent verification is loaded as a module in tests and mirrored here because
+// content scripts are injected as classic scripts in the extension.
 const FALLBACK_CMP_SIGNATURES = [
   { name: "Usercentrics", patterns: ["usercentrics", "uc-settings", "uc-center-container", "uc-privacy", "cmp.usercentrics"] },
   { name: "OneTrust", patterns: ["onetrust", "ot-sdk", "optanon", "cookiepro", "optanonconsent"] },
@@ -481,22 +483,55 @@ async function detectContacts() {
 }
 
 async function tryDenyAll() {
-  const candidates = collectDenyCandidates();
-  const clicked = candidates.find((button) => {
-    try {
-      button.click();
-      return true;
-    } catch {
-      return false;
-    }
-  });
+  let before = collectConsentState();
+  const excluded = new Set();
+  const actions = [];
+  let verification = { status: "unverified", evidence: [] };
 
-  await wait(1400);
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const candidates = collectDenyCandidates(excluded);
+    if (!candidates.length) break;
+    const candidate = candidates[0];
+    excluded.add(candidate.element);
+    const label = consentControls?.getAccessibleName(candidate.element) || "";
+    let clicked = false;
+    try {
+      candidate.element.click();
+      clicked = true;
+    } catch {
+      // Continue to the next safe candidate when a control is no longer clickable.
+    }
+    if (!clicked) continue;
+
+    await wait(700);
+    const after = collectConsentState();
+    verification = evaluateConsentStateChange(before, after);
+    actions.push({
+      label: String(label).slice(0, 160),
+      source: candidate.classification.source,
+      confidence: candidate.classification.confidence,
+      status: verification.status,
+      evidence: verification.evidence
+    });
+    if (verification.status === "verified") break;
+    before = after;
+  }
+
+  const firstAction = actions[0];
+  const clicked = actions.length > 0;
+  const found = clicked || collectDenyCandidates().length > 0;
+  const status = verification.status === "verified" ? "verified" : clicked ? "unclear" : "not-attempted";
   return {
-    clicked: Boolean(clicked),
-    label: clicked && consentControls ? consentControls.getAccessibleName(clicked) : "",
-    found: candidates.length > 0,
-    reason: clicked ? "semantic-control-clicked" : candidates.length > 0 ? "safe-control-not-clickable" : "no-safe-control"
+    clicked,
+    verified: status === "verified",
+    label: firstAction?.label || "",
+    found,
+    reason: status === "verified" ? "consent-state-verified" : clicked ? "consent-state-unverified" : "no-safe-control",
+    verification: {
+      status,
+      evidence: [...new Set(actions.flatMap((action) => action.evidence || []))],
+      actions
+    }
   };
 }
 
@@ -546,16 +581,57 @@ function collectBannerOverviewCandidates() {
     .map(({ element }) => element);
 }
 
-function collectDenyCandidates() {
+function collectDenyCandidates(excluded = new Set()) {
   const selectorMatches = DENY_SELECTORS.flatMap((selector) => Array.from(document.querySelectorAll(selector)));
   return Array.from(new Set(selectorMatches))
     .filter((element) => element instanceof HTMLElement)
     .filter(isUsableConsentControl)
     .map((element) => ({ element, classification: classifyConsentElement(element) }))
     .filter(({ classification }) => ["deny-all", "essential-only"].includes(classification.kind) && classification.canClick)
+    .filter(({ element, classification }) => !excluded.has(element) && (isConsentSurfaceElement(element) || classification.source === "cmp"))
     .sort((left, right) => consentControlScore(right.classification) - consentControlScore(left.classification))
     .slice(0, PAGE_ANALYSIS_BUDGETS.maxConsentNodes)
-    .map(({ element }) => element);
+}
+
+function collectConsentState() {
+  const bannerText = normalizeConsentStateText(collectBannerText());
+  const signals = collectDomConsentSignals().map((signal) => signal.value).sort();
+  const candidates = collectDenyCandidates(excluded);
+  const controls = candidates.map(({ element }) => [
+    consentControls?.getAccessibleName(element) || "",
+    element.getAttribute("aria-checked") || "",
+    element.getAttribute("aria-pressed") || "",
+    element.getAttribute("aria-expanded") || "",
+    element.getAttribute("disabled") || ""
+  ].join("~")).sort();
+  return {
+    bannerVisible: Boolean(bannerText || signals.length),
+    bannerSignature: bannerText,
+    consentSignalSignature: signals.join("|") ,
+    controlStateSignature: controls.join("|"),
+    rejectCandidateCount: candidates.length
+  };
+}
+
+function evaluateConsentStateChange(before = {}, after = {}) {
+  const evidence = [];
+  if (before.rejectCandidateCount > after.rejectCandidateCount) evidence.push("reject-control-removed");
+  if (before.consentSignalSignature !== after.consentSignalSignature) evidence.push("consent-signals-changed");
+  if (before.bannerSignature !== after.bannerSignature) evidence.push("banner-state-changed");
+  if (before.controlStateSignature !== after.controlStateSignature) evidence.push("consent-control-state-changed");
+  const changed = evidence.length > 0;
+  const completed = changed && (after.rejectCandidateCount === 0 || after.bannerVisible === false);
+  return { status: completed ? "verified" : changed ? "changed-not-final" : "unverified", evidence };
+}
+
+function normalizeConsentStateText(value) {
+  return String(value || "").toLocaleLowerCase().replace(/\s+/g, " ").trim().slice(0, 3000);
+}
+
+function isConsentSurfaceElement(element) {
+  return Boolean(element.closest?.(
+    "[role='dialog'], [aria-modal='true'], [id*='cookie' i], [class*='cookie' i], [id*='consent' i], [class*='consent' i], [id*='privacy' i], [class*='privacy' i], [data-testid*='cookie' i], [data-testid*='consent' i]"
+  ));
 }
 
 function classifyConsentElement(element) {
