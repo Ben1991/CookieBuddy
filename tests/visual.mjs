@@ -64,7 +64,7 @@ const fixtureDelta = {
     after: { status: "observed", frameworks: ["iab-tcf", "google-consent-mode"], apiSupport: { tcf: "observed", googleConsentMode: "observed" }, signals: [{ framework: "iab-tcf", key: "purpose:3", value: "granted", optional: true, source: "__tcfapi:getTCData" }, { framework: "google-consent-mode", key: "analytics_storage", value: "denied", optional: true, source: "dataLayer:update" }], limitations: [] }
   },
   consentContradictions: [{ framework: "iab-tcf", key: "purpose:3", value: "granted", source: "__tcfapi:getTCData", severity: "high", before: "granted", rationale: "Optional TCF purpose remained granted after verified rejection" }],
-  report: { reportVersion: 1, payload: { audit: { hostname: "example.com", extension: { name: "CookieBuddy", version: "2.4.0" }, browser: { userAgent: "TestBrowser/1.0", platform: "test" } } }, integrity: { algorithm: "SHA-256", payloadHash: "b".repeat(64) } },
+  report: { reportVersion: 1, payload: { audit: { hostname: "example.com", extension: { name: "CookieBuddy", version: "0.1.0" }, browser: { userAgent: "Chrome", platform: "desktop" } } }, integrity: { algorithm: "SHA-256", payloadHash: "b".repeat(64) } },
   browserStorage: {
     before: {
       indexedDB: { status: "observed", names: ["consent-db"] },
@@ -125,6 +125,15 @@ async function captureDocumentationScreenshot(page, fileName, options = {}) {
   await page.screenshot({ path: join(screenshotDir, fileName), ...options });
 }
 
+async function captureStoreScreenshot(page, fileName, { centerPopup = false } = {}) {
+  const storeAssetDir = process.env.COOKIEBUDDY_STORE_ASSET_DIR;
+  if (!storeAssetDir) return;
+  await mkdir(storeAssetDir, { recursive: true });
+  await page.setViewportSize({ width: 1280, height: 800 });
+  if (centerPopup) await page.addStyleTag({ content: "body { display: flex; justify-content: center; align-items: flex-start; } .shell { margin: 0 auto; }" });
+  await page.screenshot({ path: join(storeAssetDir, fileName), fullPage: false });
+}
+
 await new Promise((resolve) => server.listen(port, "127.0.0.1", resolve));
 const browser = await chromium.launch({ headless: true });
 try {
@@ -159,6 +168,14 @@ try {
   assert.equal(await popup.locator('#auditSteps [data-state="complete"]').count(), 8, "completed audit should mark every progress step complete");
   await captureDocumentationScreenshot(popup, "popup-overview.png", { fullPage: true });
 
+  const storeDetails = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+  await storeDetails.addInitScript({ content: chromeFixtureScript() });
+  await storeDetails.goto(`http://127.0.0.1:${port}/details.html?view=delta&store=1`);
+  await storeDetails.getByText("Evidence details", { exact: true }).waitFor({ state: "visible", timeoutMs: 10000 });
+  await storeDetails.getByText("Report context", { exact: true }).waitFor({ state: "visible", timeoutMs: 10000 });
+  await captureStoreScreenshot(storeDetails, "cookiebuddy-evidence-1280x800.png");
+  await storeDetails.close();
+
   const reviewPopup = await browser.newPage({ viewport: { width: 460, height: 900 } });
   await reviewPopup.addInitScript({ content: chromeFixtureScript("review") });
   await reviewPopup.goto(`http://127.0.0.1:${port}/popup.html?review=1`);
@@ -174,7 +191,7 @@ try {
   const details = await browser.newPage({ viewport: { width: 1200, height: 900 } });
   await details.addInitScript({ content: chromeFixtureScript() });
   await details.goto(`http://127.0.0.1:${port}/details.html?view=delta`);
-  await details.getByText("Technische Details", { exact: true }).waitFor({ state: "visible", timeoutMs: 10000 });
+  await details.getByText("Evidence details", { exact: true }).waitFor({ state: "visible", timeoutMs: 10000 });
   assert.ok((await details.screenshot()).length > 10000, "details screenshot should contain rendered UI");
   assert.ok(await details.locator("#copyDeltaReportButton").isVisible(), "copy-for-email action should be visible");
   assert.ok(await details.locator("#complaintDraft").isVisible(), "details should expose an editable complaint draft");

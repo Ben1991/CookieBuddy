@@ -994,6 +994,15 @@
   "detailsDocumentTitle": {
     "message": "CookieBuddy – Scan-Details"
   },
+  "detailsHeading": {
+    "message": "Technische Details"
+  },
+  "detailsIntro": {
+    "message": "Nachweise zuerst · Scan lokal gespeichert"
+  },
+  "localOnlyBadge": {
+    "message": "Lokal gespeichert"
+  },
   "currentPageAriaLabel": {
     "message": "Aktuelle Seite"
   },

@@ -994,6 +994,15 @@
   "detailsDocumentTitle": {
     "message": "CookieBuddy – Scan details"
   },
+  "detailsHeading": {
+    "message": "Evidence details"
+  },
+  "detailsIntro": {
+    "message": "Evidence first · Scan stored locally"
+  },
+  "localOnlyBadge": {
+    "message": "Stored locally"
+  },
   "currentPageAriaLabel": {
     "message": "Current page"
   },

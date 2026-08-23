@@ -22,6 +22,7 @@ test("store release kit keeps public privacy and review guidance present", async
   const files = [
     "PRIVACY.md",
     "docs/chrome-web-store/store-listing.md",
+    "docs/chrome-web-store/assets/cookiebuddy-evidence-1280x800.png",
     "docs/chrome-web-store/privacy-disclosure.md",
     "docs/chrome-web-store/test-instructions.md",
     "docs/chrome-web-store/release-checklist.md",

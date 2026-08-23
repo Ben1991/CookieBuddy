@@ -55,8 +55,9 @@ Es werden weder Konto noch Testzugang benötigt.
 ## Graphic assets
 
 - **Store icon:** `assets/logo-v2-128.png` (128×128)
+- **Store screenshot:** `docs/chrome-web-store/assets/cookiebuddy-evidence-1280x800.png` (1280×800)
 - **Current documentation screenshots:** `docs/screenshots/popup-overview.png`, `docs/screenshots/popup-review.png`, `docs/screenshots/delta-audit.png`
-- **Required manual store asset:** at least one current 1280×800 screenshot, up to five total. The existing documentation screenshots are intentionally not uploaded as-is because their dimensions are not the store's recommended 1280×800 format.
+- **Additional screenshots:** up to four more current 1280×800 screenshots may be added. The existing documentation screenshots are intentionally not uploaded as-is because their dimensions are not the store's recommended 1280×800 format.
 - **Optional promotional assets:** 440×280 small promo tile and 1400×560 marquee image, both still to be created from approved product visuals.
 - **Video:** none prepared; leave empty unless a current, publicly accessible walkthrough is available.
 

@@ -10,7 +10,7 @@
 - [x] Privacy-tab declarations in [`privacy-disclosure.md`](privacy-disclosure.md).
 - [x] Reviewer flow in [`test-instructions.md`](test-instructions.md).
 - [x] Reproducible ZIP packaging via `npm run package:store`.
-- [ ] Create at least one current 1280×800 store screenshot from the actual UI.
+- [x] Create at least one current 1280×800 store screenshot from the actual UI.
 - [ ] Optionally create the 440×280 small promo tile and 1400×560 marquee image.
 
 ## Before upload
