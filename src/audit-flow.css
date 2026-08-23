@@ -1,0 +1,64 @@
+.audit-popup { gap: 12px; max-width: 430px; padding: 14px; }
+.audit-header, .audit-site-row, .audit-section-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.audit-header { align-items: center; }
+.audit-hero, .audit-explainer, .audit-progress-card, .audit-result { border: 1px solid var(--line); border-radius: 14px; background: var(--panel); box-shadow: 0 10px 28px rgba(15, 23, 42, .08); }
+.audit-hero { padding: 16px; }
+.audit-eyebrow { display: block; margin-bottom: 3px; color: var(--muted); font-size: .7rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.audit-site { display: block; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .92rem; }
+.audit-state-pill { flex: 0 0 auto; border: 1px solid var(--line); border-radius: 999px; padding: 5px 9px; background: var(--panel-strong); color: var(--muted); font-size: .72rem; font-weight: 800; }
+.audit-state-pill[data-mode="busy"] { border-color: color-mix(in srgb, var(--blue) 35%, var(--line)); color: var(--blue); }
+.audit-state-pill[data-mode="warn"] { border-color: color-mix(in srgb, var(--danger) 35%, var(--line)); color: var(--danger); }
+.audit-state-pill[data-mode="ok"] { border-color: color-mix(in srgb, var(--accent) 35%, var(--line)); color: var(--accent-strong); }
+.audit-verdict-intro { padding: 18px 0 14px; }
+.audit-verdict-intro h1 { margin: 0 0 7px; font-size: 1.28rem; line-height: 1.2; }
+.audit-copy { margin: 0; color: var(--muted); font-size: .85rem; line-height: 1.5; }
+.audit-local-note { display: flex; align-items: center; gap: 9px; border-top: 1px solid var(--line); padding-top: 11px; }
+.audit-local-note strong, .audit-local-note span { display: block; }
+.audit-local-note strong { font-size: .78rem; }
+.audit-local-note span:not(.audit-local-icon) { margin-top: 2px; color: var(--muted); font-size: .72rem; }
+.audit-local-icon { color: var(--accent); font-size: .9rem; }
+.audit-explainer, .audit-progress-card { padding: 14px; }
+.audit-explainer h2, .audit-progress-card h2 { margin: 0 0 9px; font-size: .92rem; }
+.audit-steps-preview { display: grid; gap: 9px; margin: 0; padding: 0; list-style: none; }
+.audit-steps-preview li { display: grid; grid-template-columns: 26px 1fr; gap: 9px; align-items: start; }
+.audit-steps-preview li > span { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: color-mix(in srgb, var(--blue) 10%, var(--panel-strong)); color: var(--blue); font-size: .7rem; font-weight: 900; }
+.audit-steps-preview strong, .audit-steps-preview small { display: block; }
+.audit-steps-preview strong { font-size: .8rem; }
+.audit-steps-preview small { margin-top: 2px; color: var(--muted); font-size: .71rem; line-height: 1.35; }
+.audit-progress-card { position: relative; }
+.audit-progress-dot { width: 9px; height: 9px; margin-top: 5px; border-radius: 50%; background: var(--line); }
+.audit-step-list { display: grid; gap: 6px; margin: 12px 0 0; padding: 0; list-style: none; }
+.audit-step-list li { display: grid; grid-template-columns: 23px minmax(0, 1fr) auto; gap: 8px; align-items: center; min-height: 25px; color: var(--muted); font-size: .75rem; }
+.audit-step-icon { display: grid; place-items: center; width: 21px; height: 21px; border: 1px solid var(--line); border-radius: 50%; font-size: .65rem; font-weight: 800; }
+.audit-step-list li[data-state="active"] { color: var(--blue); font-weight: 800; }
+.audit-step-list li[data-state="active"] .audit-step-icon { border-color: var(--blue); background: color-mix(in srgb, var(--blue) 12%, var(--panel-strong)); }
+.audit-step-list li[data-state="complete"] { color: var(--text); }
+.audit-step-list li[data-state="complete"] .audit-step-icon { border-color: var(--accent); background: var(--accent); color: white; }
+.audit-step-list li[data-state="failed"] { color: var(--danger); }
+.audit-step-list li[data-state="failed"] .audit-step-icon { border-color: var(--danger); color: var(--danger); }
+.audit-step-list small { color: inherit; font-size: .68rem; }
+.audit-progress-track { height: 5px; margin-top: 11px; overflow: hidden; border-radius: 999px; background: color-mix(in srgb, var(--line) 75%, transparent); }
+.audit-progress-track span { display: block; width: 0; height: 100%; border-radius: inherit; background: var(--blue); transition: width 180ms ease; }
+.audit-result { padding: 14px; }
+.audit-empty-result { padding: 5px 8px; text-align: center; }
+.audit-empty-result strong { font-size: .86rem; }
+.audit-empty-result p { max-width: 34ch; margin: 5px auto 0; color: var(--muted); font-size: .75rem; line-height: 1.4; }
+.audit-primary-actions { display: grid; gap: 8px; }
+.audit-primary-button, .audit-secondary-button { width: 100%; min-height: 42px; justify-content: center; }
+.audit-primary-button { font-weight: 850; }
+.audit-verdict { display: grid; gap: 10px; padding: 14px; border: 1px solid var(--line); border-radius: 12px; }
+.audit-verdict[data-verdict="positive"] { border-color: #35a878; background: color-mix(in srgb, var(--accent) 9%, var(--panel-strong)); }
+.audit-verdict[data-verdict="negative"] { border-color: var(--danger); background: color-mix(in srgb, var(--danger) 8%, var(--panel-strong)); }
+.audit-verdict[data-verdict="incomplete"] { border-color: #b7791f; background: color-mix(in srgb, #d99a2b 10%, var(--panel-strong)); }
+.audit-verdict-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.audit-verdict-heading h2 { margin: 0; font-size: 1rem; }
+.audit-verdict-heading p { margin: 4px 0 0; color: var(--muted); font-size: .75rem; line-height: 1.4; }
+.audit-reason-list { display: grid; gap: 5px; margin: 0; padding-left: 18px; color: var(--muted); font-size: .76rem; }
+.audit-evidence { border-top: 1px solid var(--line); padding-top: 9px; }
+.audit-evidence summary { cursor: pointer; color: var(--accent-strong); font-size: .76rem; font-weight: 800; }
+.audit-evidence-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 8px; }
+.audit-evidence-grid span { display: grid; gap: 2px; padding: 7px; border-radius: 8px; background: color-mix(in srgb, var(--line) 34%, transparent); color: var(--muted); font-size: .66rem; }
+.audit-evidence-grid strong { color: var(--text); font-size: .95rem; }
+.audit-result-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.audit-result-actions a, .audit-result-actions button { flex: 1; min-width: 130px; text-align: center; }
+@media (prefers-color-scheme: dark) { .audit-hero, .audit-explainer, .audit-progress-card, .audit-result { box-shadow: 0 14px 34px rgba(0, 0, 0, .24); } }

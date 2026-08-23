@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test tests/core.test.mjs tests/popup.integration.test.mjs tests/details.integration.test.mjs tests/contact-discovery.test.mjs tests/localization.test.mjs tests/use-cases.test.mjs",
+    "test": "node --test tests/core.test.mjs tests/popup.integration.test.mjs tests/details.integration.test.mjs tests/contact-discovery.test.mjs tests/localization.test.mjs tests/use-cases.test.mjs tests/audit-popup-contract.test.mjs",
     "test:visual": "node tests/visual.mjs",
     "check": "node --check src/background.js && node --check src/content.js && node --check src/contact-discovery.js && node --check src/popup.js && node --check src/details.js && node --check src/i18n.js && node -e \"for (const file of ['manifest.json','_locales/en/messages.json','_locales/de/messages.json']) JSON.parse(require('fs').readFileSync(file,'utf8'))\""
   },
