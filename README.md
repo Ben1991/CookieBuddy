@@ -56,7 +56,7 @@ The source of truth for product acceptance behavior is [`features/cookiebuddy.fe
 | UC-12 | Classify necessity conservatively with rationale and confidence; names/CDNs alone cannot prove necessity. |
 | UC-13 | Recognize services from versioned maintainable offline rule data while keeping unknown signals visible. |
 | UC-14 | Detect and operate supported consent controls in the top document, same-origin frames, and open shadow roots; inaccessible cross-origin surfaces remain explicit and incomplete. |
-| UC-15 | Detect contaminated audit state such as prior consent, blockers, tracking protection, or other conditions that undermine integrity. |
+| UC-15 | Detect and report prior consent, prior opt-out, observable blocker interference, and unknown audit integrity; uncertain runs cannot be green and recommend a clean rerun. |
 | UC-16 | Handle SPA navigation, redirects, popup closure, service-worker restart, reload, tab closure, and delayed trackers deterministically; persist lifecycle evidence and never render interrupted work as green. |
 | UC-17 | Produce a conservative verdict: looks correct, review recommended, likely incorrect, or audit incomplete. |
 | UC-18 | Build an evidence-grade report with timeline, coverage, observed facts, interpretation, and machine-readable export. |

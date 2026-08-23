@@ -1,4 +1,5 @@
 import { minimizeUrlEvidence } from "./url-evidence.mjs";
+import { assessAuditIntegrity } from "./audit-integrity.mjs";
 
 export function capitalize(value) {
   return value.charAt(0).toUpperCase() + value.slice(1);
@@ -59,6 +60,8 @@ export function normalizeTraffic(traffic, firstPartyHost) {
           path: minimized.path,
           queryKeys: minimized.queryKeys,
           type: item.type,
+          blocked: Boolean(item.blocked),
+          error: item.blocked ? String(item.error || "blocked").slice(0, 100) : "",
           thirdParty: getBaseDomain(minimized.host) !== firstPartyBase
         };
       } catch {
@@ -170,6 +173,8 @@ export function buildDelta({
   denyLabel,
   denyVerification = null,
   inaccessibleConsentSurfaces = [],
+  beforeAnalysis = null,
+  blockedRequests = [],
   manualConsentConfirmed,
   labels,
   tabUrl
@@ -178,13 +183,16 @@ export function buildDelta({
   const remainingCookies = afterCookies.filter((cookie) => beforeCookieKeys.has(cookieKey(cookie)) && !isEssentialCookie(cookie));
   const newCookies = afterCookies.filter((cookie) => !beforeCookieKeys.has(cookieKey(cookie)) && !isEssentialCookie(cookie));
   const essentialCookies = afterCookies.filter((cookie) => isEssentialCookie(cookie));
-  const allThirdPartyHosts = Array.from(new Set(afterTraffic.map((item) => item.host))).sort();
+  const observedBeforeTraffic = beforeTraffic.filter((item) => !item.blocked);
+  const observedAfterTraffic = afterTraffic.filter((item) => !item.blocked);
+  const allThirdPartyHosts = Array.from(new Set(observedAfterTraffic.map((item) => item.host))).sort();
   const thirdPartyHosts = allThirdPartyHosts.filter((host) => !isEssentialHost(host));
   const essentialThirdPartyHosts = allThirdPartyHosts.filter((host) => isEssentialHost(host));
   const remainingStorageEntries = afterStorageEntries.filter(Boolean);
   const nonEssentialStorageEntries = remainingStorageEntries.filter((entry) => !isEssentialStorageEntry(entry));
   const essentialStorageEntries = remainingStorageEntries.filter(isEssentialStorageEntry);
-  const serviceAudit = buildServiceAudit({ bannerCategories, beforeCookies, afterCookies, beforeTraffic, afterTraffic, afterStorageEntries: remainingStorageEntries });
+  const serviceAudit = buildServiceAudit({ bannerCategories, beforeCookies, afterCookies, beforeTraffic: observedBeforeTraffic, afterTraffic: observedAfterTraffic, afterStorageEntries: remainingStorageEntries });
+  const integrity = assessAuditIntegrity({ beforeCookies, beforeStorageEntries: beforeAnalysis?.storage?.items || [], beforeAnalysis, blockedRequests });
   const suspiciousCookies = remainingCookies.filter((cookie) => !isEssentialCookie(cookie));
   const hasDelta = suspiciousCookies.length > 0 || newCookies.length > 0 || thirdPartyHosts.length > 0 || nonEssentialStorageEntries.length > 0 || serviceAudit.some((service) => service.status === "active") || (!denyClicked && !manualConsentConfirmed);
 
@@ -206,6 +214,7 @@ export function buildDelta({
     essentialCookies,
     essentialThirdPartyHosts,
     banner,
+    integrity,
     inaccessibleConsentSurfaces: inaccessibleConsentSurfaces.slice(0, 12),
     afterStorageEntries: remainingStorageEntries,
     remainingStorageEntries,
@@ -214,7 +223,7 @@ export function buildDelta({
     serviceAudit,
     beforeCounts: {
       cookies: beforeCookies.length,
-      thirdPartyHosts: Array.from(new Set(beforeTraffic.map((item) => item.host))).length
+      thirdPartyHosts: Array.from(new Set(observedBeforeTraffic.map((item) => item.host))).length
     },
     afterDenyCounts: {
       cookies: afterCookies.length,
@@ -273,12 +282,13 @@ export function createCoverageSummary({ delta = {}, analysisComplete = true, heu
   const inaccessibleConsentSurfaces = Array.isArray(delta.inaccessibleConsentSurfaces) ? delta.inaccessibleConsentSurfaces : [];
   const hasConsentObservation = Boolean(delta.banner && delta.banner.confidence !== "none") && inaccessibleConsentSurfaces.length === 0;
   return {
-    auditComplete: Boolean(analysisComplete && delta.beforeCounts && delta.afterDenyCounts && inaccessibleConsentSurfaces.length === 0),
+    auditComplete: Boolean(analysisComplete && delta.beforeCounts && delta.afterDenyCounts && inaccessibleConsentSurfaces.length === 0 && (!delta.integrity || delta.integrity.uncertain === false)),
     observed: [
       { key: "cookies", state: hasCookieObservation ? "observed" : "not-observed", confidence: hasCookieObservation ? "confirmed" : "limited", evidenceCount: delta.afterDenyCounts?.cookies || 0 },
       { key: "browser-storage", state: hasStorageObservation ? "observed" : "not-observed", confidence: hasStorageObservation ? "confirmed" : "limited", evidenceCount: delta.afterDenyCounts?.storageEntries || 0 },
       { key: "network-requests", state: hasTrafficObservation ? "observed" : "not-observed", confidence: hasTrafficObservation ? "confirmed" : "limited", evidenceCount: delta.afterDenyCounts?.thirdPartyHosts || 0 },
-      { key: "consent-surface", state: inaccessibleConsentSurfaces.length ? "not-technically-inspectable" : hasConsentObservation ? "observed" : "not-observed", confidence: inaccessibleConsentSurfaces.length ? "high" : hasConsentObservation ? (delta.banner.confidence || "confirmed") : "limited", evidenceCount: delta.banner?.evidence?.length || 0 }
+      { key: "consent-surface", state: inaccessibleConsentSurfaces.length ? "not-technically-inspectable" : hasConsentObservation ? "observed" : "not-observed", confidence: inaccessibleConsentSurfaces.length ? "high" : hasConsentObservation ? (delta.banner.confidence || "confirmed") : "limited", evidenceCount: delta.banner?.evidence?.length || 0 },
+      { key: "audit-integrity", state: delta.integrity?.uncertain === false ? "observed" : "not-observed", confidence: delta.integrity?.uncertain === false ? "confirmed" : "limited", evidenceCount: delta.integrity?.evidence?.length || 0 }
     ],
     limitations: COVERAGE_LIMITATIONS.map((limitation) => ({ ...limitation })),
     heuristicSignals: heuristicSignals || deriveHeuristicSignals(delta)
@@ -297,6 +307,7 @@ export function deriveAuditVerdict(delta, { analysisComplete = true } = {}) {
   if (!delta?.denyAction?.clicked || !delta?.denyAction?.verified) missingCoverage.push("rejection-verification");
   if (!delta?.banner || delta.banner.confidence === "none") missingCoverage.push("consent-surface");
   if (delta?.inaccessibleConsentSurfaces?.length) missingCoverage.push("consent-surface-inaccessible");
+  if (!delta?.integrity || delta.integrity.uncertain) missingCoverage.push("audit-integrity");
   if (!delta?.beforeCounts || !delta?.afterDenyCounts) missingCoverage.push("before-after-observation");
   if (!analysisComplete) missingCoverage.push("page-analysis");
   if (delta?.auditLifecycle?.status && delta.auditLifecycle.status !== "completed") missingCoverage.push("audit-lifecycle");
@@ -392,6 +403,20 @@ export function formatDeltaReport(delta, url = "") {
     });
     report += "  These surfaces were not treated as absent; the audit remains incomplete.\n\n";
   }
+
+  const integrity = delta.integrity || { status: "unknown", knownStartingState: "unknown", uncertain: true, limitations: ["integrity-not-recorded"], evidence: [], recommendation: "rerun-clean-environment" };
+  report += "AUDIT INTEGRITY:\n";
+  report += `  Status: ${integrity.status || "unknown"}\n`;
+  report += `  Starting consent state: ${integrity.knownStartingState || "unknown"}\n`;
+  report += `  Integrity uncertain: ${integrity.uncertain ? "yes" : "no"}\n`;
+  if (integrity.limitations?.length) report += `  Limitations: ${integrity.limitations.join(", ")}\n`;
+  if (integrity.evidence?.length) {
+    integrity.evidence.slice(0, 12).forEach((item) => {
+      report += `  - Evidence: ${item.type || "integrity-signal"}; ${item.scope || "unknown"}; ${item.name || item.key || item.host || item.url || "recorded"}${item.error ? `; ${item.error}` : ""}\n`;
+    });
+  }
+  if (integrity.recommendation && integrity.recommendation !== "none") report += "  Recommendation: rerun in a clean browser environment before relying on a positive result.\n";
+  report += "\n";
 
   if (delta.auditLifecycle) {
     report += "AUDIT LIFECYCLE:\n";

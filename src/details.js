@@ -258,6 +258,7 @@ function renderDelta(delta, options = {}) {
             ${renderSimpleList([t("deltaLimitationBestEffort"), t("deltaLimitationServerSide"), t("deltaLimitationNecessary"), t("deltaLimitationHeuristic")])}
           </section>
           ${renderRejectVerification(delta.denyAction)}
+          ${renderAuditIntegrity(delta)}
           ${renderLifecycleEvidence(delta)}
           ${renderCoverage(coverage)}
         </aside>
@@ -605,6 +606,22 @@ function renderConsentSurfaceLimitations(delta) {
   if (!surfaces.length) return "";
   const items = surfaces.slice(0, 8).map((surface) => `<li>${escapeHtml(t("inaccessibleConsentSurface", [surface.frameUrl || t("unknownWebsite"), surface.frameOrigin || "unknown", surface.domContext || t("unknownDomContext")] ))}</li>`).join("");
   return `<section><h3>${escapeHtml(t("inaccessibleConsentHeading"))}</h3><p class="muted">${escapeHtml(t("inaccessibleConsentIntro"))}</p><ul class="delta-list">${items}</ul></section>`;
+}
+
+function renderAuditIntegrity(delta) {
+  const integrity = delta.integrity || { status: "unknown", knownStartingState: "unknown", uncertain: true, limitations: ["integrity-not-recorded"], evidence: [], recommendation: "rerun-clean-environment" };
+  const statusKey = integrity.status === "clean" ? "auditIntegrityStatusClean" : integrity.status === "contaminated" ? "auditIntegrityStatusContaminated" : "auditIntegrityStatusUnknown";
+  const stateKey = integrity.knownStartingState === "prior-consent" ? "auditIntegrityStatePriorConsent" : integrity.knownStartingState === "prior-opt-out" ? "auditIntegrityStatePriorOptOut" : integrity.knownStartingState === "clean" ? "auditIntegrityStateClean" : "auditIntegrityStateUnknown";
+  const limitationLabels = {
+    "prior-consent": t("auditIntegrityLimitationPriorConsent"),
+    "prior-opt-out": t("auditIntegrityLimitationPriorOptOut"),
+    "blocked-tracker-request": t("auditIntegrityLimitationBlockedRequest"),
+    "starting-consent-state-unknown": t("auditIntegrityLimitationUnknownState"),
+    "integrity-not-recorded": t("auditIntegrityLimitationNotRecorded")
+  };
+  const limitations = (integrity.limitations || []).map((item) => `<li>${escapeHtml(limitationLabels[item] || item)}</li>`).join("");
+  const evidence = (integrity.evidence || []).slice(0, 8).map((item) => `<li>${escapeHtml([item.type || "integrity-signal", item.scope || "", item.name || item.key || item.host || item.url || "", item.error || ""].filter(Boolean).join(" · "))}</li>`).join("");
+  return `<section class="integrity-report"><h3>${escapeHtml(t("auditIntegrityHeading"))}</h3><p class="muted">${escapeHtml(t("auditIntegrityIntro"))}</p><p class="muted"><strong>${escapeHtml(t("auditIntegrityStatusLabel"))}:</strong> ${escapeHtml(t(statusKey))} · <strong>${escapeHtml(t("auditIntegrityStartingStateLabel"))}:</strong> ${escapeHtml(t(stateKey))}</p>${limitations ? `<h4>${escapeHtml(t("auditIntegrityLimitationsHeading"))}</h4><ul class="coverage-list">${limitations}</ul>` : ""}${evidence ? `<h4>${escapeHtml(t("auditIntegrityEvidenceHeading"))}</h4><ul class="coverage-list">${evidence}</ul>` : ""}${integrity.recommendation !== "none" ? `<p class="muted">${escapeHtml(t("auditIntegrityRecommendation"))}</p>` : ""}</section>`;
 }
 
 function renderSimpleList(items) {

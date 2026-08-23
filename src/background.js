@@ -1,6 +1,7 @@
 import { PERFORMANCE_BUDGETS } from "./performance-budgets.mjs";
 import { createAuditLifecycleState, getAuditLifecycleEvidence, transitionAuditLifecycle } from "./audit-lifecycle.mjs";
 import { minimizeUrlEvidence } from "./url-evidence.mjs";
+import { isBlockedRequestError } from "./audit-integrity.mjs";
 
 const TRAFFIC_STORAGE_KEY = "cookiebuddyTraffic";
 const ICON_STATUS_STORAGE_KEY = "cookiebuddyIconStatus";
@@ -129,6 +130,39 @@ chrome.webRequest.onBeforeRequest.addListener(
   },
   { urls: ["<all_urls>"] }
 );
+
+// A browser or another privacy control can prevent a request before it reaches
+// the network. Keep only minimized request metadata so the audit can distinguish
+// "not observed" from an observable blocked attempt without inspecting extensions.
+if (chrome.webRequest.onErrorOccurred) {
+  chrome.webRequest.onErrorOccurred.addListener(
+    async (details) => {
+      const auditStartedAt = activeAuditTabs.get(details.tabId);
+      if (details.tabId < 0 || !details.url || !auditStartedAt || !isBlockedRequestError(details.error)) return;
+      if (Date.now() - auditStartedAt > PERFORMANCE_BUDGETS.activeAudit.maxDurationMs) return;
+
+      const minimized = minimizeUrlEvidence(details.url);
+      if (!minimized?.url) return;
+      const tabTraffic = await getTraffic(details.tabId);
+      tabTraffic.push({
+        url: minimized.url,
+        host: minimized.host,
+        path: minimized.path,
+        protocol: minimized.protocol,
+        queryKeys: minimized.queryKeys,
+        type: details.type,
+        timeStamp: details.timeStamp,
+        blocked: true,
+        error: String(details.error).slice(0, 100)
+      });
+      if (tabTraffic.length > PERFORMANCE_BUDGETS.activeAudit.maxRequestsPerTab) {
+        tabTraffic.splice(0, tabTraffic.length - PERFORMANCE_BUDGETS.activeAudit.maxRequestsPerTab);
+      }
+      await setTraffic(details.tabId, tabTraffic);
+    },
+    { urls: ["<all_urls>"] }
+  );
+}
 
 chrome.tabs.onRemoved.addListener(async (tabId) => {
   await transitionStoredAuditState(tabId, "tab-closed");

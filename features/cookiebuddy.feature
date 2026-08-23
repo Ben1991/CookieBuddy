@@ -130,6 +130,8 @@ Feature: One-click consent and tracking audit
     Given the browser may have prior consent, prior rejection, blocking, tracking protection, login state, or other conditions that influence observed traffic
     When CookieBuddy evaluates audit integrity
     Then it reports the known starting consent state and integrity limitations
+    And distinguishes prior consent, prior opt-out, clean, and unknown starting states
+    And records observable blocked tracker requests separately from successful network traffic
     And materially uncertain integrity prevents a green verdict
     And CookieBuddy can recommend rerunning in a cleaner environment without silently deleting unrelated user data
 
