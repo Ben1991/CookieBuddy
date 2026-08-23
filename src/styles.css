@@ -1245,6 +1245,7 @@ body,
 }
 
 .audit-badge.allowed-essential { color: #166534; background: #dcfce7; }
+.audit-badge.allowed-likely-necessary { color: #854d0e; background: #fef9c3; }
 .audit-badge.disabled { color: #1d4ed8; background: #dbeafe; }
 .audit-badge.active { color: #991b1b; background: #fee2e2; }
 .audit-badge.unclear { color: #92400e; background: #fef3c7; }

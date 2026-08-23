@@ -122,7 +122,7 @@ test("popup overview includes the storage tile from the merged delta UX", async 
   assert.match(document.getElement("cookieResult").innerHTML, /Service workers/);
 });
 
-test("popup delta view separates non-essential findings from allowed infrastructure", async () => {
+test("popup delta view keeps generic infrastructure visible for review", async () => {
   const document = createDocument();
   const window = { Node: class {}, HTMLElement: FakeElement, URL };
 
@@ -170,7 +170,7 @@ test("popup delta view separates non-essential findings from allowed infrastruct
 
     assert.match(deltaHtml, /non-essential cookies still present/i);
     assert.match(deltaHtml, /non-essential third-party traffic after opt-out/i);
-    assert.match(deltaHtml, /essential third-party infrastructure/i);
+    assert.match(deltaHtml, /static\.cloudflare\.com/i);
     assert.doesNotMatch(deltaHtml, /data-complaint-action="true"/, "incomplete findings must not invite a complaint workflow");
     assert.doesNotMatch(deltaHtml, /data-authority-complaint-action="true"/, "incomplete findings must not invite an authority complaint workflow");
     assert.doesNotMatch(deltaHtml, /focus=complaint/, "incomplete findings must open the evidence view without complaint focus");

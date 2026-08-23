@@ -129,9 +129,12 @@ Observed evidence may include:
 - request host/path/type/timestamp with sensitive URL values removed by default
 - optional before/after screenshots of the tested tab, with minimized URL metadata and explicit local review/removal
 - service/rule mapping with local rule version, matching evidence, and confidence
+- necessity classification with one of four conservative states: known necessary, likely necessary, non-essential, or unknown, plus rationale and confidence
 - explicit unsupported or incomplete checks
 
 Interpretations must link back to the evidence that produced them.
+
+CookieBuddy does not treat a cookie name or a generic CDN hostname as proof that an item is necessary. Explicit browser-runtime metadata may be known necessary; consent-banner declarations and familiar session names remain likely necessary and require review. Unknown infrastructure and storage signals stay visible and cannot produce a green result.
 
 ## Privacy
 

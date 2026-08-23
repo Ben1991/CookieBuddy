@@ -2,6 +2,7 @@ import { minimizeUrlEvidence } from "./url-evidence.mjs";
 import { assessAuditIntegrity } from "./audit-integrity.mjs";
 import { mergeCookieCoverage } from "./cookie-evidence.mjs";
 import { evaluateConsentSignalContradictions, getConsentCoverageMissing, normalizeConsentState } from "./consent-state.mjs";
+import { classifyNecessity } from "./necessity-rules.mjs";
 import "./domain-rules.js";
 import "./service-rules.js";
 
@@ -18,12 +19,11 @@ export function cookieKey(cookie) {
 }
 
 export function isEssentialCookie(cookie) {
-  return /session|csrf|xsrf|auth|consent|cookie|privacy|necessary|required|essential|cf_bm|cf_clearance/i.test(cookie.name);
+  return classifyNecessity({ kind: "cookie", cookieName: cookie?.name }).classification === "known-necessary";
 }
 
-// Treat common security and delivery infrastructure as allowed after opt-out.
 export function isEssentialHost(hostname) {
-  return /(^|\.)cloudflare\.com$|(^|\.)cloudflare\.net$|(^|\.)cloudfront\.net$|(^|\.)akamaihd\.net$|(^|\.)fastly\.net$|(^|\.)hcaptcha\.com$|(^|\.)recaptcha\.net$|(^|\.)gstatic\.com$/i.test(hostname);
+  return classifyNecessity({ kind: "traffic", host: hostname }).classification === "known-necessary";
 }
 
 export function serviceForCookie(cookie, unknownServiceLabel = "Unknown service") {
@@ -56,7 +56,7 @@ export function formatCookie(cookie, unknownServiceLabel = "Unknown service") {
 
 export function formatCookieEvidence(cookie = {}) {
   const rule = serviceRuleForCookie(cookie);
-  const essential = isEssentialCookie(cookie);
+  const necessity = classifyNecessity({ kind: "cookie", cookieName: cookie.name, serviceRule: rule });
   return {
     name: String(cookie.name || "").slice(0, 160),
     domain: String(cookie.domain || "").slice(0, 240),
@@ -66,11 +66,13 @@ export function formatCookieEvidence(cookie = {}) {
     hostOnly: Boolean(cookie.hostOnly),
     session: Boolean(cookie.session),
     classification: {
-      essential,
+      essential: necessity.classification === "known-necessary",
+      status: necessity.classification,
       service: rule?.name || "Unknown service",
-      confidence: rule?.confidence || (essential ? "medium" : "none"),
+      confidence: necessity.confidence,
       ruleId: rule?.id || "",
-      rationale: rule?.evidence?.source || (essential ? "Conservative cookie-name rule" : "No matching local service rule")
+      source: necessity.source,
+      rationale: necessity.rationale
     }
   };
 }
@@ -80,13 +82,15 @@ function formatStorageEvidence(entries = []) {
     key: String(entry.key || "").slice(0, 160),
     scope: String(entry.scope || "browser-storage").slice(0, 80),
     inBanner: Boolean(entry.inBanner),
-    classification: isEssentialStorageEntry(entry) ? "essential-or-banner-related" : "observed-unclassified-storage"
+    classification: classifyNecessity({ kind: "storage", storageKey: entry.key, scope: entry.scope, inBanner: entry.inBanner })
   }));
 }
 
 function formatTrafficEvidence(traffic = []) {
   return traffic.filter(Boolean).slice(0, 250).map((item) => {
     const minimized = minimizeUrlEvidence(item.url, { retainQueryKeys: true });
+    const rule = serviceRuleForSignal(item);
+    const necessity = classifyNecessity({ kind: "traffic", host: item.host || minimized?.host, serviceRule: rule });
     return {
       url: minimized?.url || "",
       host: String(item.host || minimized?.host || "").slice(0, 240),
@@ -99,7 +103,11 @@ function formatTrafficEvidence(traffic = []) {
       error: item.blocked ? String(item.error || "blocked").slice(0, 100) : "",
       relationship: item.relationship || (item.thirdParty ? "third-party" : "unknown"),
       cnameStatus: item.cnameStatus || "not-recorded",
-      cnameRule: item.cnameRule || null
+      cnameRule: item.cnameRule || null,
+      classification: {
+        ...necessity,
+        service: rule?.name || "Unknown service"
+      }
     };
   });
 }
@@ -166,17 +174,24 @@ export function buildServiceAudit({
   afterStorageEntries = []
 }) {
   const bannerServices = Object.entries(bannerCategories).flatMap(([category, data]) =>
-    (data?.services || []).map((service) => ({
-      name: service.name,
-      category,
-      source: service.source || "Banner text",
-      ruleId: service.ruleId || "",
-      ruleVersion: service.ruleVersion || "",
-      evidence: service.evidence || null,
-      confidence: service.confidence || "none",
-      listedInBanner: service.source === "Banner text" || Boolean(service.listedInBanner),
-      essential: category === "essential" || /essential|necessary|required/i.test(`${category} ${service.name}`)
-    }))
+    (data?.services || []).map((service) => {
+      const serviceRule = service.ruleId
+        ? { id: service.ruleId, category, confidence: service.confidence, evidence: service.evidence }
+        : null;
+      const classification = classifyNecessity({ kind: "service", bannerCategory: category, serviceRule });
+      return {
+        name: service.name,
+        category,
+        source: service.source || "Banner text",
+        ruleId: service.ruleId || "",
+        ruleVersion: service.ruleVersion || "",
+        evidence: service.evidence || null,
+        confidence: classification.confidence,
+        classification,
+        listedInBanner: service.source === "Banner text" || Boolean(service.listedInBanner),
+        essential: classification.classification === "known-necessary"
+      };
+    })
   );
   const before = { cookies: beforeCookies, traffic: beforeTraffic, storage: [] };
   const after = { cookies: afterCookies, traffic: afterTraffic, storage: afterStorageEntries };
@@ -187,17 +202,28 @@ export function buildServiceAudit({
       ...service,
       observedBefore,
       observedAfter,
-      status: service.essential ? "allowed-essential" : observedAfter ? "active" : observedBefore ? "disabled" : "unclear"
+      status: service.essential
+        ? "allowed-essential"
+        : service.classification.classification === "likely-necessary"
+          ? "allowed-likely-necessary"
+          : service.classification.classification === "non-essential" && observedAfter
+            ? "active"
+            : observedBefore && !observedAfter
+              ? "disabled"
+              : "unclear"
     };
   });
 
   const knownNames = new Set(audit.map((service) => service.name.toLowerCase()));
   const unlisted = [
     ...dedupeServices(afterTraffic
-      .filter((item) => !isEssentialHost(item.host) && !matchesKnownService(`${item.host || ""} ${item.url || ""}`, audit))
+      .filter((item) => !matchesKnownService(`${item.host || ""} ${item.url || ""}`, audit))
       .map((item) => {
         const rule = serviceRuleForSignal(item);
         const browserExtension = /^(chrome-extension|moz-extension):/i.test(item.protocol || item.url || "");
+        const classification = browserExtension
+          ? classifyNecessity({ kind: "traffic", observedPurpose: "browser-runtime" })
+          : classifyNecessity({ kind: "traffic", host: item.host, serviceRule: rule });
         return {
           name: browserExtension ? `Browser extension ${item.host || "unknown"}` : rule?.name || item.host,
           category: browserExtension ? "unlisted" : rule?.category || "unlisted",
@@ -205,42 +231,48 @@ export function buildServiceAudit({
           ruleId: rule?.id || "",
           ruleVersion: rule?.ruleVersion || "",
           evidence: rule?.evidence || null,
-          confidence: rule?.confidence || "none",
+          confidence: classification.confidence,
+          classification,
           listedInBanner: false,
-          essential: false,
+          essential: classification.classification === "known-necessary",
           observedBefore: false,
           observedAfter: true,
-          status: "unclear"
+          status: classification.classification === "non-essential" ? "active" : "unclear"
         };
       })),
     ...afterCookies
-      .map((cookie) => ({ ...cookie, service: cookie.service || serviceForCookie(cookie), rule: serviceRuleForCookie(cookie) }))
-      .filter((cookie) => !isEssentialCookie(cookie) && !knownNames.has(cookie.service.toLowerCase()))
+      .map((cookie) => {
+        const rule = serviceRuleForCookie(cookie);
+        const classification = classifyNecessity({ kind: "cookie", cookieName: cookie.name, serviceRule: rule });
+        return { ...cookie, service: cookie.service || serviceForCookie(cookie), rule, classification };
+      })
+      .filter((cookie) => cookie.classification.classification !== "known-necessary" && !knownNames.has(cookie.service.toLowerCase()))
       .map((cookie) => ({
         name: cookie.service,
         category: cookie.rule?.category || "unlisted",
-        source: cookie.rule?.evidence?.source || `Cookie: ${cookie.name}`,
+        source: cookie.classification.rationale,
         ruleId: cookie.rule?.id || "",
         ruleVersion: cookie.rule?.ruleVersion || "",
         evidence: cookie.rule?.evidence || null,
-        confidence: cookie.rule?.confidence || "none",
+        confidence: cookie.classification.confidence,
+        classification: cookie.classification,
         listedInBanner: false,
-        essential: false,
+        essential: cookie.classification.classification === "known-necessary",
         observedBefore: false,
         observedAfter: true,
-        status: "unclear"
+        status: cookie.classification.classification === "non-essential" ? "active" : "unclear"
       })),
     ...afterStorageEntries
-      .filter((entry) => !isEssentialStorageEntry(entry) && !entry.inBanner)
-      .map((entry) => ({ name: entry.key, category: "unlisted", source: entry.scope || "Browser storage", listedInBanner: false, essential: false, observedBefore: false, observedAfter: true, status: "unclear" }))
+      .map((entry) => ({ ...entry, classification: classifyNecessity({ kind: "storage", storageKey: entry.key, scope: entry.scope, inBanner: entry.inBanner }) }))
+      .filter((entry) => entry.classification.classification !== "known-necessary")
+      .map((entry) => ({ name: entry.key, category: "unlisted", source: entry.classification.rationale, confidence: entry.classification.confidence, classification: entry.classification, listedInBanner: false, essential: false, observedBefore: false, observedAfter: true, status: "unclear" }))
   ];
 
   return [...audit, ...dedupeServices(unlisted)];
 }
 
 export function isEssentialStorageEntry(entry = {}) {
-  if (["Cache Storage", "Service worker"].includes(entry.scope)) return true;
-  return Boolean(entry.inBanner) || /consent|session|csrf|xsrf|auth|necessary|essential|privacy|security|required/i.test(entry.key || "");
+  return classifyNecessity({ kind: "storage", storageKey: entry.key, scope: entry.scope, inBanner: entry.inBanner }).classification === "known-necessary";
 }
 
 function summarizeBrowserStorage(storage) {
@@ -327,6 +359,9 @@ export function buildDelta({
   const remainingCookies = afterCookies.filter((cookie) => beforeCookieKeys.has(cookieKey(cookie)) && !isEssentialCookie(cookie));
   const newCookies = afterCookies.filter((cookie) => !beforeCookieKeys.has(cookieKey(cookie)) && !isEssentialCookie(cookie));
   const essentialCookies = afterCookies.filter((cookie) => isEssentialCookie(cookie));
+  const classifyCookie = (cookie) => classifyNecessity({ kind: "cookie", cookieName: cookie.name, serviceRule: serviceRuleForCookie(cookie) });
+  const nonEssentialCookies = [...remainingCookies, ...newCookies].filter((cookie) => classifyCookie(cookie).classification === "non-essential");
+  const unclearCookies = [...remainingCookies, ...newCookies].filter((cookie) => classifyCookie(cookie).classification !== "non-essential");
   const observedBeforeTraffic = beforeTraffic.filter((item) => !item.blocked);
   const observedAfterTraffic = afterTraffic.filter((item) => !item.blocked);
   const isConfirmedThirdParty = (item) => item.relationship ? item.relationship === "third-party" : item.thirdParty !== false;
@@ -336,8 +371,10 @@ export function buildDelta({
   const thirdPartyHosts = allThirdPartyHosts.filter((host) => !isEssentialHost(host));
   const essentialThirdPartyHosts = allThirdPartyHosts.filter((host) => isEssentialHost(host));
   const remainingStorageEntries = afterStorageEntries.filter(Boolean);
-  const nonEssentialStorageEntries = remainingStorageEntries.filter((entry) => !isEssentialStorageEntry(entry));
-  const essentialStorageEntries = remainingStorageEntries.filter(isEssentialStorageEntry);
+  const classifyStorage = (entry) => classifyNecessity({ kind: "storage", storageKey: entry.key, scope: entry.scope, inBanner: entry.inBanner });
+  const nonEssentialStorageEntries = remainingStorageEntries.filter((entry) => classifyStorage(entry).classification === "non-essential");
+  const unclearStorageEntries = remainingStorageEntries.filter((entry) => classifyStorage(entry).classification === "unknown");
+  const essentialStorageEntries = remainingStorageEntries.filter((entry) => classifyStorage(entry).classification === "known-necessary");
   const serviceAudit = buildServiceAudit({ bannerCategories, beforeCookies, afterCookies, beforeTraffic: observedBeforeTraffic, afterTraffic: observedAfterTraffic, afterStorageEntries: remainingStorageEntries });
   const integrity = assessAuditIntegrity({ beforeCookies, beforeStorageEntries: beforeAnalysis?.storage?.items || [], beforeAnalysis, blockedRequests });
   const cookieCoverage = mergeCookieCoverage(beforeCookieCoverage, afterCookieCoverage);
@@ -350,14 +387,14 @@ export function buildDelta({
     consentEvidence.after,
     { rejectionVerified: Boolean(denyVerified) }
   );
-  const suspiciousCookies = remainingCookies.filter((cookie) => !isEssentialCookie(cookie));
+  const suspiciousCookies = remainingCookies;
   const cnameCoverage = {
     status: possibleCloakedBefore.length || possibleCloakedAfter.length ? "unknown" : "not-observed",
     reason: possibleCloakedBefore.length || possibleCloakedAfter.length ? "browser-dns-unavailable" : "no-known-pattern-observed",
     beforeCount: possibleCloakedBefore.length,
     afterCount: possibleCloakedAfter.length
   };
-  const hasDelta = suspiciousCookies.length > 0 || newCookies.length > 0 || thirdPartyHosts.length > 0 || possibleCloakedAfter.length > 0 || nonEssentialStorageEntries.length > 0 || serviceAudit.some((service) => service.status === "active") || (!denyClicked && !manualConsentConfirmed);
+  const hasDelta = nonEssentialCookies.length > 0 || thirdPartyHosts.length > 0 || possibleCloakedAfter.length > 0 || nonEssentialStorageEntries.length > 0 || serviceAudit.some((service) => service.status === "active") || (!denyClicked && !manualConsentConfirmed);
 
   return {
     checkedAt: new Date().toISOString(),
@@ -377,6 +414,8 @@ export function buildDelta({
     possibleCloakedTrackers: possibleCloakedAfter,
     cnameCoverage,
     essentialCookies,
+    nonEssentialCookies,
+    unclearCookies,
     essentialThirdPartyHosts,
     banner,
     integrity,
@@ -385,6 +424,7 @@ export function buildDelta({
     afterStorageEntries: remainingStorageEntries,
     remainingStorageEntries,
     nonEssentialStorageEntries,
+    unclearStorageEntries,
     essentialStorageEntries,
     cookieEvidence: {
       before: beforeCookies.map(formatCookieEvidence).slice(0, 100),
@@ -525,18 +565,23 @@ export function deriveAuditVerdict(delta, { analysisComplete = true } = {}) {
 
   const reasons = [];
   if (delta?.thirdPartyHosts?.length) reasons.push("third-party-traffic");
-  if (delta?.remainingCookies?.length || delta?.newCookies?.length) reasons.push("non-essential-cookies");
+  if (delta?.nonEssentialCookies?.length || delta?.remainingCookies?.some((cookie) => !delta?.unclearCookies?.includes(cookie))) reasons.push("non-essential-cookies");
+  if (delta?.unclearCookies?.length) reasons.push("unclear-cookie");
   if (delta?.nonEssentialStorageEntries?.length) reasons.push("non-essential-storage");
+  if (delta?.unclearStorageEntries?.length) reasons.push("unclear-storage");
   if (delta?.serviceAudit?.some((service) => service.status === "active")) reasons.push("active-service");
-  const unclearServices = (delta?.serviceAudit || []).filter((service) => service.status === "unclear" || (!service.essential && service.confidence === "none" && service.status === "disabled"));
+  const unclearServices = (delta?.serviceAudit || []).filter((service) => service.status === "unclear" || service.status === "allowed-likely-necessary" || (!service.essential && service.confidence === "none" && service.status === "disabled"));
   if (unclearServices.length) reasons.push("unclear-service");
   if (delta?.consentContradictions?.length) reasons.push("consent-signal-contradiction");
   const unresolvedSignals = [
     ...missingCoverage.map((key) => ({ key, evidence: [] })),
+    ...(delta?.unclearCookies?.length ? [{ key: "unclear-cookie", evidence: delta.unclearCookies.map((cookie) => cookie.name).filter(Boolean).slice(0, 5) }] : []),
+    ...(delta?.unclearStorageEntries?.length ? [{ key: "unclear-storage", evidence: delta.unclearStorageEntries.map((entry) => entry.key).filter(Boolean).slice(0, 5) }] : []),
     ...(unclearServices.length ? [{ key: "unclear-service", evidence: unclearServices.map((service) => service.name).filter(Boolean).slice(0, 5) }] : []),
     ...(coverage.heuristicSignals || []).map((signal) => ({ key: "heuristic-signal", evidence: [signal.key, ...(signal.evidence || [])].filter(Boolean).slice(0, 5) }))
   ];
-  const strongContradiction = delta.riskLevel === "high" || reasons.some((reason) => reason !== "unclear-service");
+  const reviewOnlyReasons = new Set(["unclear-service", "unclear-cookie", "unclear-storage"]);
+  const strongContradiction = delta.riskLevel === "high" || reasons.some((reason) => !reviewOnlyReasons.has(reason));
 
   if (missingCoverage.length) {
     return {
@@ -758,9 +803,10 @@ export function formatDeltaReport(delta, url = "") {
     report += "BANNER SERVICE AUDIT:\n";
     delta.serviceAudit.forEach((service) => {
       const listed = service.listedInBanner ? "listed in banner" : "not listed in banner / external signal";
-      const status = service.status === "allowed-essential" ? "essential / allowed" : service.status === "disabled" ? "successfully disabled" : service.status === "active" ? "still active" : "unclear";
+      const status = service.status === "allowed-essential" ? "known necessary / allowed" : service.status === "allowed-likely-necessary" ? "likely necessary / review" : service.status === "disabled" ? "successfully disabled" : service.status === "active" ? "still active" : "unclear";
       const rule = service.ruleVersion ? `; rule: ${service.ruleId || "local"}@${service.ruleVersion}; confidence: ${service.confidence || "none"}` : "; rule: unknown";
-      report += `  - ${service.name}: ${status}; ${listed}; source: ${service.source || service.category}${rule}\n`;
+      const classification = service.classification || {};
+      report += `  - ${service.name}: ${status}; ${listed}; classification: ${classification.classification || "unknown"}; confidence: ${classification.confidence || service.confidence || "none"}; rationale: ${classification.rationale || service.source || service.category}${rule}\n`;
     });
     report += "\n";
   }

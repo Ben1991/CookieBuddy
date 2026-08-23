@@ -17,6 +17,9 @@ import {
   serviceForCookie,
   serviceRuleForCookie
 } from "../src/core.js";
+import { classifyNecessity } from "../src/necessity-rules.mjs";
+
+const genericInfrastructureHost = ["static", "cloudflare", "com"].join(".");
 
 test("capitalizes labels for category headings", () => {
   assert.equal(capitalize("analytics"), "Analytics");
@@ -26,9 +29,11 @@ test("builds stable cookie keys", () => {
   assert.equal(cookieKey({ domain: ".example.com", path: "/", name: "sid" }), ".example.com|/|sid");
 });
 
-test("detects essential cookies by name", () => {
-  assert.equal(isEssentialCookie({ name: "cookie_consent" }), true);
-  assert.equal(isEssentialCookie({ name: "__cf_bm" }), true);
+test("does not treat cookie names as proof of necessity", () => {
+  assert.equal(isEssentialCookie({ name: "cookie_consent" }), false);
+  assert.equal(isEssentialCookie({ name: "__cf_bm" }), false);
+  assert.equal(classifyNecessity({ kind: "cookie", cookieName: "sessionid" }).classification, "likely-necessary");
+  assert.equal(classifyNecessity({ kind: "cookie", cookieName: "sessionid" }).confidence, "low");
   assert.equal(isEssentialCookie({ name: "ga_id" }), false);
 });
 
@@ -84,9 +89,9 @@ test("keeps inaccessible consent surfaces incomplete and explicit", () => {
   assert.match(formatDeltaReport(delta), /AUDIT INTEGRITY/);
 });
 
-test("detects essential infrastructure hosts", () => {
-  assert.equal(isEssentialHost("static.cloudflare.com"), true);
-  assert.equal(isEssentialHost("assets.cloudfront.net"), true);
+test("does not treat generic infrastructure hosts as necessary", () => {
+  assert.equal(isEssentialHost("static.cloudflare.com"), false);
+  assert.equal(isEssentialHost("assets.cloudfront.net"), false);
   assert.equal(isEssentialHost("google-analytics.com"), false);
 });
 
@@ -182,7 +187,7 @@ test("builds a delta summary from the before and after states", () => {
       { domain: ".example.com", path: "/", name: "_hjSession" }
     ],
     beforeTraffic: [{ host: "cdn.example.com" }],
-    afterTraffic: [{ host: "cdn.example.com" }, { host: "tracker.example.net" }, { host: "static.cloudflare.com" }],
+    afterTraffic: [{ host: "cdn.example.com" }, { host: "tracker.example.net" }, { host: genericInfrastructureHost }],
     afterStorageEntries: [],
     denyClicked: true,
     denyLabel: "Reject all",
@@ -195,8 +200,9 @@ test("builds a delta summary from the before and after states", () => {
 
   assert.equal(delta.riskLevel, "high");
   assert.equal(delta.thirdPartyHosts.includes("tracker.example.net"), true);
-  assert.equal(delta.thirdPartyHosts.includes("static.cloudflare.com"), false);
-  assert.equal(delta.essentialThirdPartyHosts.includes("static.cloudflare.com"), true);
+  assert.equal(delta.thirdPartyHosts.includes(genericInfrastructureHost), true);
+  assert.deepEqual(delta.essentialThirdPartyHosts, []);
+  assert.equal(delta.networkEvidence.after.find((item) => item.host === genericInfrastructureHost).classification.classification, "unknown");
   assert.equal(delta.summary, "found");
 });
 
@@ -290,7 +296,7 @@ test("keeps extended browser storage metadata as before-and-after evidence", () 
   assert.equal("valuePreview" in delta.browserStorage.after.cacheStorage.caches[0].keys[0], false);
 });
 
-test("keeps delta low when only essential cookies and infrastructure remain after manual opt-out", () => {
+test("keeps generic infrastructure visible after manual opt-out", () => {
   const delta = buildDelta({
     beforeCookies: [
       { domain: ".example.com", path: "/", name: "session" }
@@ -300,7 +306,7 @@ test("keeps delta low when only essential cookies and infrastructure remain afte
       { domain: ".example.com", path: "/", name: "__cf_bm" }
     ],
     beforeTraffic: [],
-    afterTraffic: [{ host: "static.cloudflare.com" }],
+    afterTraffic: [{ host: genericInfrastructureHost }],
     denyClicked: false,
     manualConsentConfirmed: true,
     denyLabel: "",
@@ -311,9 +317,9 @@ test("keeps delta low when only essential cookies and infrastructure remain afte
     tabUrl: "https://example.com"
   });
 
-  assert.equal(delta.riskLevel, "low");
-  assert.deepEqual(delta.thirdPartyHosts, []);
-  assert.deepEqual(delta.essentialThirdPartyHosts, ["static.cloudflare.com"]);
+  assert.equal(delta.riskLevel, "high");
+  assert.deepEqual(delta.thirdPartyHosts, [genericInfrastructureHost]);
+  assert.deepEqual(delta.essentialThirdPartyHosts, []);
   assert.equal(delta.denyAction.manual, true);
 });
 
@@ -338,6 +344,7 @@ test("treats remaining storage entries as part of the delta", () => {
   assert.equal(delta.riskLevel, "high");
   assert.equal(delta.afterDenyCounts.storageEntries, 1);
   assert.equal(delta.afterStorageEntries.length, 1);
+  assert.deepEqual(delta.nonEssentialStorageEntries.map((entry) => entry.key), ["marketing_state"]);
 });
 
 test("keeps Cache Storage and service-worker presence as metadata instead of non-essential tracking evidence", () => {
@@ -378,7 +385,9 @@ test("audits banner services against post-opt-out cookies, storage, and traffic"
     afterStorageEntries: [{ key: "extension_state", scope: "localStorage" }]
   });
 
-  assert.equal(audit.find((service) => service.name === "Essential services").status, "allowed-essential");
+  assert.equal(audit.find((service) => service.name === "Essential services").status, "allowed-likely-necessary");
+  assert.equal(audit.find((service) => service.name === "Essential services").classification.classification, "likely-necessary");
+  assert.match(audit.find((service) => service.name === "Essential services").classification.rationale, /banner/i);
   assert.equal(audit.find((service) => service.name === "Google Analytics").status, "disabled");
   assert.equal(audit.find((service) => service.name === "Marketing services").status, "unclear");
   assert.equal(audit.some((service) => service.name === "extension.example.net" && service.status === "unclear"), true);
