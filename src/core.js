@@ -1,6 +1,7 @@
 import { minimizeUrlEvidence } from "./url-evidence.mjs";
 import { assessAuditIntegrity } from "./audit-integrity.mjs";
 import { mergeCookieCoverage } from "./cookie-evidence.mjs";
+import "./service-rules.js";
 
 export function capitalize(value) {
   return value.charAt(0).toUpperCase() + value.slice(1);
@@ -25,25 +26,30 @@ export function isEssentialHost(hostname) {
 }
 
 export function serviceForCookie(cookie, unknownServiceLabel = "Unknown service") {
-  const value = `${cookie.name} ${cookie.domain}`.toLowerCase();
-  const match = [
-    ["Google Analytics", ["_ga", "_gid"]],
-    ["Google Ads", ["_gcl", "doubleclick"]],
-    ["Meta Pixel", ["_fbp", "facebook"]],
-    ["Hotjar", ["_hj"]],
-    ["HubSpot", ["hubspot", "__hstc"]]
-  ].find(([, patterns]) => patterns.some((pattern) => value.includes(pattern)));
-  return match?.[0] || unknownServiceLabel;
+  return serviceRuleForCookie(cookie)?.name || unknownServiceLabel;
+}
+
+export function serviceRuleForCookie(cookie = {}) {
+  return globalThis.CookieBuddyServiceRules?.match({ cookieName: cookie.name, cookieDomain: cookie.domain }) || null;
+}
+
+export function serviceRuleForSignal(signal = {}) {
+  return globalThis.CookieBuddyServiceRules?.match(signal) || null;
 }
 
 export function formatCookie(cookie, unknownServiceLabel = "Unknown service") {
+  const rule = serviceRuleForCookie(cookie);
   return {
     name: cookie.name,
     domain: cookie.domain,
     path: cookie.path,
     secure: cookie.secure,
     sameSite: cookie.sameSite,
-    service: serviceForCookie(cookie, unknownServiceLabel)
+    service: rule?.name || unknownServiceLabel,
+    serviceRuleId: rule?.id || "",
+    serviceRuleVersion: rule?.ruleVersion || "",
+    serviceEvidence: rule?.evidence || null,
+    serviceConfidence: rule?.confidence || "none"
   };
 }
 
@@ -86,6 +92,10 @@ export function buildServiceAudit({
       name: service.name,
       category,
       source: service.source || "Banner text",
+      ruleId: service.ruleId || "",
+      ruleVersion: service.ruleVersion || "",
+      evidence: service.evidence || null,
+      confidence: service.confidence || "none",
       listedInBanner: service.source === "Banner text" || Boolean(service.listedInBanner),
       essential: category === "essential" || /essential|necessary|required/i.test(`${category} ${service.name}`)
     }))
@@ -107,20 +117,41 @@ export function buildServiceAudit({
   const unlisted = [
     ...dedupeServices(afterTraffic
       .filter((item) => !isEssentialHost(item.host) && !matchesKnownService(`${item.host || ""} ${item.url || ""}`, audit))
-      .map((item) => ({
-        name: /^(chrome-extension|moz-extension):/i.test(item.protocol || item.url || "") ? `Browser extension ${item.host || "unknown"}` : item.host,
-        category: "unlisted",
-        source: /^(chrome-extension|moz-extension):/i.test(item.protocol || item.url || "") ? "Browser extension traffic" : "Third-party traffic",
+      .map((item) => {
+        const rule = serviceRuleForSignal(item);
+        const browserExtension = /^(chrome-extension|moz-extension):/i.test(item.protocol || item.url || "");
+        return {
+          name: browserExtension ? `Browser extension ${item.host || "unknown"}` : rule?.name || item.host,
+          category: browserExtension ? "unlisted" : rule?.category || "unlisted",
+          source: browserExtension ? "Browser extension traffic" : rule?.evidence?.source || "Third-party traffic",
+          ruleId: rule?.id || "",
+          ruleVersion: rule?.ruleVersion || "",
+          evidence: rule?.evidence || null,
+          confidence: rule?.confidence || "none",
+          listedInBanner: false,
+          essential: false,
+          observedBefore: false,
+          observedAfter: true,
+          status: "unclear"
+        };
+      })),
+    ...afterCookies
+      .map((cookie) => ({ ...cookie, service: cookie.service || serviceForCookie(cookie), rule: serviceRuleForCookie(cookie) }))
+      .filter((cookie) => !isEssentialCookie(cookie) && !knownNames.has(cookie.service.toLowerCase()))
+      .map((cookie) => ({
+        name: cookie.service,
+        category: cookie.rule?.category || "unlisted",
+        source: cookie.rule?.evidence?.source || `Cookie: ${cookie.name}`,
+        ruleId: cookie.rule?.id || "",
+        ruleVersion: cookie.rule?.ruleVersion || "",
+        evidence: cookie.rule?.evidence || null,
+        confidence: cookie.rule?.confidence || "none",
         listedInBanner: false,
         essential: false,
         observedBefore: false,
         observedAfter: true,
         status: "unclear"
-      }))),
-    ...afterCookies
-      .map((cookie) => ({ ...cookie, service: cookie.service || serviceForCookie(cookie) }))
-      .filter((cookie) => !isEssentialCookie(cookie) && !knownNames.has(cookie.service.toLowerCase()))
-      .map((cookie) => ({ name: cookie.service, category: "unlisted", source: `Cookie: ${cookie.name}`, listedInBanner: false, essential: false, observedBefore: false, observedAfter: true, status: "unclear" })),
+      })),
     ...afterStorageEntries
       .filter((entry) => !isEssentialStorageEntry(entry) && !entry.inBanner)
       .map((entry) => ({ name: entry.key, category: "unlisted", source: entry.scope || "Browser storage", listedInBanner: false, essential: false, observedBefore: false, observedAfter: true, status: "unclear" }))
@@ -522,7 +553,8 @@ export function formatDeltaReport(delta, url = "") {
     delta.serviceAudit.forEach((service) => {
       const listed = service.listedInBanner ? "listed in banner" : "not listed in banner / external signal";
       const status = service.status === "allowed-essential" ? "essential / allowed" : service.status === "disabled" ? "successfully disabled" : service.status === "active" ? "still active" : "unclear";
-      report += `  - ${service.name}: ${status}; ${listed}; source: ${service.source || service.category}\n`;
+      const rule = service.ruleVersion ? `; rule: ${service.ruleId || "local"}@${service.ruleVersion}; confidence: ${service.confidence || "none"}` : "; rule: unknown";
+      report += `  - ${service.name}: ${status}; ${listed}; source: ${service.source || service.category}${rule}\n`;
     });
     report += "\n";
   }

@@ -1,5 +1,5 @@
 import { applyI18n, getLanguage, initI18n, setLanguage, t } from "./i18n.js";
-import { buildDelta, capitalize, createCoverageSummary, deriveAuditVerdict, getBaseDomain, isEssentialCookie, isEssentialHost, normalizeTraffic, serviceForCookie } from "./core.js";
+import { buildDelta, capitalize, createCoverageSummary, deriveAuditVerdict, getBaseDomain, isEssentialCookie, isEssentialHost, normalizeTraffic, serviceForCookie, serviceRuleForCookie } from "./core.js";
 import { AUDIT_LIFECYCLE_STATUS } from "./audit-lifecycle.mjs";
 import { canCaptureVisibleTab, createAuditTimelineEvent, createVisualEvidenceItem, createVisualEvidenceState, sanitizeEvidenceUrl } from "./visual-evidence.mjs";
 import { createCookieCoverage, getObservedCookieHosts } from "./cookie-evidence.mjs";
@@ -822,7 +822,8 @@ function renderServiceAudit(service) {
     unclear: t("serviceStatusUnclear")
   }[service.status] || t("serviceStatusUnclear");
   const listedLabel = service.listedInBanner ? t("serviceListedInBanner") : t("serviceNotListedInBanner");
-  return `<div class="service-audit-row"><div><strong>${escapeHtml(service.name)}</strong><span>${escapeHtml(service.source || service.category)}</span></div><div><span class="audit-badge ${escapeHtml(service.status)}">${escapeHtml(statusLabel)}</span><small>${escapeHtml(listedLabel)}</small></div></div>`;
+  const ruleLabel = service.ruleVersion ? t("serviceRuleEvidence", [service.ruleId || "local", service.ruleVersion, service.confidence || "none"]) : t("serviceRuleUnknown");
+  return `<div class="service-audit-row"><div><strong>${escapeHtml(service.name)}</strong><span>${escapeHtml(service.source || service.category)}</span><small>${escapeHtml(ruleLabel)}</small></div><div><span class="audit-badge ${escapeHtml(service.status)}">${escapeHtml(statusLabel)}</span><small>${escapeHtml(listedLabel)}</small></div></div>`;
 }
 
 function renderError(error) {
@@ -836,7 +837,7 @@ async function ensureContentScript(tabId) {
   } catch {
     await chrome.scripting.executeScript({
       target: { tabId, allFrames: true },
-      files: ["src/contact-discovery-content.js", "src/consent-controls.js", "src/consent-surfaces.js", "src/content.js"]
+      files: ["src/service-rules.js", "src/contact-discovery-content.js", "src/consent-controls.js", "src/consent-surfaces.js", "src/content.js"]
     });
   }
 }
@@ -1074,13 +1075,18 @@ function setStatus(key, mode) {
 }
 
 function formatCookie(cookie) {
+  const rule = serviceRuleForCookie(cookie);
   return {
     name: cookie.name,
     domain: cookie.domain,
     path: cookie.path,
     secure: cookie.secure,
     sameSite: cookie.sameSite,
-    service: serviceForCookie(cookie)
+    service: serviceForCookie(cookie),
+    serviceRuleId: rule?.id || "",
+    serviceRuleVersion: rule?.ruleVersion || "",
+    serviceEvidence: rule?.evidence || null,
+    serviceConfidence: rule?.confidence || "none"
   };
 }
 

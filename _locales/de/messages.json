@@ -868,5 +868,11 @@
   },
   "supportDescription": {
     "message": "Unterstütze die Entwicklung mit einem Kaffee"
+  },
+  "serviceRuleEvidence": {
+    "message": "Regel $1@$2 · Konfidenz: $3"
+  },
+  "serviceRuleUnknown": {
+    "message": "Keine passende lokale Regel"
   }
 }

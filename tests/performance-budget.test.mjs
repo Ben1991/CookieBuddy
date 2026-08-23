@@ -54,6 +54,9 @@ test("idle monitoring and page analysis enforce their limits in production code"
   assert.match(content, /maxContactResponseChars/);
   assert.match(content, /analysisStartedAt = performance\.now\(\)/);
   assert.match(content, /durationMs: Math\.round\(performance\.now\(\) - analysisStartedAt\)/);
+  assert.match(content, /CookieBuddyServiceRules/);
+  assert.doesNotMatch(content, /SERVICE_HINTS/);
+  assert.ok(manifest.content_scripts[0].js.includes("src/service-rules.js"));
 });
 
 test("consent analysis covers all permitted frames and records surface context", () => {

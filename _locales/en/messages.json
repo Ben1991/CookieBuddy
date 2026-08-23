@@ -868,5 +868,11 @@
   },
   "supportDescription": {
     "message": "Support development with a coffee"
+  },
+  "serviceRuleEvidence": {
+    "message": "Rule $1@$2 · confidence: $3"
+  },
+  "serviceRuleUnknown": {
+    "message": "No matching local rule"
   }
 }

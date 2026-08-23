@@ -389,7 +389,8 @@ function renderServiceAudit(service) {
     unclear: t("serviceStatusUnclear")
   }[service.status] || t("serviceStatusUnclear");
   const listedLabel = service.listedInBanner ? t("serviceListedInBanner") : t("serviceNotListedInBanner");
-  return `<div class="service-audit-row"><div><strong>${escapeHtml(service.name)}</strong><span>${escapeHtml(service.source || service.category)}</span></div><div><span class="audit-badge ${escapeHtml(service.status)}">${escapeHtml(statusLabel)}</span><small>${escapeHtml(listedLabel)}</small></div></div>`;
+  const ruleLabel = service.ruleVersion ? t("serviceRuleEvidence", [service.ruleId || "local", service.ruleVersion, service.confidence || "none"]) : t("serviceRuleUnknown");
+  return `<div class="service-audit-row"><div><strong>${escapeHtml(service.name)}</strong><span>${escapeHtml(service.source || service.category)}</span><small>${escapeHtml(ruleLabel)}</small></div><div><span class="audit-badge ${escapeHtml(service.status)}">${escapeHtml(statusLabel)}</span><small>${escapeHtml(listedLabel)}</small></div></div>`;
 }
 
 function openDeltaMailDraft(target = "dpo") {

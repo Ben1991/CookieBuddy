@@ -117,6 +117,7 @@ Feature: One-click consent and tracking audit
     When it maps the signal to a service
     Then service identification uses versioned local rule data
     And the result exposes the rule evidence and confidence
+    And the rule validation detects duplicate or conflicting signatures before release
     And unknown signals remain visible as first-class evidence
 
   @UC-14 @issue-55 @p1
