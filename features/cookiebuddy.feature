@@ -259,3 +259,13 @@ Feature: One-click consent and tracking audit
     And visual tests and screenshots are updated when visible behavior changes
     And the README use-case contract and relevant limitations are updated in the same change
     And the task is not complete while any affected contract artifact is stale
+
+  @UC-27 @issue-50 @p2
+  Scenario: Maintain a deterministic real-world CMP and tracker regression corpus
+    Given CookieBuddy's local fixtures mimic OneTrust, Usercentrics, Cookiebot, Didomi, Sourcepoint, Consentmanager, Google Funding Choices, custom banners, and no-banner pages
+    When the regression corpus runs in CI
+    Then each implementation fixture documents its expected detection evidence and verdict outcomes
+    And correct rejection, pre-consent traffic, remaining traffic, delayed traffic, reload traffic, contradictory consent signals, and incomplete states are covered
+    And every P1 detection path has at least one positive and one negative regression fixture
+    And a changed expected verdict fails CI until the fixture change is reviewed
+    And live-site smoke checks remain optional and are never required for deterministic CI
