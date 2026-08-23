@@ -65,6 +65,8 @@
   "auditVerdictIncomplete": { "message": "Unklar oder unvollständig" },
   "auditVerdictIncompleteCopy": { "message": "Nicht jeder erforderliche Schritt konnte verifiziert werden. Deshalb ist dies kein grünes Ergebnis." },
   "auditConfidence": { "message": "Sicherheit: $1" },
+  "auditCompletenessComplete": { "message": "Prüfung vollständig" },
+  "auditCompletenessIncomplete": { "message": "Prüfung unvollständig · kein grünes Ergebnis" },
   "auditShowEvidence": { "message": "Beobachtete Belege anzeigen" },
   "auditOpenEvidence": { "message": "Belege öffnen" },
   "auditContactWebsite": { "message": "Website / DSB kontaktieren" },

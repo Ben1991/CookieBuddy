@@ -207,6 +207,7 @@ Feature: One-click consent and tracking audit
     When the user views the main popup
     Then the primary screen answers whether tracking appears correctly implemented before showing technical metrics
     And explains the result in plain language with one to three reasons
+    And shows whether the observable audit is complete or incomplete next to the verdict
     And cookies, services, storage, traffic, CMP data, and advanced terminology remain available through progressive disclosure
 
   @UC-23 @issue-62 @p2

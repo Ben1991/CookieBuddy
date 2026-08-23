@@ -47,6 +47,18 @@
         </div>
       </section>
 
+      <div class="audit-primary-actions">
+        <button id="deltaButton" class="primary-button audit-primary-button" type="button" data-i18n="runAuditButton">Tracking prüfen</button>
+        <button id="heroScanButton" class="ghost-button audit-secondary-button" type="button" data-i18n="refreshButton">Seite neu erfassen</button>
+      </div>
+
+      <section id="deltaResult" class="audit-result" aria-live="polite" aria-atomic="false">
+        <div class="audit-empty-result">
+          <strong data-i18n="auditNoResult">Noch kein Ergebnis</strong>
+          <p data-i18n="auditNoResultDetail">Starte die Prüfung. Technische Details werden erst nach dem Ergebnis eingeblendet.</p>
+        </div>
+      </section>
+
       <section class="audit-explainer" aria-labelledby="auditExplainerHeading">
         <h2 id="auditExplainerHeading" data-i18n="auditWhatIsChecked">Was wird geprüft?</h2>
         <ol class="audit-steps-preview">
@@ -90,17 +102,6 @@
         <div class="audit-progress-track" aria-hidden="true"><span id="auditProgressBar"></span></div>
       </section>
 
-      <section id="deltaResult" class="audit-result" aria-live="polite" aria-atomic="false">
-        <div class="audit-empty-result">
-          <strong data-i18n="auditNoResult">Noch kein Ergebnis</strong>
-          <p data-i18n="auditNoResultDetail">Starte die Prüfung. Technische Details werden erst nach dem Ergebnis eingeblendet.</p>
-        </div>
-      </section>
-
-      <div class="audit-primary-actions">
-        <button id="deltaButton" class="primary-button audit-primary-button" type="button" data-i18n="runAuditButton">Tracking prüfen</button>
-        <button id="heroScanButton" class="ghost-button audit-secondary-button" type="button" data-i18n="refreshButton">Seite neu erfassen</button>
-      </div>
       <p class="cb-disclaimer" data-i18n="legalDisclaimer">CookieBuddy liefert technische Review-Signale – keine rechtliche Bewertung.</p>
       <span class="cb-support-copy" data-i18n="supportPrompt">Support CookieBuddy</span>
       <span class="sr-only" data-i18n="supportDescription">Support development with a coffee</span>

@@ -53,6 +53,10 @@
 .audit-verdict-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
 .audit-verdict-heading h2 { margin: 0; font-size: 1rem; }
 .audit-verdict-heading p { margin: 4px 0 0; color: var(--muted); font-size: .75rem; line-height: 1.4; }
+.audit-verdict-meta { display: grid; justify-items: end; gap: 4px; flex: 0 0 auto; }
+.audit-completeness { color: var(--muted); font-size: .64rem; font-weight: 800; text-align: right; }
+.audit-completeness[data-complete="false"] { color: #a15c00; }
+.audit-completeness[data-complete="true"] { color: var(--accent-strong); }
 .audit-reason-list { display: grid; gap: 5px; margin: 0; padding-left: 18px; color: var(--muted); font-size: .76rem; }
 .audit-evidence { border-top: 1px solid var(--line); padding-top: 9px; }
 .audit-evidence summary { cursor: pointer; color: var(--accent-strong); font-size: .76rem; font-weight: 800; }

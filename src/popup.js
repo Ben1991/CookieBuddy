@@ -655,7 +655,8 @@ function renderAuditVerdict(delta, verdict) {
     "audit-lifecycle": t("auditCoverageLifecycle"),
     "no-contradictory-evidence": t("auditReasonNoContradiction")
   };
-  const reasons = (verdict.reasons || []).map((reason) => `<li>${escapeHtml(reasonLabels[reason] || reason)}</li>`).join("");
+  const reasons = (verdict.reasons || []).slice(0, 3).map((reason) => `<li>${escapeHtml(reasonLabels[reason] || reason)}</li>`).join("");
+  const complete = verdict.coverage?.complete === true;
   const cookieCount = (delta.remainingCookies?.length || 0) + (delta.newCookies?.length || 0);
   const dpoEmail = state.analysis?.contacts?.dpo?.email || "";
   const complaintBody = dpoEmail ? buildMailBody("access", delta) : "";
@@ -673,7 +674,10 @@ function renderAuditVerdict(delta, verdict) {
           <h2>${escapeHtml(meta.title)}</h2>
           <p>${escapeHtml(meta.copy)}</p>
         </div>
-        <span class="audit-confidence">${escapeHtml(t("auditConfidence", verdict.confidence))}</span>
+        <div class="audit-verdict-meta">
+          <span class="audit-confidence">${escapeHtml(t("auditConfidence", verdict.confidence))}</span>
+          <span class="audit-completeness" data-complete="${complete}">${escapeHtml(t(complete ? "auditCompletenessComplete" : "auditCompletenessIncomplete"))}</span>
+        </div>
       </div>
       <ul class="audit-reason-list">${reasons}</ul>
       <details class="audit-evidence">

@@ -65,6 +65,8 @@
   "auditVerdictIncomplete": { "message": "Unclear or incomplete" },
   "auditVerdictIncompleteCopy": { "message": "CookieBuddy could not verify every required step, so this is not a green result." },
   "auditConfidence": { "message": "Confidence: $1" },
+  "auditCompletenessComplete": { "message": "Audit complete" },
+  "auditCompletenessIncomplete": { "message": "Audit incomplete · no green result" },
   "auditShowEvidence": { "message": "Show observed evidence" },
   "auditOpenEvidence": { "message": "Open evidence" },
   "auditContactWebsite": { "message": "Contact website / DPO" },

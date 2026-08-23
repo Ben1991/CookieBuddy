@@ -12,6 +12,8 @@ test("UC-22 puts the plain-language audit question and action before technical m
   assert.match(visiblePrefix, /data-i18n="runAuditButton"/);
   assert.match(visiblePrefix, /id="auditSteps"/);
   assert.doesNotMatch(visiblePrefix, /Delta-Check starten|Run delta check|Erkannte Kategorien/);
+  assert.ok(visiblePrefix.indexOf('id="deltaButton"') < visiblePrefix.indexOf('id="auditExplainerHeading"'));
+  assert.ok(visiblePrefix.indexOf('id="deltaResult"') < visiblePrefix.indexOf('id="auditExplainerHeading"'));
   assert.match(popupHtml, /<div class="cb-functional-sections" hidden>/);
 });
 
@@ -22,6 +24,8 @@ test("the popup exposes all required progress phases and progressive evidence ac
   assert.match(popupScript, /auditOpenEvidence/);
   assert.match(popupScript, /auditContactWebsite/);
   assert.match(popupScript, /deriveAuditVerdict/);
+  assert.match(popupScript, /auditCompletenessComplete/);
+  assert.match(popupScript, /slice\(0, 3\)/);
 });
 
 test("incomplete, negative, and positive states have non-color styling hooks", () => {
