@@ -1,273 +1,112 @@
 # Contributing to CookieBuddy
 
-Thank you for your interest in contributing to CookieBuddy! 🎉
+CookieBuddy is built around privacy, transparency, user control, and reproducible technical evidence. Contributions should improve the reliability of the one-click consent/tracking audit without overstating what a browser extension can prove.
 
-CookieBuddy exists to help users understand and control their online privacy. Every contribution — whether code, documentation, testing, design, translations, or feedback — helps make the project more transparent, secure, and user-friendly.
+## Core Principles
 
-This guide explains how to contribute effectively and what principles guide development.
+When contributing:
 
----
+- Keep processing local by default.
+- Do not add analytics, telemetry, remote logging, user profiling, mandatory accounts, or automatic scan uploads.
+- Minimize stored evidence before persistence; do not store/export cookie values by default.
+- Separate observed evidence from interpretation.
+- Unknown, incomplete, unsupported, or contaminated audit coverage must never become a positive green verdict.
+- A successful DOM click is not proof that consent was rejected.
+- Do not imply that CookieBuddy can detect browser-invisible server-side processing or every form of tracking.
 
-## Our Principles
+## Gherkin Acceptance Contract
 
-CookieBuddy is built around privacy, transparency, and user control.
+`features/cookiebuddy.feature` is the authoritative product acceptance specification.
 
-When contributing, keep these principles in mind:
+Every change that affects product behavior, detection, classification, verdicts, evidence, privacy behavior, user flow, or visible UI must identify the affected `@UC-xx` scenario(s).
 
-* **Privacy first:** Never introduce features that weaken user privacy or collect unnecessary data.
-* **Minimal data handling:** Avoid adding telemetry, tracking, analytics, or external dependencies unless there is a strong privacy-preserving reason.
-* **Transparency:** Users should understand what CookieBuddy does and why.
-* **Security matters:** Treat user data, browser permissions, and stored information with care.
-* **User control:** Features should empower users, not make decisions on their behalf without clear consent.
+A product task is not complete until all affected contract artifacts are synchronized in the same change:
 
-If you are unsure whether a change aligns with these principles, open a discussion before implementing it.
+1. Update or add the matching Gherkin scenario.
+2. Add or update real automated tests for the changed behavior, including negative and failure paths.
+3. Update `README.md`, including the use-case contract and any affected product, privacy, usage, or limitations text.
+4. Update visual tests and regenerate README screenshots when visible behavior changes.
+5. Keep scenario IDs stable; use a new `@UC-xx` only for a genuinely new product contract.
+6. Keep `@issue-N` references on scenarios governed by a GitHub implementation issue.
 
----
-
-## Ways to Contribute
-
-There are many ways to help:
-
-### 🐛 Report Bugs
-
-Found something broken?
-
-Before opening an issue:
-
-1. Check existing issues to avoid duplicates.
-2. Verify the problem still exists on the latest version.
-3. Collect useful details:
-
-   * Browser and version
-   * Operating system
-   * CookieBuddy version
-   * Steps to reproduce
-   * Expected behavior
-   * Actual behavior
-   * Relevant logs or screenshots (avoid sharing private data)
-
-Create a bug report with a clear title and description.
-
----
-
-### 💡 Suggest Features
-
-Feature requests are welcome.
-
-Good feature requests include:
-
-* The problem you want to solve
-* Why the feature improves privacy or usability
-* Possible alternatives considered
-* Potential privacy/security implications
-
-Please avoid suggestions that require:
-
-* User tracking
-* Mandatory accounts
-* Unnecessary cloud services
-* Collection of browsing data
-
----
+`tests/use-cases.test.mjs` enforces basic Gherkin/README contract hygiene in CI. It does not replace functional tests: implementation work must include automated tests that exercise the actual acceptance behavior.
 
 ## Development Workflow
 
-### 1. Fork the Repository
+Create focused branches and changes. Avoid unrelated formatting or refactors in feature work.
 
-Create your own fork and clone it locally:
+Before implementation, read:
 
-```bash
-git clone https://github.com/YOUR_USERNAME/CookieBuddy.git
-cd CookieBuddy
-```
+- `features/cookiebuddy.feature`
+- `README.md`
+- `agent.md` when using AI-supported development
+- the relevant GitHub issue and referenced `@UC-xx` scenario
 
----
-
-### 2. Create a Branch
-
-Use a descriptive branch name:
-
-```bash
-git checkout -b feature/meaningful-name
-```
-
-Examples:
-
-* `feature/improve-cookie-detection`
-* `fix/firefox-storage-bug`
-* `docs/privacy-explanation`
-
----
-
-### 3. Make Your Changes
-
-Keep changes focused.
-
-Good pull requests:
-
-* Solve one problem at a time
-* Include tests where applicable
-* Avoid unrelated formatting changes
-* Keep dependencies minimal
-
----
+For detection changes, prefer deterministic local fixtures over live websites. Live-site checks are useful as optional smoke tests but are not suitable as deterministic CI dependencies.
 
 ## Privacy and Security Requirements
 
-Before submitting changes, consider:
+Do not add hidden or unnecessary network requests. If a network request or new permission is truly required, document what it accesses, why it is necessary, its privacy impact, and whether a narrower alternative exists.
 
-### Data Collection
+New dependencies should be reviewed for maintenance, code size, external communication, privacy impact, and whether the platform already provides the required functionality.
 
-Do not add:
-
-* Tracking scripts
-* Analytics SDKs
-* Remote logging
-* User profiling
-* Hidden network requests
-
-If a network request is required, document:
-
-* What data is sent
-* Where it goes
-* Why it is necessary
-* How users can disable it
-
----
-
-### Permissions
-
-CookieBuddy may interact with browser permissions.
-
-When changing permissions:
-
-* Request the minimum required access
-* Explain why it is needed
-* Avoid broad permissions unless unavoidable
-
----
-
-### Dependencies
-
-New dependencies should be evaluated carefully.
-
-Ask:
-
-* Is it actively maintained?
-* Does it introduce unnecessary code?
-* Does it communicate externally?
-* Does it affect user privacy?
-* Is the functionality already available?
-
-A smaller dependency footprint improves security and trust.
-
----
-
-## Code Style
-
-Please follow the existing project style.
-
-General guidelines:
-
-* Write readable code
-* Prefer clarity over cleverness
-* Use meaningful names
-* Add comments where behavior is not obvious
-* Remove unused code
-* Keep functions focused
-
----
+Treat page text, URLs, contact data, exported HTML, and browser-provided data as untrusted input. Escape or sanitize content appropriately.
 
 ## Testing
 
-Before submitting a pull request:
+For product changes run:
 
-* Run the existing test suite
-* Test your changes manually
-* Verify privacy-related behavior
-* Check browser compatibility if applicable
+```sh
+npm test
+npm run check
+npm run test:visual
+```
 
-If adding a feature, include tests where possible.
+The affected acceptance criteria must have real unit/integration/browser coverage. Tests should include realistic positive, negative, ambiguous, and failure cases where applicable.
 
----
+For documentation/contract-only changes, at minimum run:
 
-## Pull Requests
+```sh
+node --test tests/use-cases.test.mjs
+```
 
-Before opening a PR:
+Visible changes require updated visual tests and regenerated screenshots.
 
-* Rebase or update against the latest main branch
-* Ensure builds/tests pass
-* Write a clear description
+## Pull Request Definition of Done
 
-A good PR explains:
+A PR that changes product behavior should explicitly state:
 
-### What changed?
+- affected `@UC-xx` scenario(s)
+- what changed and why
+- tests added/updated
+- privacy/security impact
+- evidence or verdict implications
+- remaining limitations
+- README updates
+- screenshot/visual-test updates when applicable
 
-Example:
+Do not merge a product change when implementation, Gherkin, tests, README, or screenshots disagree.
 
-> Added improved cookie categorization handling.
+## Bug Reports and Feature Requests
 
-### Why?
+Useful reports include browser/version, OS, CookieBuddy version, steps to reproduce, expected result, actual result, and privacy-safe screenshots/logs where helpful.
 
-Example:
-
-> Helps users better understand which cookies require attention.
-
-### Privacy impact
-
-Example:
-
-> No new data collection or permissions added.
-
----
-
-## Review Process
-
-All contributions are reviewed with focus on:
-
-* Correctness
-* Security
-* Privacy impact
-* Maintainability
-* User experience
-
-Changes may require discussion before merging.
-
-Reviews are collaborative — feedback is meant to improve the project.
-
----
+Good feature requests describe the user problem, why it improves the core audit/evidence workflow, alternatives considered, and privacy/security implications.
 
 ## Security Issues
 
-Please do not publicly disclose security vulnerabilities.
+Do not publicly disclose security vulnerabilities. Use a private security reporting channel when available and include reproduction steps, affected versions, and impact.
 
-If you discover a security issue:
+## Review Focus
 
-* Open a private security report if available
-* Provide reproduction steps
-* Include affected versions
-* Explain potential impact
+Reviews prioritize:
 
-Responsible disclosure helps protect CookieBuddy users.
+- correctness and false-negative risk
+- audit integrity
+- security and privacy
+- evidence quality
+- conservative verdict behavior
+- maintainability
+- user comprehension and accessibility
 
----
-
-## Community Guidelines
-
-Please:
-
-* Be respectful
-* Assume good intentions
-* Discuss ideas, not people
-* Welcome newcomers
-* Keep discussions focused on improving the project
-
-Privacy communities depend on trust and constructive collaboration.
-
----
-
-## Thank You
-
-Every contribution helps make the web a little more private.
-
-Thank you for helping build CookieBuddy. ❤️
+A change that makes the UI look more certain than the underlying evidence is not an improvement.
