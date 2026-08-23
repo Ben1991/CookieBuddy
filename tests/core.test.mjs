@@ -352,4 +352,13 @@ test("derives a positive verdict only when rejection and before/after coverage a
   assert.equal(deriveAuditVerdict({ ...base, integrity: { status: "contaminated", uncertain: true } }).status, "incomplete");
   assert.equal(deriveAuditVerdict({ ...base, cookieCoverage: { complete: false, requestedHosts: ["tracker.example"], unavailableHosts: ["tracker.example"] } }).status, "incomplete");
   assert.equal(deriveAuditVerdict({ ...base, riskLevel: "high", thirdPartyHosts: ["tracker.example"] }).status, "negative");
+  const review = deriveAuditVerdict({
+    ...base,
+    riskLevel: "low",
+    serviceAudit: [{ name: "Unmapped banner service", essential: false, confidence: "none", status: "disabled" }]
+  });
+  assert.equal(review.status, "review");
+  assert.deepEqual(review.reasons, ["unclear-service"]);
+  assert.deepEqual(review.unresolvedSignals[0], { key: "unclear-service", evidence: ["Unmapped banner service"] });
+  assert.deepEqual(review.evidenceLinks, [{ key: "delta-report", href: "details.html?view=delta" }]);
 });

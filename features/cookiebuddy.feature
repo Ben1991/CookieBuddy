@@ -163,6 +163,7 @@ Feature: One-click consent and tracking audit
     When CookieBuddy determines the result
     Then the top-level verdict is <verdict>
     And the verdict includes confidence, reasons, coverage, unresolved signals, and links to evidence
+    And unresolved or ambiguous signals remain visible without being treated as safe
     And the wording remains a technical review rather than a legal compliance conclusion
 
     Examples:

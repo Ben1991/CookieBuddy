@@ -29,9 +29,10 @@ test("the popup exposes all required progress phases and progressive evidence ac
   assert.match(popupScript, /denyAction\?\.verified/);
 });
 
-test("incomplete, negative, and positive states have non-color styling hooks", () => {
+test("incomplete, review, negative, and positive states have non-color styling hooks", () => {
   assert.match(auditCss, /audit-verdict\[data-verdict="positive"\]/);
   assert.match(auditCss, /audit-verdict\[data-verdict="negative"\]/);
+  assert.match(auditCss, /audit-verdict\[data-verdict="review"\]/);
   assert.match(auditCss, /audit-verdict\[data-verdict="incomplete"\]/);
   assert.match(auditCss, /border-color/);
 });

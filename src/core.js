@@ -341,6 +341,7 @@ export function createCoverageSummary({ delta = {}, analysisComplete = true, heu
  */
 export function deriveAuditVerdict(delta, { analysisComplete = true } = {}) {
   const coverage = delta?.coverage || createCoverageSummary({ delta, analysisComplete });
+  const evidenceLinks = [{ key: "delta-report", href: "details.html?view=delta" }];
   const missingCoverage = [];
   if (!delta?.denyAction?.clicked || !delta?.denyAction?.verified) missingCoverage.push("rejection-verification");
   if (!delta?.banner || delta.banner.confidence === "none") missingCoverage.push("consent-surface");
@@ -356,23 +357,45 @@ export function deriveAuditVerdict(delta, { analysisComplete = true } = {}) {
   if (delta?.remainingCookies?.length || delta?.newCookies?.length) reasons.push("non-essential-cookies");
   if (delta?.nonEssentialStorageEntries?.length) reasons.push("non-essential-storage");
   if (delta?.serviceAudit?.some((service) => service.status === "active")) reasons.push("active-service");
-  if (delta?.serviceAudit?.some((service) => service.status === "unclear")) reasons.push("unclear-service");
+  const unclearServices = (delta?.serviceAudit || []).filter((service) => service.status === "unclear" || (!service.essential && service.confidence === "none" && service.status === "disabled"));
+  if (unclearServices.length) reasons.push("unclear-service");
+  const unresolvedSignals = [
+    ...missingCoverage.map((key) => ({ key, evidence: [] })),
+    ...(unclearServices.length ? [{ key: "unclear-service", evidence: unclearServices.map((service) => service.name).filter(Boolean).slice(0, 5) }] : []),
+    ...(coverage.heuristicSignals || []).map((signal) => ({ key: "heuristic-signal", evidence: [signal.key, ...(signal.evidence || [])].filter(Boolean).slice(0, 5) }))
+  ];
+  const strongContradiction = delta.riskLevel === "high" || reasons.some((reason) => reason !== "unclear-service");
 
   if (missingCoverage.length) {
     return {
       status: "incomplete",
       confidence: "limited",
       reasons: missingCoverage,
-      coverage: { ...coverage, complete: false, missing: missingCoverage }
+      coverage: { ...coverage, complete: false, missing: missingCoverage },
+      unresolvedSignals,
+      evidenceLinks
     };
   }
 
-  if (delta.riskLevel === "high" || reasons.length) {
+  if (strongContradiction) {
     return {
       status: "negative",
       confidence: "evidence-backed",
       reasons,
-      coverage: { ...coverage, complete: true, missing: [] }
+      coverage: { ...coverage, complete: true, missing: [] },
+      unresolvedSignals,
+      evidenceLinks
+    };
+  }
+
+  if (unresolvedSignals.length) {
+    return {
+      status: "review",
+      confidence: "limited",
+      reasons: reasons.length ? reasons : ["unclear-service"],
+      coverage: { ...coverage, complete: true, missing: [] },
+      unresolvedSignals,
+      evidenceLinks
     };
   }
 
@@ -380,7 +403,9 @@ export function deriveAuditVerdict(delta, { analysisComplete = true } = {}) {
     status: "positive",
     confidence: "evidence-backed",
     reasons: ["no-contradictory-evidence"],
-    coverage: { ...coverage, complete: true, missing: [] }
+    coverage: { ...coverage, complete: true, missing: [] },
+    unresolvedSignals,
+    evidenceLinks
   };
 }
 
