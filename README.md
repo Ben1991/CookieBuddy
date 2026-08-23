@@ -57,7 +57,7 @@ The source of truth for product acceptance behavior is [`features/cookiebuddy.fe
 | UC-13 | Recognize services from versioned maintainable offline rule data while keeping unknown signals visible. |
 | UC-14 | Detect consent surfaces in the top document, supported frames, and open shadow roots; inaccessible surfaces remain explicit. |
 | UC-15 | Detect contaminated audit state such as prior consent, blockers, tracking protection, or other conditions that undermine integrity. |
-| UC-16 | Handle SPA navigation, redirects, popup closure, service-worker restart, reload, tab closure, and delayed trackers deterministically. |
+| UC-16 | Handle SPA navigation, redirects, popup closure, service-worker restart, reload, tab closure, and delayed trackers deterministically; persist lifecycle evidence and never render interrupted work as green. |
 | UC-17 | Produce a conservative verdict: looks correct, review recommended, likely incorrect, or audit incomplete. |
 | UC-18 | Build an evidence-grade report with timeline, coverage, observed facts, interpretation, and machine-readable export. |
 | UC-19 | Minimize sensitive URL data at capture time; exclude query values and fragments by default. |
@@ -158,6 +158,10 @@ The budgets are local safeguards, not telemetry:
 - Each page analysis records only local duration and bounded sample counts for regression inspection; it does not upload performance data.
 
 The corresponding contract and regression tests live in `tests/performance-budget.test.mjs`. If a limit is exceeded, the audit remains local and is marked incomplete rather than silently weakening evidence integrity.
+
+## Audit lifecycle
+
+During an audit, CookieBuddy keeps a minimal state machine in local session storage. SPA route changes, redirects, reloads, tab switches, popup reopening, service-worker restarts, tab closure, and observation timeouts are recorded as lifecycle evidence. A navigation that changes the page baseline, a popup/service-worker interruption, or a timeout ends the run as incomplete; a closed tested tab ends it as failed. The next popup can inspect that state and start a fresh audit explicitly. Lifecycle URLs are stored without query parameters or fragments.
 
 ## Detection Limits
 

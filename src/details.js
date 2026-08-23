@@ -252,12 +252,36 @@ function renderDelta(delta, options = {}) {
             <p class="muted">${escapeHtml(t("importantLimitationsHeading"))}</p>
             ${renderSimpleList([t("deltaLimitationBestEffort"), t("deltaLimitationServerSide"), t("deltaLimitationNecessary"), t("deltaLimitationHeuristic")])}
           </section>
+          ${renderLifecycleEvidence(delta)}
           ${renderCoverage(coverage)}
         </aside>
       </div>
       ${renderVisualEvidence(delta, options)}
     </div>
   `;
+}
+
+function renderLifecycleEvidence(delta) {
+  const lifecycle = delta.auditLifecycle;
+  if (!lifecycle) return "";
+  const statusLabel = {
+    completed: t("auditLifecycleCompleted"),
+    incomplete: t("auditLifecycleIncomplete"),
+    failed: t("auditLifecycleFailed"),
+    running: t("auditLifecycleRunning")
+  }[lifecycle.status] || lifecycle.status;
+  const eventLabels = {
+    started: t("auditLifecycleStarted"),
+    step: t("auditLifecycleStep"),
+    navigation: t("auditLifecycleNavigation"),
+    "tab-switched": t("auditLifecycleTabSwitch"),
+    "popup-reopened": t("auditLifecyclePopupReopened"),
+    "service-worker-restarted": t("auditLifecycleWorkerRestarted"),
+    timeout: t("auditLifecycleTimeout"),
+    "tab-closed": t("auditLifecycleTabClosed")
+  };
+  const events = (lifecycle.events || []).filter((event) => event.type !== "step").slice(-12);
+  return `<section class="lifecycle-report"><h3>${escapeHtml(t("auditLifecycleHeading"))}</h3><p class="muted">${escapeHtml(t("auditLifecycleStatus", statusLabel))}</p>${lifecycle.reason ? `<p class="muted">${escapeHtml(t("auditLifecycleReason", lifecycle.reason))}</p>` : ""}${events.length ? `<ul class="delta-list">${events.map((event) => `<li>${escapeHtml(eventLabels[event.type] || event.type)}${event.kind ? ` · ${escapeHtml(event.kind)}` : ""}${event.url ? ` · ${escapeHtml(event.url)}` : ""}</li>`).join("")}</ul>` : `<p class="empty-state">${escapeHtml(t("auditLifecycleNoInterruptions"))}</p>`}</section>`;
 }
 
 function renderCoverage(coverage) {

@@ -42,7 +42,12 @@ const fixtureDelta = {
     { name: "extension.example.net", category: "unlisted", source: "Third-party traffic", listedInBanner: false, essential: false, status: "unclear" }
   ],
   beforeCounts: { cookies: 2, thirdPartyHosts: 1 },
-  afterDenyCounts: { cookies: 1, thirdPartyHosts: 1, storageEntries: 1 }
+  afterDenyCounts: { cookies: 1, thirdPartyHosts: 1, storageEntries: 1 },
+  auditLifecycle: {
+    status: "incomplete",
+    reason: "redirect-during-audit",
+    events: [{ type: "navigation", kind: "redirect", url: "https://example.com/redirected" }]
+  }
 };
 
 const server = createServer(async (request, response) => {
@@ -128,6 +133,8 @@ try {
   assert.ok(await details.getByText("Coverage and limits", { exact: true }).isVisible(), "coverage limits should be visible in the evidence report");
   assert.ok(await details.getByText("Not technically inspectable", { exact: false }).count() > 0, "unsupported techniques should be labeled as not technically inspectable");
   assert.ok(await details.getByText("Heuristic indicators (not confirmed evidence)", { exact: true }).isVisible(), "heuristics should be separated from confirmed evidence");
+  assert.ok(await details.getByText("Audit lifecycle evidence", { exact: true }).isVisible(), "lifecycle evidence should be visible in the report");
+  assert.ok(await details.getByText("Navigation interrupted the audit", { exact: false }).count() > 0, "navigation interruptions should be explained");
   assert.ok(await details.getByText("Stored locally", { exact: true }).isVisible(), "local-only status should be visible in the redesigned details header");
   await details.locator("#languageSelect").selectOption("de");
   await details.locator("html[lang='de']").waitFor({ state: "attached", timeout: 10000 });

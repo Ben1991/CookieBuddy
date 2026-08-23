@@ -286,6 +286,7 @@ export function deriveAuditVerdict(delta, { analysisComplete = true } = {}) {
   if (!delta?.banner || delta.banner.confidence === "none") missingCoverage.push("consent-surface");
   if (!delta?.beforeCounts || !delta?.afterDenyCounts) missingCoverage.push("before-after-observation");
   if (!analysisComplete) missingCoverage.push("page-analysis");
+  if (delta?.auditLifecycle?.status && delta.auditLifecycle.status !== "completed") missingCoverage.push("audit-lifecycle");
 
   const reasons = [];
   if (delta?.thirdPartyHosts?.length) reasons.push("third-party-traffic");
@@ -367,6 +368,16 @@ export function formatDeltaReport(delta, url = "") {
     report += "    - none recorded\n";
   }
   report += "\n";
+
+  if (delta.auditLifecycle) {
+    report += "AUDIT LIFECYCLE:\n";
+    report += `  Status: ${delta.auditLifecycle.status || "unknown"}\n`;
+    if (delta.auditLifecycle.reason) report += `  Reason: ${delta.auditLifecycle.reason}\n`;
+    (delta.auditLifecycle.events || []).filter((event) => event.type !== "step").forEach((event) => {
+      report += `  - ${event.type}${event.kind ? ` (${event.kind})` : ""}${event.url ? `: ${event.url}` : ""}\n`;
+    });
+    report += "\n";
+  }
 
   report += "═════════════════════════════════════════\n";
   report += "DENY ACTION DETAILS\n";
