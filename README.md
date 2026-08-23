@@ -85,6 +85,8 @@ The source of truth for product acceptance behavior is [`features/cookiebuddy.fe
 
 The one-click audit uses two controlled page reloads: one to capture initial-load evidence for the baseline and one after rejection to validate the post-opt-out state. A bounded observation window records delayed requests; if either reload or the observation window cannot be completed, the result remains incomplete or unclear.
 
+During an active audit, network evidence is serialized per tab before session persistence. This prevents concurrent tracker requests from overwriting each other; retention is deterministic and keeps the newest entries up to the configured limit. Navigation, tab closure, and explicit resets clear the corresponding tab evidence.
+
 The target UX replaces the technical `Delta-Check` framing with a plain-language one-click tracking audit and top-level verdict (UC-22).
 
 ## Product Screenshots

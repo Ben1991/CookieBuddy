@@ -223,6 +223,7 @@ async function runDeltaCheck() {
       beforeAnalysis: before.analysis,
       afterAnalysis: afterDeny.analysis,
       blockedRequests: [...(before.blockedRequests || []), ...(afterDeny.blockedRequests || [])],
+      trafficCapture: before.trafficCapture?.status === "failed" ? before.trafficCapture : afterDeny.trafficCapture,
       controlledReloads,
       observationWindow: {
         phase: "post-rejection",
@@ -497,7 +498,8 @@ async function snapshot(label) {
     cookies: cookieSnapshot.cookies,
     cookieCoverage: cookieSnapshot.coverage,
     thirdPartyTraffic: normalizedTraffic,
-    blockedRequests: normalizedTraffic.filter((item) => item.blocked)
+    blockedRequests: normalizedTraffic.filter((item) => item.blocked),
+    trafficCapture: trafficResponse?.captureStatus || { status: "complete" }
   };
 }
 

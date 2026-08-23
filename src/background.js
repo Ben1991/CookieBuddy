@@ -3,12 +3,15 @@ import { createAuditLifecycleState, getAuditLifecycleEvidence, transitionAuditLi
 import { minimizeUrlEvidence } from "./url-evidence.mjs";
 import { isBlockedRequestError } from "./audit-integrity.mjs";
 import { SESSION_AUDIT_STORAGE_KEYS } from "./audit-storage.mjs";
+import { createSerializedTrafficStore } from "./traffic-store.mjs";
 
 const TRAFFIC_STORAGE_KEY = "cookiebuddyTraffic";
 const ICON_STATUS_STORAGE_KEY = "cookiebuddyIconStatus";
 const AUDIT_STATE_STORAGE_KEY = "cookiebuddyAuditLifecycle";
 const activeAuditTabs = new Map();
 const auditExpiryTimers = new Map();
+const trafficCaptureGenerations = new Map();
+const trafficCaptureStatusByTab = new Map();
 const WORKER_SESSION_ID = `worker-${Date.now()}`;
 
 /**
@@ -83,11 +86,53 @@ async function transitionStoredAuditState(tabId, type, payload = {}) {
 /**
  * Helper to clear traffic data for a tab
  */
-async function clearTabTraffic(tabId) {
+async function removeTraffic(tabId) {
   const data = await chrome.storage.session.get(TRAFFIC_STORAGE_KEY);
   const trafficByTab = data[TRAFFIC_STORAGE_KEY] || {};
   delete trafficByTab[tabId];
   await chrome.storage.session.set({ [TRAFFIC_STORAGE_KEY]: trafficByTab });
+}
+
+const trafficStore = createSerializedTrafficStore({
+  read: getTraffic,
+  write: setTraffic,
+  remove: removeTraffic,
+  limit: PERFORMANCE_BUDGETS.activeAudit.maxRequestsPerTab,
+  // All tab entries share one storage object. A global queue prevents two
+  // tabs from racing while their read-modify-write operations update it.
+  queueKey: () => "traffic-storage"
+});
+
+function nextTrafficCaptureGeneration(tabId) {
+  const generation = (trafficCaptureGenerations.get(tabId) || 0) + 1;
+  trafficCaptureGenerations.set(tabId, generation);
+  return generation;
+}
+
+async function clearTabTraffic(tabId) {
+  nextTrafficCaptureGeneration(tabId);
+  await trafficStore.clear(tabId);
+}
+
+async function getTrafficSnapshot(tabId) {
+  return trafficStore.snapshot(tabId);
+}
+
+async function appendTraffic(tabId, entry, captureGeneration) {
+  try {
+    return await trafficStore.append(tabId, entry, {
+      accept: () => trafficCaptureGenerations.get(tabId) === captureGeneration && activeAuditTabs.has(tabId)
+    });
+  } catch {
+    const captureStatus = { status: "failed", reason: "traffic-capture-persistence-failed" };
+    trafficCaptureStatusByTab.set(tabId, captureStatus);
+    try {
+      await transitionStoredAuditState(tabId, "incomplete", { reason: captureStatus.reason });
+    } catch {
+      // The audit remains conservative through the capture status response.
+    }
+    return null;
+  }
 }
 
 /**
@@ -101,10 +146,13 @@ async function clearTabIconStatus(tabId) {
 }
 
 async function clearLocalAuditData() {
-  await chrome.storage.session.remove(SESSION_AUDIT_STORAGE_KEYS);
+  for (const tabId of activeAuditTabs.keys()) nextTrafficCaptureGeneration(tabId);
   activeAuditTabs.clear();
   for (const timer of auditExpiryTimers.values()) clearTimeout(timer);
   auditExpiryTimers.clear();
+  await trafficStore.waitForAll();
+  trafficCaptureStatusByTab.clear();
+  await chrome.storage.session.remove(SESSION_AUDIT_STORAGE_KEYS);
   await applyIconStatus("neutral");
 }
 
@@ -112,6 +160,7 @@ chrome.webRequest.onBeforeRequest.addListener(
   async (details) => {
     const auditStartedAt = activeAuditTabs.get(details.tabId);
     if (details.tabId < 0 || !details.url || !auditStartedAt) return;
+    const captureGeneration = trafficCaptureGenerations.get(details.tabId) || 0;
     if (Date.now() - auditStartedAt > PERFORMANCE_BUDGETS.activeAudit.maxDurationMs) {
       activeAuditTabs.delete(details.tabId);
       await clearTabTraffic(details.tabId);
@@ -120,8 +169,7 @@ chrome.webRequest.onBeforeRequest.addListener(
 
     const minimized = minimizeUrlEvidence(details.url);
     if (!minimized?.url) return;
-    const tabTraffic = await getTraffic(details.tabId);
-    tabTraffic.push({
+    await appendTraffic(details.tabId, {
       url: minimized.url,
       host: minimized.host,
       path: minimized.path,
@@ -129,13 +177,7 @@ chrome.webRequest.onBeforeRequest.addListener(
       queryKeys: minimized.queryKeys,
       type: details.type,
       timeStamp: details.timeStamp
-    });
-
-    if (tabTraffic.length > PERFORMANCE_BUDGETS.activeAudit.maxRequestsPerTab) {
-      tabTraffic.splice(0, tabTraffic.length - PERFORMANCE_BUDGETS.activeAudit.maxRequestsPerTab);
-    }
-
-    await setTraffic(details.tabId, tabTraffic);
+    }, captureGeneration);
   },
   { urls: ["<all_urls>"] }
 );
@@ -148,12 +190,12 @@ if (chrome.webRequest.onErrorOccurred) {
     async (details) => {
       const auditStartedAt = activeAuditTabs.get(details.tabId);
       if (details.tabId < 0 || !details.url || !auditStartedAt || !isBlockedRequestError(details.error)) return;
+      const captureGeneration = trafficCaptureGenerations.get(details.tabId) || 0;
       if (Date.now() - auditStartedAt > PERFORMANCE_BUDGETS.activeAudit.maxDurationMs) return;
 
       const minimized = minimizeUrlEvidence(details.url);
       if (!minimized?.url) return;
-      const tabTraffic = await getTraffic(details.tabId);
-      tabTraffic.push({
+      await appendTraffic(details.tabId, {
         url: minimized.url,
         host: minimized.host,
         path: minimized.path,
@@ -163,11 +205,7 @@ if (chrome.webRequest.onErrorOccurred) {
         timeStamp: details.timeStamp,
         blocked: true,
         error: String(details.error).slice(0, 100)
-      });
-      if (tabTraffic.length > PERFORMANCE_BUDGETS.activeAudit.maxRequestsPerTab) {
-        tabTraffic.splice(0, tabTraffic.length - PERFORMANCE_BUDGETS.activeAudit.maxRequestsPerTab);
-      }
-      await setTraffic(details.tabId, tabTraffic);
+      }, captureGeneration);
     },
     { urls: ["<all_urls>"] }
   );
@@ -176,6 +214,7 @@ if (chrome.webRequest.onErrorOccurred) {
 chrome.tabs.onRemoved.addListener(async (tabId) => {
   await transitionStoredAuditState(tabId, "tab-closed");
   activeAuditTabs.delete(tabId);
+  trafficCaptureStatusByTab.delete(tabId);
   clearTimeout(auditExpiryTimers.get(tabId));
   auditExpiryTimers.delete(tabId);
   await clearTabTraffic(tabId);
@@ -221,8 +260,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message.type === "GET_TRAFFIC") {
     (async () => {
-      const traffic = await getTraffic(message.tabId);
-      sendResponse({ traffic });
+      const traffic = await getTrafficSnapshot(message.tabId);
+      sendResponse({ traffic, captureStatus: trafficCaptureStatusByTab.get(message.tabId) || { status: "complete" } });
     })();
     return true;
   }
@@ -250,6 +289,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         workerSessionId: WORKER_SESSION_ID,
         maxDurationMs: PERFORMANCE_BUDGETS.activeAudit.maxDurationMs
       });
+      trafficCaptureStatusByTab.delete(tabId);
       await setStoredAuditState(state);
       activeAuditTabs.set(tabId, Date.parse(state.startedAt));
       clearTimeout(auditExpiryTimers.get(tabId));
