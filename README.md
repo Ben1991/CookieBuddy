@@ -83,6 +83,8 @@ The source of truth for product acceptance behavior is [`features/cookiebuddy.fe
 7. Use `Seite neu erfassen / Refresh` to capture the current page locally.
 8. Select `Tracking prüfen / Check tracking` to run the guided audit and review the top-level verdict.
 
+The one-click audit uses two controlled page reloads: one to capture initial-load evidence for the baseline and one after rejection to validate the post-opt-out state. A bounded observation window records delayed requests; if either reload or the observation window cannot be completed, the result remains incomplete or unclear.
+
 The target UX replaces the technical `Delta-Check` framing with a plain-language one-click tracking audit and top-level verdict (UC-22).
 
 ## Product Screenshots

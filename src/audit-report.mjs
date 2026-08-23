@@ -121,7 +121,9 @@ export function buildAuditReportPayload({ delta = {}, manifest = null, browser =
     },
     timeline: {
       auditSteps: (delta.auditTimeline || []).slice(0, 60),
-      lifecycle: delta.auditLifecycle || null
+      lifecycle: delta.auditLifecycle || null,
+      controlledReloads: delta.controlledReloads || [],
+      observationWindow: delta.observationWindow || null
     },
     evidence: {
       cookies: delta.cookieEvidence || { before: [], after: [] },

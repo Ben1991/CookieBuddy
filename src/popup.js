@@ -144,6 +144,7 @@ async function runDeltaCheck() {
   let lifecycleState = null;
   const visualEvidenceEnabled = elements.visualEvidenceToggle?.checked === true;
   const auditTimeline = [];
+  const controlledReloads = [];
   const visualEvidenceItems = [];
   const recordAuditEvent = (step, evidenceIds = []) => {
     auditTimeline.push(createAuditTimelineEvent(step, new Date().toISOString(), evidenceIds));
@@ -162,14 +163,16 @@ async function runDeltaCheck() {
     }
     recordAuditEvent("prepare");
     assertAuditBudget(auditStartedAt, auditMaxDurationMs);
-    const before = await snapshot(t("snapshotCurrentState"));
+    setAuditStep("prepare", "complete");
+    setAuditStep("baseline", "active", t("auditReloadBaselineProgress"));
+    controlledReloads.push(await controlledReloadForAudit("baseline-reload", auditStartedAt, auditMaxDurationMs));
+    const before = await snapshot(t("snapshotBaselineAfterReload"));
     assertAuditBudget(auditStartedAt, auditMaxDurationMs);
     const beforeVisualEvidence = await captureVisualEvidence("before", "baseline", visualEvidenceEnabled, auditStartedAt, auditMaxDurationMs);
     visualEvidenceItems.push(beforeVisualEvidence);
-    recordAuditEvent("baseline", [beforeVisualEvidence.id]);
-    setAuditStep("prepare", "complete");
-    setAuditStep("consent", "complete");
+    recordAuditEvent("baseline-reload", [beforeVisualEvidence.id]);
     setAuditStep("baseline", "complete");
+    setAuditStep("consent", "complete");
     setAuditStep("reject", "active");
     const denyResult = await sendToTab(state.tab.id, { target: "cookiebuddy-content", type: "TRY_DENY_ALL" });
     if (visualEvidenceItems[0]) visualEvidenceItems[0].rejectControlLabel = String(denyResult?.label || "").slice(0, 160);
@@ -179,9 +182,13 @@ async function runDeltaCheck() {
     recordAuditEvent("verify");
     setAuditStep("observe", "active");
     await chrome.runtime.sendMessage({ target: "cookiebuddy-background", type: "CLEAR_TRAFFIC", tabId: state.tab.id });
+    setAuditStep("observe", "active", t("auditReloadAfterRejectProgress"));
+    controlledReloads.push(await controlledReloadForAudit("post-rejection-reload", auditStartedAt, auditMaxDurationMs));
     const observationWindowMs = Math.min(DEFAULT_AUDIT_OBSERVATION_WINDOW_MS, Math.max(0, auditMaxDurationMs - (Date.now() - auditStartedAt)));
+    const observationStartedAt = new Date().toISOString();
     setAuditStep("observe", "active", t("auditObservationProgress", Math.ceil(observationWindowMs / 1000)));
     await wait(observationWindowMs);
+    const observationEndedAt = new Date().toISOString();
     assertAuditBudget(auditStartedAt, auditMaxDurationMs);
     recordAuditEvent("observe");
     setAuditStep("observe", "complete");
@@ -216,6 +223,15 @@ async function runDeltaCheck() {
       beforeAnalysis: before.analysis,
       afterAnalysis: afterDeny.analysis,
       blockedRequests: [...(before.blockedRequests || []), ...(afterDeny.blockedRequests || [])],
+      controlledReloads,
+      observationWindow: {
+        phase: "post-rejection",
+        requestedMs: observationWindowMs,
+        observedMs: Math.max(0, Date.parse(observationEndedAt) - Date.parse(observationStartedAt)),
+        startedAt: observationStartedAt,
+        endedAt: observationEndedAt,
+        status: "completed"
+      },
       manualConsentConfirmed: !denyResult?.found,
       labels: {
         deltaFoundSummary: t("deltaFoundSummary"),
@@ -331,6 +347,69 @@ async function sendAuditLifecycleEvent(eventType, payload = {}) {
   }
 }
 
+async function controlledReloadForAudit(phase, auditStartedAt, auditMaxDurationMs) {
+  if (typeof chrome.tabs?.reload !== "function" || typeof chrome.tabs?.onUpdated?.addListener !== "function" || typeof chrome.tabs?.onUpdated?.removeListener !== "function") {
+    throw new AuditLifecycleError(t("auditReloadUnavailable"), AUDIT_LIFECYCLE_STATUS.incomplete, "controlled-reload-unavailable");
+  }
+  assertAuditBudget(auditStartedAt, auditMaxDurationMs);
+  const startedAt = new Date().toISOString();
+  const response = await chrome.runtime.sendMessage({
+    target: "cookiebuddy-background",
+    type: "CONTROLLED_RELOAD",
+    tabId: state.tab.id,
+    phase,
+    url: sanitizeEvidenceUrl(state.tab.url)
+  });
+  if (response?.ok === false) {
+    throw new AuditLifecycleError(t("auditReloadUnavailable"), AUDIT_LIFECYCLE_STATUS.incomplete, "controlled-reload-rejected");
+  }
+
+  const remainingMs = auditMaxDurationMs - (Date.now() - auditStartedAt);
+  if (remainingMs <= 0) throw new AuditLifecycleError(t("auditReloadTimeout"), AUDIT_LIFECYCLE_STATUS.incomplete, "controlled-reload-timeout");
+  const loadPromise = waitForTabLoad(state.tab.id, Math.min(remainingMs, 12_000));
+  try {
+    await chrome.tabs.reload(state.tab.id, { bypassCache: true });
+    await loadPromise;
+  } catch (error) {
+    if (error instanceof AuditLifecycleError) throw error;
+    throw new AuditLifecycleError(t("auditReloadTimeout"), AUDIT_LIFECYCLE_STATUS.incomplete, "controlled-reload-failed");
+  }
+  assertAuditBudget(auditStartedAt, auditMaxDurationMs);
+  await ensureContentScript(state.tab.id);
+  await installNavigationMonitor(state.tab.id);
+  const lifecycleState = await getAuditLifecycleState(state.tab.id);
+  if (lifecycleState?.status && lifecycleState.status !== AUDIT_LIFECYCLE_STATUS.running) {
+    throw new AuditLifecycleError(t("auditLifecycleInterrupted"), lifecycleState.status, lifecycleState.reason || "audit-lifecycle-interruption");
+  }
+  return {
+    phase,
+    status: "completed",
+    startedAt,
+    completedAt: new Date().toISOString()
+  };
+}
+
+function waitForTabLoad(tabId, timeoutMs) {
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const cleanup = () => {
+      chrome.tabs.onUpdated.removeListener(onUpdated);
+      clearTimeout(timeoutId);
+    };
+    const finish = (callback, value) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      callback(value);
+    };
+    const onUpdated = (updatedTabId, changeInfo) => {
+      if (updatedTabId === tabId && changeInfo.status === "complete") finish(resolve);
+    };
+    const timeoutId = setTimeout(() => finish(reject, new AuditLifecycleError(t("auditReloadTimeout"), AUDIT_LIFECYCLE_STATUS.incomplete, "controlled-reload-timeout")), timeoutMs);
+    chrome.tabs.onUpdated.addListener(onUpdated);
+  });
+}
+
 async function installNavigationMonitor(tabId) {
   if (!chrome.scripting?.executeScript) throw new Error("navigation monitor unavailable");
   await chrome.scripting.executeScript({
@@ -378,6 +457,8 @@ function createIncompleteAuditDelta(outcome, lifecycleState, summary) {
     essentialThirdPartyHosts: [],
     remainingStorageEntries: [],
     nonEssentialStorageEntries: [],
+    controlledReloads: [],
+    observationWindow: null,
     serviceAudit: [],
     banner: state.analysis?.banner || null,
     integrity: { status: "unknown", uncertain: true, knownStartingState: "unknown", limitations: ["integrity-not-recorded"], evidence: [], recommendation: "rerun-clean-environment" },

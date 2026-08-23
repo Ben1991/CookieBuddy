@@ -19,6 +19,8 @@ test("creates a reproducible hashed report with minimized evidence and finding l
     verdict: { status: "negative", confidence: "high", reasons: ["third-party-traffic"], unresolvedSignals: [], evidenceLinks: [{ href: "details.html?view=delta" }] },
     auditTimeline: [{ step: "baseline", at: "2026-08-23T10:00:00.000Z" }, { step: "after-deny", at: "2026-08-23T10:00:05.000Z" }],
     auditLifecycle: { status: "complete", events: [] },
+    controlledReloads: [{ phase: "baseline-reload", status: "completed" }, { phase: "post-rejection-reload", status: "completed" }],
+    observationWindow: { phase: "post-rejection", requestedMs: 1800, observedMs: 1800, status: "completed" },
     coverage: { auditComplete: true, limitations: [] },
     cookieCoverage: { complete: true },
     cnameCoverage: { status: "unknown" }
@@ -33,6 +35,8 @@ test("creates a reproducible hashed report with minimized evidence and finding l
   assert.equal(report.payload.audit.hostname, "example.com");
   assert.equal(report.payload.audit.extension.version, "2.4.0");
   assert.equal(report.payload.timeline.auditSteps.length, 2);
+  assert.equal(report.payload.timeline.controlledReloads.length, 2);
+  assert.equal(report.payload.timeline.observationWindow.requestedMs, 1800);
   assert.equal(report.payload.interpretation.findings[0].evidence[0].section, "network.after");
   assert.match(report.integrity.payloadHash, /^[a-f0-9]{64}$/);
   assert.equal(await verifyAuditReport(report), true);

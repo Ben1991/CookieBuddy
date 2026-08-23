@@ -36,6 +36,17 @@ test("records SPA routes, redirects, tab switches, and late-observation progress
   assert.equal(state.events.at(-1).kind, "spa");
 });
 
+test("keeps an explicitly controlled reload inside the running audit", () => {
+  let state = transitionAuditLifecycle(runningState(), "controlled-reload-start", { phase: "baseline-reload" });
+  state = transitionAuditLifecycle(state, "controlled-reload-loading", { phase: "baseline-reload" });
+  assert.equal(state.status, AUDIT_LIFECYCLE_STATUS.running);
+  assert.equal(state.controlledReload, true);
+  state = transitionAuditLifecycle(state, "controlled-reload-complete", { phase: "baseline-reload" });
+  assert.equal(state.status, AUDIT_LIFECYCLE_STATUS.running);
+  assert.equal(state.controlledReload, false);
+  assert.deepEqual(state.events.slice(-3).map((event) => event.type), ["controlled-reload-start", "controlled-reload-loading", "controlled-reload-complete"]);
+});
+
 test("classifies popup reopen, worker restart, timeout, and tab closure deterministically", () => {
   for (const [event, expectedStatus] of [
     ["popup-reopened", AUDIT_LIFECYCLE_STATUS.incomplete],

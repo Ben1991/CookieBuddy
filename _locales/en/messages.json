@@ -86,6 +86,10 @@
   "auditComplaintReviewNote": { "message": "Review the factual draft before sending. CookieBuddy does not determine a legal violation." },
   "auditDurationExceeded": { "message": "The audit exceeded its local time budget and was marked incomplete." },
   "auditObservationProgress": { "message": "Observing late-loading trackers for up to $1 seconds." },
+  "auditReloadBaselineProgress": { "message": "Reloading the page to capture a clean baseline and initial-load requests." },
+  "auditReloadAfterRejectProgress": { "message": "Reloading after rejection to validate the post-opt-out state." },
+  "auditReloadUnavailable": { "message": "CookieBuddy could not observe a controlled page reload, so the audit is incomplete." },
+  "auditReloadTimeout": { "message": "The controlled page reload did not complete within the audit time budget." },
   "auditReasonThirdParty": { "message": "Third-party traffic remained after opt-out." },
   "auditReasonCookies": { "message": "Non-essential cookies remained or appeared after opt-out." },
   "auditReasonStorage": { "message": "Non-essential browser storage remained after opt-out." },
@@ -132,9 +136,14 @@
   "auditLifecycleTabSwitch": { "message": "The user switched tabs during the audit" },
   "auditLifecyclePopupReopened": { "message": "The popup was reopened while the audit was running" },
   "auditLifecycleWorkerRestarted": { "message": "The service worker restarted during the audit" },
+  "auditLifecycleControlledReloadStart": { "message": "Controlled reload started" },
+  "auditLifecycleControlledReloadLoading": { "message": "Controlled reload is loading" },
+  "auditLifecycleControlledReloadComplete": { "message": "Controlled reload completed" },
   "auditLifecycleTimeout": { "message": "The audit observation window timed out" },
   "auditLifecycleTabClosed": { "message": "The tested tab was closed" },
   "auditLifecycleNoInterruptions": { "message": "No lifecycle interruption was recorded." },
+  "auditObservationWindowEvidence": { "message": "Post-rejection observation window: $1 ms requested, $2 ms observed." },
+  "auditControlledReloadEvidence": { "message": "$1 controlled reloads were completed and recorded." },
   "languageLabel": {
     "message": "Language"
   },
@@ -403,6 +412,9 @@
   },
   "snapshotCurrentState": {
     "message": "Current state"
+  },
+  "snapshotBaselineAfterReload": {
+    "message": "Baseline after controlled reload"
   },
   "snapshotAfterDenyAll": {
     "message": "After deny all"

@@ -351,6 +351,8 @@ export function buildDelta({
   beforeAnalysis = null,
   afterAnalysis = null,
   blockedRequests = [],
+  controlledReloads = [],
+  observationWindow = null,
   manualConsentConfirmed,
   labels,
   tabUrl
@@ -440,6 +442,8 @@ export function buildDelta({
     },
     consentEvidence,
     consentContradictions,
+    controlledReloads: controlledReloads.slice(0, 4),
+    observationWindow,
     browserStorage: {
       before: summarizeBrowserStorage(beforeAnalysis?.storage),
       after: summarizeBrowserStorage(afterStorage)
@@ -724,6 +728,15 @@ export function formatDeltaReport(delta, url = "") {
       report += `  - ${event.type}${event.kind ? ` (${event.kind})` : ""}${event.url ? `: ${event.url}` : ""}\n`;
     });
     report += "\n";
+  }
+
+  if (delta.controlledReloads?.length || delta.observationWindow) {
+    report += "CONTROLLED AUDIT WINDOWS:\n";
+    report += `  Controlled reloads completed: ${delta.controlledReloads?.length || 0}\n`;
+    if (delta.observationWindow) {
+      report += `  Post-rejection observation window: ${delta.observationWindow.requestedMs || 0} ms requested; ${delta.observationWindow.observedMs || 0} ms observed; status: ${delta.observationWindow.status || "unknown"}\n`;
+    }
+    report += "  Initial-load and post-rejection requests are separated by the controlled reload boundaries.\n\n";
   }
 
   report += "═════════════════════════════════════════\n";
