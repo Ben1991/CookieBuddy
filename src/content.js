@@ -94,6 +94,20 @@ const DENY_SELECTORS = [
   "button"
 ];
 
+// These are local collection limits, not telemetry. They keep ordinary page
+// browsing responsive while preserving enough evidence for an audit.
+const PAGE_ANALYSIS_BUDGETS = Object.freeze({
+  maxPageTextChars: 120_000,
+  maxHtmlSampleChars: 250_000,
+  maxResources: 250,
+  maxConsentNodes: 96,
+  maxBannerTextChars: 20_000,
+  maxStorageEntries: 50,
+  maxContactPages: 8,
+  maxContactResponseChars: 200_000,
+  contactTimeoutMs: 1_500
+});
+
 function getCmpSignatures() {
   return FALLBACK_CMP_SIGNATURES;
 }
@@ -125,8 +139,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 async function analyzePage() {
-  const pageText = document.body?.innerText || "";
-  const htmlSample = document.documentElement.outerHTML.slice(0, 250000).toLowerCase();
+  const analysisStartedAt = performance.now();
+  const pageText = (document.body?.innerText || "").slice(0, PAGE_ANALYSIS_BUDGETS.maxPageTextChars);
+  const htmlSample = document.documentElement.outerHTML.slice(0, PAGE_ANALYSIS_BUDGETS.maxHtmlSampleChars).toLowerCase();
   const resources = collectResources();
   const banner = detectBanner({ htmlSample, pageText, resources });
   const categories = detectCategories(pageText, htmlSample, resources, collectBannerText());
@@ -142,6 +157,13 @@ async function analyzePage() {
     resources,
     contacts,
     storage,
+    performance: {
+      durationMs: Math.round(performance.now() - analysisStartedAt),
+      pageTextChars: pageText.length,
+      htmlSampleChars: htmlSample.length,
+      resourceCount: resources.length,
+      storageEntryCount: storage.items.length
+    },
     scannedAt: new Date().toISOString()
   };
 }
@@ -247,7 +269,7 @@ function collectDomConsentSignals() {
       ].filter(Boolean).join(" ")
     }))
     .filter((signal, index, list) => signal.value && list.findIndex((item) => item.value === signal.value) === index)
-    .slice(0, 12);
+    .slice(0, PAGE_ANALYSIS_BUDGETS.maxConsentNodes);
 }
 
 function collectConsentSourceSignals(urls) {
@@ -350,13 +372,14 @@ function collectStoredData({ banner, categories, pageText, htmlSample }) {
     localStorageKeys,
     sessionStorageKeys,
     indexedDbNames,
-    items: items.sort((a, b) => Number(b.inBanner) - Number(a.inBanner) || a.scope.localeCompare(b.scope) || a.key.localeCompare(b.key)).slice(0, 50)
+    items: items.sort((a, b) => Number(b.inBanner) - Number(a.inBanner) || a.scope.localeCompare(b.scope) || a.key.localeCompare(b.key)).slice(0, PAGE_ANALYSIS_BUDGETS.maxStorageEntries)
   };
 }
 
 function collectResources() {
   return performance
     .getEntriesByType("resource")
+    .slice(0, PAGE_ANALYSIS_BUDGETS.maxResources)
     .map((entry) => safeUrl(entry.name))
     .filter(Boolean)
     .map((url) => ({
@@ -365,13 +388,13 @@ function collectResources() {
       thirdParty: getBaseDomain(url.hostname) !== getBaseDomain(location.hostname)
     }))
     .filter((resource, index, list) => list.findIndex((item) => item.url === resource.url) === index)
-    .slice(0, 250);
+    .slice(0, PAGE_ANALYSIS_BUDGETS.maxResources);
 }
 
 async function detectContacts() {
   const currentPageSource = classifyPageSource(location.href, document.title);
   const currentPageContacts = extractContactsFromText(
-    document.body?.innerText || "",
+    (document.body?.innerText || "").slice(0, PAGE_ANALYSIS_BUDGETS.maxPageTextChars),
     location.href,
     currentPageSource.source,
     currentPageSource.sourceType
@@ -385,7 +408,7 @@ async function detectContacts() {
     .filter(Boolean)
     .sort((a, b) => contactLinkPriority(b) - contactLinkPriority(a))
     .filter((link, index, list) => list.findIndex((candidate) => candidate.href === link.href) === index)
-    .slice(0, 12);
+    .slice(0, PAGE_ANALYSIS_BUDGETS.maxContactPages);
 
   const linkedContacts = [];
   for (const link of links) {
@@ -394,9 +417,9 @@ async function detectContacts() {
         continue;
       }
 
-      const response = await fetch(link.href, { credentials: "include" });
+      const response = await fetchWithTimeout(link.href, { credentials: "include" }, PAGE_ANALYSIS_BUDGETS.contactTimeoutMs);
       if (!response.ok) continue;
-      const text = await response.text();
+      const text = (await response.text()).slice(0, PAGE_ANALYSIS_BUDGETS.maxContactResponseChars);
       linkedContacts.push(...extractContactsFromText(
         stripHtml(text),
         link.href,
@@ -526,7 +549,17 @@ function collectBannerText() {
     .flatMap((selector) => Array.from(document.querySelectorAll(selector)).slice(0, 6))
     .map((element) => element.innerText || element.textContent || "")
     .join(" ")
-    .slice(0, 20000);
+    .slice(0, PAGE_ANALYSIS_BUDGETS.maxBannerTextChars);
+}
+
+async function fetchWithTimeout(url, options, timeoutMs) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 function isSafeContactLink(href) {

@@ -55,6 +55,7 @@
   "auditContactWebsite": { "message": "Contact website / DPO" },
   "auditRecipientUnclear": { "message": "Recipient not confirmed; review the evidence and choose a contact manually." },
   "auditComplaintReviewNote": { "message": "Review the factual draft before sending. CookieBuddy does not determine a legal violation." },
+  "auditDurationExceeded": { "message": "The audit exceeded its local time budget and was marked incomplete." },
   "auditReasonThirdParty": { "message": "Third-party traffic remained after opt-out." },
   "auditReasonCookies": { "message": "Non-essential cookies remained or appeared after opt-out." },
   "auditReasonStorage": { "message": "Non-essential browser storage remained after opt-out." },

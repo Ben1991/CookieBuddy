@@ -146,6 +146,17 @@ CookieBuddy is designed to stay local.
 
 CookieBuddy may inspect the page, cookies, supported browser storage, consent APIs, and browser requests only to perform the user's local audit. Local audit data must have documented retention/deletion behavior.
 
+## Performance budgets
+
+The budgets are local safeguards, not telemetry:
+
+- Idle browsing captures zero requests and performs zero per-request session-storage writes.
+- An active audit runs for at most 30 seconds and retains at most 500 requests per tab.
+- Page analysis limits text to 120,000 characters, HTML evidence to 250,000 characters, resources to 250 entries, stored entries to 50, contact pages to 8, and each contact response to 200,000 characters with a 1.5-second timeout.
+- Each page analysis records only local duration and bounded sample counts for regression inspection; it does not upload performance data.
+
+The corresponding contract and regression tests live in `tests/performance-budget.test.mjs`. If a limit is exceeded, the audit remains local and is marked incomplete rather than silently weakening evidence integrity.
+
 ## Detection Limits
 
 CookieBuddy can only assess evidence observable from the browser extension context. It must not imply complete tracking detection.

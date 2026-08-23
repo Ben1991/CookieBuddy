@@ -1,5 +1,9 @@
+import { PERFORMANCE_BUDGETS } from "./performance-budgets.mjs";
+
 const TRAFFIC_STORAGE_KEY = "cookiebuddyTraffic";
 const ICON_STATUS_STORAGE_KEY = "cookiebuddyIconStatus";
+const activeAuditTabs = new Map();
+const auditExpiryTimers = new Map();
 
 /**
  * Helper to get traffic data from session storage
@@ -61,7 +65,13 @@ async function clearTabIconStatus(tabId) {
 
 chrome.webRequest.onBeforeRequest.addListener(
   async (details) => {
-    if (details.tabId < 0 || !details.url) return;
+    const auditStartedAt = activeAuditTabs.get(details.tabId);
+    if (details.tabId < 0 || !details.url || !auditStartedAt) return;
+    if (Date.now() - auditStartedAt > PERFORMANCE_BUDGETS.activeAudit.maxDurationMs) {
+      activeAuditTabs.delete(details.tabId);
+      await clearTabTraffic(details.tabId);
+      return;
+    }
 
     const tabTraffic = await getTraffic(details.tabId);
     tabTraffic.push({
@@ -70,8 +80,8 @@ chrome.webRequest.onBeforeRequest.addListener(
       timeStamp: details.timeStamp
     });
 
-    if (tabTraffic.length > 500) {
-      tabTraffic.splice(0, tabTraffic.length - 500);
+    if (tabTraffic.length > PERFORMANCE_BUDGETS.activeAudit.maxRequestsPerTab) {
+      tabTraffic.splice(0, tabTraffic.length - PERFORMANCE_BUDGETS.activeAudit.maxRequestsPerTab);
     }
 
     await setTraffic(details.tabId, tabTraffic);
@@ -80,6 +90,9 @@ chrome.webRequest.onBeforeRequest.addListener(
 );
 
 chrome.tabs.onRemoved.addListener(async (tabId) => {
+  activeAuditTabs.delete(tabId);
+  clearTimeout(auditExpiryTimers.get(tabId));
+  auditExpiryTimers.delete(tabId);
   await clearTabTraffic(tabId);
   await clearTabIconStatus(tabId);
 });
@@ -91,6 +104,7 @@ chrome.tabs.onActivated.addListener(async ({ tabId }) => {
 
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
   if (changeInfo.status === "loading") {
+    await clearTabTraffic(tabId);
     await clearTabIconStatus(tabId);
     await applyIconStatus("neutral");
   }
@@ -105,6 +119,35 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       sendResponse({ traffic });
     })();
     return true;
+  }
+
+  if (message.type === "START_AUDIT") {
+    (async () => {
+      const tabId = Number(message.tabId);
+      if (!Number.isInteger(tabId) || tabId < 0) {
+        sendResponse({ ok: false, error: "invalid tab" });
+        return;
+      }
+      activeAuditTabs.set(tabId, Date.now());
+      clearTimeout(auditExpiryTimers.get(tabId));
+      auditExpiryTimers.set(tabId, setTimeout(async () => {
+        activeAuditTabs.delete(tabId);
+        auditExpiryTimers.delete(tabId);
+        await clearTabTraffic(tabId);
+      }, PERFORMANCE_BUDGETS.activeAudit.maxDurationMs));
+      await clearTabTraffic(tabId);
+      sendResponse({ ok: true, maxDurationMs: PERFORMANCE_BUDGETS.activeAudit.maxDurationMs });
+    })();
+    return true;
+  }
+
+  if (message.type === "STOP_AUDIT") {
+    const tabId = Number(message.tabId);
+    activeAuditTabs.delete(tabId);
+    clearTimeout(auditExpiryTimers.get(tabId));
+    auditExpiryTimers.delete(tabId);
+    sendResponse({ ok: true });
+    return false;
   }
 
   if (message.type === "CLEAR_TRAFFIC") {
