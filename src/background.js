@@ -1,5 +1,6 @@
 import { PERFORMANCE_BUDGETS } from "./performance-budgets.mjs";
 import { createAuditLifecycleState, getAuditLifecycleEvidence, transitionAuditLifecycle } from "./audit-lifecycle.mjs";
+import { minimizeUrlEvidence } from "./url-evidence.mjs";
 
 const TRAFFIC_STORAGE_KEY = "cookiebuddyTraffic";
 const ICON_STATUS_STORAGE_KEY = "cookiebuddyIconStatus";
@@ -107,9 +108,15 @@ chrome.webRequest.onBeforeRequest.addListener(
       return;
     }
 
+    const minimized = minimizeUrlEvidence(details.url);
+    if (!minimized?.url) return;
     const tabTraffic = await getTraffic(details.tabId);
     tabTraffic.push({
-      url: details.url,
+      url: minimized.url,
+      host: minimized.host,
+      path: minimized.path,
+      protocol: minimized.protocol,
+      queryKeys: minimized.queryKeys,
       type: details.type,
       timeStamp: details.timeStamp
     });

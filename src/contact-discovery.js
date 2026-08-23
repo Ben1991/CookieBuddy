@@ -1,4 +1,6 @@
 const PRIVACY_PATTERN = /privacy|datenschutz|data[- ]?protection|privacy[- ]?policy/i;
+import { sanitizeEvidenceUrl } from "./url-evidence.mjs";
+
 const IMPRINT_PATTERN = /imprint|impressum|legal[- ]?notice/i;
 const CONTACT_PATTERN = /contact|kontakt/i;
 const DPO_CONTEXT_PATTERN = /data protection officer|datenschutzbeauftrag|privacy officer|dpo\b/i;
@@ -9,7 +11,7 @@ export function getContactLinkMetadata(href, text, inFooter = false) {
   if (!sourceType) return null;
 
   return {
-    href,
+    href: sanitizeEvidenceUrl(href),
     text: String(text || "").trim().toLowerCase(),
     inFooter: Boolean(inFooter),
     sourceType,
@@ -45,7 +47,7 @@ export function extractContactsFromText(text, sourceUrl, source, sourceType) {
       email,
       phone: "",
       source: source || "Visited page",
-      sourceUrl,
+      sourceUrl: sanitizeEvidenceUrl(sourceUrl),
       sourceType: sourceType || "page"
     });
   }

@@ -85,6 +85,17 @@ test("keeps only third-party traffic", () => {
 
   assert.equal(result.length, 1);
   assert.equal(result[0].host, "analytics.other.com");
+  assert.equal(result[0].url, "https://analytics.other.com/pixel.js");
+});
+
+test("minimizes request URLs before traffic classification", () => {
+  const result = normalizeTraffic([
+    { url: "https://analytics.other.com/pixel?email=alice%40example.com&query=private%20term#section", type: "xmlhttprequest" }
+  ], "www.example.com");
+
+  assert.equal(result[0].url, "https://analytics.other.com/pixel");
+  assert.deepEqual(result[0].queryKeys, ["email", "query"]);
+  assert.doesNotMatch(JSON.stringify(result[0]), /alice|private|section/);
 });
 
 test("builds a delta summary from the before and after states", () => {
@@ -222,6 +233,7 @@ test("formats delta report as plain text", () => {
   assert.match(report, /COVERAGE AND LIMITATIONS/);
   assert.match(report, /not-technically-inspectable/);
   assert.match(report, /Heuristic indicators/);
+  assert.match(report, /URL DATA MINIMIZATION/);
   assert.match(report, /_ga/);
   assert.match(report, /tracker.example.net/);
 });

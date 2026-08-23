@@ -35,7 +35,11 @@ test("idle monitoring and page analysis enforce their limits in production code"
   assert.match(background, /AUDIT_STATE_STORAGE_KEY/);
   assert.match(background, /service-worker-restarted/);
   assert.match(background, /tab-closed/);
+  assert.match(background, /minimizeUrlEvidence/);
+  assert.doesNotMatch(background, /url: details\.url/);
   assert.match(content, /AUDIT_NAVIGATION/);
+  assert.match(content, /sanitizePageUrl/);
+  assert.match(content, /minimizePageEvidence/);
   assert.match(lifecycle, /not technically inspectable|incomplete/);
   assert.match(content, /maxPageTextChars/);
   assert.match(content, /maxHtmlSampleChars/);

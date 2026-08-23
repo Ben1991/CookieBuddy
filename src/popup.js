@@ -1,7 +1,7 @@
 import { applyI18n, getLanguage, initI18n, setLanguage, t } from "./i18n.js";
 import { buildDelta, capitalize, createCoverageSummary, deriveAuditVerdict, getBaseDomain, isEssentialCookie, isEssentialHost, normalizeTraffic, serviceForCookie } from "./core.js";
 import { AUDIT_LIFECYCLE_STATUS } from "./audit-lifecycle.mjs";
-import { canCaptureVisibleTab, createAuditTimelineEvent, createVisualEvidenceItem, createVisualEvidenceState } from "./visual-evidence.mjs";
+import { canCaptureVisibleTab, createAuditTimelineEvent, createVisualEvidenceItem, createVisualEvidenceState, sanitizeEvidenceUrl } from "./visual-evidence.mjs";
 
 const state = {
   tab: null,
@@ -140,7 +140,7 @@ async function runDeltaCheck() {
   };
 
   try {
-    const auditStartResponse = await chrome.runtime.sendMessage({ target: "cookiebuddy-background", type: "START_AUDIT", tabId: state.tab.id, tabUrl: state.tab.url, controllerId: POPUP_INSTANCE_ID, auditId: `audit-${Date.now()}` });
+    const auditStartResponse = await chrome.runtime.sendMessage({ target: "cookiebuddy-background", type: "START_AUDIT", tabId: state.tab.id, tabUrl: sanitizeEvidenceUrl(state.tab.url), controllerId: POPUP_INSTANCE_ID, auditId: `audit-${Date.now()}` });
     auditMaxDurationMs = auditStartResponse?.maxDurationMs || DEFAULT_AUDIT_MAX_DURATION_MS;
     lifecycleState = auditStartResponse?.state || null;
     state.auditLifecycle = lifecycleState;
@@ -201,7 +201,7 @@ async function runDeltaCheck() {
         deltaFoundSummary: t("deltaFoundSummary"),
         noDeltaSummary: t("noDeltaSummary")
       },
-      tabUrl: state.tab.url
+      tabUrl: sanitizeEvidenceUrl(state.tab.url)
     });
     delta.auditLifecycle = {
       ...(lifecycleState || {}),
@@ -282,7 +282,18 @@ async function installNavigationMonitor(tabId) {
     func: () => {
       if (globalThis.__cookiebuddyNavigationMonitorInstalled) return;
       globalThis.__cookiebuddyNavigationMonitorInstalled = true;
-      const report = (kind) => globalThis.postMessage({ source: "cookiebuddy-navigation-monitor", kind, url: globalThis.location.href }, "*");
+      const report = (kind) => {
+        let url = "";
+        try {
+          const parsed = new URL(globalThis.location.href);
+          parsed.username = "";
+          parsed.password = "";
+          parsed.search = "";
+          parsed.hash = "";
+          url = parsed.href;
+        } catch {}
+        globalThis.postMessage({ source: "cookiebuddy-navigation-monitor", kind, url }, "*");
+      };
       ["popstate", "hashchange"].forEach((eventName) => globalThis.addEventListener(eventName, () => report("spa")));
       ["pushState", "replaceState"].forEach((method) => {
         const original = globalThis.history?.[method];
@@ -300,7 +311,7 @@ async function installNavigationMonitor(tabId) {
 function createIncompleteAuditDelta(outcome, lifecycleState, summary) {
   return {
     checkedAt: new Date().toISOString(),
-    url: state.tab?.url || state.analysis?.url || "",
+    url: sanitizeEvidenceUrl(state.tab?.url || state.analysis?.url || ""),
     riskLevel: "low",
     summary,
     denyAction: { clicked: false, label: "", manual: false },
@@ -765,7 +776,7 @@ async function captureVisualEvidence(phase, auditStep, enabled, auditStartedAt, 
   const base = {
     phase,
     auditStep,
-    tabUrl: state.tab?.url,
+    tabUrl: sanitizeEvidenceUrl(state.tab?.url),
     rejectControlLabel
   };
   if (!enabled) {

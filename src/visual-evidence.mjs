@@ -1,16 +1,8 @@
+import { minimizeUrlEvidence, sanitizeEvidenceUrl } from "./url-evidence.mjs";
+
 const VISUAL_PHASES = new Set(["before", "after"]);
 const VISUAL_STATUSES = new Set(["captured", "unavailable", "disabled", "removed"]);
-
-export function sanitizeEvidenceUrl(rawUrl = "") {
-  try {
-    const url = new URL(rawUrl);
-    url.search = "";
-    url.hash = "";
-    return url.href;
-  } catch {
-    return "";
-  }
-}
+export { minimizeUrlEvidence, sanitizeEvidenceUrl };
 
 export function canCaptureVisibleTab({ testedTab, activeTab, captureAvailable } = {}) {
   return Boolean(

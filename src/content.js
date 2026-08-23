@@ -130,7 +130,7 @@ function reportAuditNavigation(kind, url) {
     target: "cookiebuddy-background",
     type: "AUDIT_NAVIGATION",
     kind,
-    url: url || location.href
+    url: sanitizePageUrl(url || location.href)
   })).catch(() => {});
 }
 
@@ -174,7 +174,7 @@ async function analyzePage() {
   const storage = collectStoredData({ banner, categories, pageText, htmlSample });
 
   return {
-    url: location.href,
+    url: sanitizePageUrl(location.href),
     host: location.hostname,
     title: document.title,
     banner,
@@ -309,16 +309,17 @@ function collectDomConsentSignals() {
 function collectConsentSourceSignals(urls) {
   return urls
     .map((value) => {
-      const url = safeUrl(value);
-      if (!url) return null;
-      const searchable = `${url.hostname}${url.pathname}`.toLowerCase();
+      const evidence = minimizePageEvidence(value);
+      if (!evidence) return null;
+      const searchable = `${evidence.host}${evidence.path}`.toLowerCase();
       const matched = CONSENT_SOURCE_PATTERNS.find((pattern) => searchable.includes(pattern));
       if (!matched) return null;
 
       return {
         type: "source",
-        host: url.hostname,
-        value: url.href
+        host: evidence.host,
+        value: evidence.url,
+        queryKeys: evidence.queryKeys
       };
     })
     .filter(Boolean)
@@ -416,20 +417,25 @@ function collectResources() {
     .slice(0, PAGE_ANALYSIS_BUDGETS.maxResources)
     .map((entry) => safeUrl(entry.name))
     .filter(Boolean)
-    .map((url) => ({
-      url: url.href,
-      host: url.hostname,
-      thirdParty: getBaseDomain(url.hostname) !== getBaseDomain(location.hostname)
+    .map((url) => minimizePageEvidence(url.href))
+    .filter(Boolean)
+    .map((evidence) => ({
+      url: evidence.url,
+      host: evidence.host,
+      path: evidence.path,
+      queryKeys: evidence.queryKeys,
+      thirdParty: getBaseDomain(evidence.host) !== getBaseDomain(location.hostname)
     }))
     .filter((resource, index, list) => list.findIndex((item) => item.url === resource.url) === index)
     .slice(0, PAGE_ANALYSIS_BUDGETS.maxResources);
 }
 
 async function detectContacts() {
-  const currentPageSource = classifyPageSource(location.href, document.title);
+  const currentPageUrl = sanitizePageUrl(location.href);
+  const currentPageSource = classifyPageSource(currentPageUrl, document.title);
   const currentPageContacts = extractContactsFromText(
     (document.body?.innerText || "").slice(0, PAGE_ANALYSIS_BUDGETS.maxPageTextChars),
-    location.href,
+    currentPageUrl,
     currentPageSource.source,
     currentPageSource.sourceType
   );
@@ -447,11 +453,12 @@ async function detectContacts() {
   const linkedContacts = [];
   for (const link of links) {
     try {
-      if (!isSafeContactLink(link.href)) {
+      const requestHref = link.requestHref || link.href;
+      if (!isSafeContactLink(requestHref)) {
         continue;
       }
 
-      const response = await fetchWithTimeout(link.href, { credentials: "include" }, PAGE_ANALYSIS_BUDGETS.contactTimeoutMs);
+      const response = await fetchWithTimeout(requestHref, { credentials: "include" }, PAGE_ANALYSIS_BUDGETS.contactTimeoutMs);
       if (!response.ok) continue;
       const text = (await response.text()).slice(0, PAGE_ANALYSIS_BUDGETS.maxContactResponseChars);
       linkedContacts.push(...extractContactsFromText(
@@ -646,6 +653,26 @@ function safeUrl(value) {
   } catch {
     return null;
   }
+}
+
+function minimizePageEvidence(value) {
+  const url = safeUrl(value);
+  if (!url) return null;
+  url.username = "";
+  url.password = "";
+  const queryKeys = [...new Set([...url.searchParams.keys()].map((key) => key.trim().slice(0, 80)).filter(Boolean))].slice(0, 20);
+  url.search = "";
+  url.hash = "";
+  return {
+    url: url.href,
+    host: url.hostname,
+    path: url.pathname || "/",
+    queryKeys
+  };
+}
+
+function sanitizePageUrl(value) {
+  return minimizePageEvidence(value)?.url || "";
 }
 
 function getBaseDomain(hostname) {
