@@ -100,6 +100,7 @@ try {
   assert.ok((await popup.screenshot()).length > 10000, "popup screenshot should contain rendered UI");
   assert.ok(await popup.locator("#deltaButton").isVisible(), "one-click audit action should be visible");
   assert.ok(await popup.locator("#auditQuestion").isVisible(), "the main popup should lead with the audit question");
+  assert.ok((await popup.locator("#deltaButton").boundingBox()).y < (await popup.locator("#auditExplainerHeading").boundingBox()).y, "the primary action should precede the explainer");
   assert.ok(await popup.locator("#auditSteps").isVisible(), "audit progress steps should be visible");
   assert.equal(await popup.locator("#visualEvidenceToggle").isChecked(), false, "visual evidence must be opt-in");
   assert.ok(await popup.getByText("Screenshots may contain page content or personal information.", { exact: false }).isVisible(), "visual evidence privacy warning should be visible");
@@ -116,6 +117,7 @@ try {
   await popup.locator("#deltaButton").click();
   await popup.getByText("Likely incorrectly implemented", { exact: true }).waitFor({ state: "visible", timeoutMs: 10000 });
   assert.ok(await popup.locator('[data-verdict="negative"]').isVisible(), "negative audit verdict should be visible");
+  assert.ok(await popup.getByText("Audit complete", { exact: true }).isVisible(), "verdict should disclose audit completeness");
   assert.ok(await popup.locator('[data-complaint-action="true"]').isVisible(), "supported negative findings should expose a complaint action");
   assert.equal(await popup.locator('#auditSteps [data-state="complete"]').count(), 8, "completed audit should mark every progress step complete");
   await captureDocumentationScreenshot(popup, "popup-overview.png", { fullPage: true });
