@@ -3,6 +3,7 @@ import { buildDelta, capitalize, createCoverageSummary, deriveAuditVerdict, getB
 import { AUDIT_LIFECYCLE_STATUS } from "./audit-lifecycle.mjs";
 import { canCaptureVisibleTab, createAuditTimelineEvent, createVisualEvidenceItem, createVisualEvidenceState, sanitizeEvidenceUrl } from "./visual-evidence.mjs";
 import { createCookieCoverage, getObservedCookieHosts } from "./cookie-evidence.mjs";
+import { LOCAL_AUDIT_STORAGE_KEYS } from "./audit-storage.mjs";
 
 const state = {
   tab: null,
@@ -39,7 +40,9 @@ const elements = {
   auditProgressBar: document.querySelector("#auditProgressBar"),
   languageSelect: document.querySelector("#languageSelect"),
   helpButton: document.querySelector("#helpButton"),
-  helpPanel: document.querySelector("#helpPanel")
+  helpPanel: document.querySelector("#helpPanel"),
+  deleteLocalAuditDataButton: document.querySelector("#deleteLocalAuditDataButton"),
+  deleteLocalAuditDataStatus: document.querySelector("#deleteLocalAuditDataStatus")
 };
 
 const deltaGuide = "1) Reloads the page without cache.\n2) Tries to find the banner and a reject option.\n3) If no reject option is found, reject cookies manually and run the check again.\n4) Opens the result in a new tab.";
@@ -61,6 +64,7 @@ elements.refreshButton.addEventListener("click", () => scanCurrentTab());
 document.querySelector("#heroScanButton")?.addEventListener("click", () => scanCurrentTab());
 elements.deltaButton.addEventListener("click", () => runDeltaCheck());
 elements.bannerOverviewButton?.addEventListener("click", () => openBannerOverview());
+elements.deleteLocalAuditDataButton?.addEventListener("click", () => void deleteLocalAuditData());
 elements.helpButton.addEventListener("click", () => {
   const isOpen = !elements.helpPanel.hidden;
   elements.helpPanel.hidden = isOpen;
@@ -271,6 +275,41 @@ async function getAuditLifecycleState(tabId) {
     return response?.state || null;
   } catch {
     return null;
+  }
+}
+
+async function deleteLocalAuditData() {
+  if (!window.confirm(t("deleteLocalAuditDataConfirm"))) return;
+  const button = elements.deleteLocalAuditDataButton;
+  if (button) button.disabled = true;
+  if (elements.deleteLocalAuditDataStatus) elements.deleteLocalAuditDataStatus.textContent = t("deleteLocalAuditDataWorking");
+
+  try {
+    await chrome.storage.local.remove(LOCAL_AUDIT_STORAGE_KEYS);
+    await chrome.runtime.sendMessage({ target: "cookiebuddy-background", type: "CLEAR_LOCAL_AUDIT_DATA" });
+    state.tab = null;
+    state.analysis = null;
+    state.cookies = [];
+    state.cookieCoverage = null;
+    state.traffic = [];
+    state.verdict = null;
+    state.delta = null;
+    state.auditLifecycle = null;
+    if (elements.currentPageLabel) elements.currentPageLabel.textContent = "";
+    elements.deltaResult.innerHTML = `<div class="audit-empty-result"><strong>${escapeHtml(t("deleteLocalAuditDataDone"))}</strong><p>${escapeHtml(t("deleteLocalAuditDataDoneDetail"))}</p></div>`;
+    elements.overviewGrid.innerHTML = "";
+    elements.bannerResult.textContent = "";
+    elements.categoryResult.innerHTML = "";
+    elements.cookieResult.innerHTML = "";
+    elements.contactResult.innerHTML = "";
+    elements.cookieCount.textContent = "";
+    if (elements.deleteLocalAuditDataStatus) elements.deleteLocalAuditDataStatus.textContent = t("deleteLocalAuditDataDone");
+    setStatus("statusReady", "ok");
+  } catch {
+    if (elements.deleteLocalAuditDataStatus) elements.deleteLocalAuditDataStatus.textContent = t("deleteLocalAuditDataFailed");
+    setStatus("statusCheckFailed", "warn");
+  } finally {
+    if (button) button.disabled = false;
   }
 }
 

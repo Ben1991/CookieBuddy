@@ -58,6 +58,33 @@ test("details page opens a mail draft from the delta report", async () => {
   assert.equal(window.lastPrinted, true);
 });
 
+test("details escapes untrusted page text and URLs before rendering HTML", async () => {
+  const document = createDocument("en");
+  const window = createWindow("?view=delta");
+  setupGlobals({ document, window, locale: "en" });
+
+  const maliciousDelta = {
+    ...buildDeltaFixture(),
+    url: "https://example.com/?q=<img src=x onerror=alert(1)>",
+    banner: {
+      name: "<script>alert(1)</script>",
+      source: { host: "<img src=x>" },
+      evidence: [{ source: "DOM", value: "<svg onload=alert(1)>" }]
+    },
+    remainingCookies: [{ name: "<img src=x>", domain: ".example.com", service: "<script>alert(1)</script>" }],
+    serviceAudit: [{ name: "<script>alert(1)</script>", source: "<img src=x>", listedInBanner: false, status: "unclear" }]
+  };
+  globalThis.chrome.storage.local.get = async () => ({ cookiebuddyLastDelta: maliciousDelta, cookiebuddyLastScan: { analysis: { contacts: {} } } });
+
+  await import(`../src/details.js?test=${Date.now()}-escaped-page-evidence`);
+  await flush();
+
+  const html = element(document, "detailsOutput").innerHTML;
+  assert.doesNotMatch(html, /<script>|<img[^>]*onerror/i);
+  assert.match(html, /&lt;script&gt;alert\(1\)&lt;\/script&gt;/);
+  assert.match(html, /&lt;img src=x&gt;/);
+});
+
 test("details page offers authority mail when available", async () => {
   const document = createDocument("de");
   const window = createWindow("?view=delta");

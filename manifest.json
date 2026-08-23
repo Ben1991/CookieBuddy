@@ -23,37 +23,11 @@
     "cookies",
     "scripting",
     "storage",
-    "tabs",
     "webRequest"
   ],
   "host_permissions": [
-    "<all_urls>"
-  ],
-  "content_scripts": [
-    {
-      "matches": [
-        "<all_urls>"
-      ],
-      "js": [
-        "src/service-rules.js",
-        "src/contact-discovery-content.js",
-        "src/consent-controls.js",
-        "src/consent-surfaces.js",
-        "src/content.js"
-      ],
-      "all_frames": true,
-      "run_at": "document_idle"
-    }
-  ],
-  "web_accessible_resources": [
-    {
-      "resources": [
-        "details.html"
-      ],
-      "matches": [
-        "<all_urls>"
-      ]
-    }
+    "http://*/*",
+    "https://*/*"
   ],
   "icons": {
     "16": "assets/logo-v2-16.png",

@@ -240,8 +240,11 @@ Feature: One-click consent and tracking audit
     Given CookieBuddy can observe page, cookie, storage, and request metadata
     When the extension is installed and audits are run
     Then every permission has a documented product need
+    And page analysis scripts are injected only on demand for the active tab rather than persistently on every page
+    And the remaining broad host access is documented as required for third-party cookie and request evidence
     And no audit data, browsing data, analytics, telemetry, or identifiers are sent to a remote service
     And retained local audit data can be deleted by the user
+    And page-provided text and URLs are escaped before appearing in the UI or HTML export
     And idle and active audit work stays within documented performance and evidence-retention budgets
     And idle request monitoring records no requests and performs no session-storage writes
     And an active audit is bounded to 30 seconds and 500 requests per tab
