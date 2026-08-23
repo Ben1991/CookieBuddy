@@ -127,6 +127,48 @@ test("details page still offers downloads when no email recipient is available",
   assert.equal(window.lastDownloadedName, "cookiebuddy-delta-report.html");
 });
 
+test("details previews visual evidence and removes it before export", async () => {
+  const document = createDocument("en");
+  const window = createWindow("?view=delta");
+  setupGlobals({ document, window, locale: "en" });
+  let storedDelta = {
+    ...buildDeltaFixture(),
+    visualEvidence: {
+      enabled: true,
+      rejectControlLabel: "Reject all",
+      items: [{
+        id: "visual-before-1787479200000",
+        phase: "before",
+        status: "captured",
+        dataUrl: "data:image/png;base64,AAAA",
+        url: "https://example.com/",
+        auditStep: "baseline",
+        capturedAt: "2026-08-23T10:00:00.000Z"
+      }]
+    },
+    auditTimeline: [{ step: "baseline", at: "2026-08-23T10:00:01.000Z", evidenceIds: ["visual-before-1787479200000"] }]
+  };
+  globalThis.chrome.storage.local.get = async () => ({ cookiebuddyLastDelta: storedDelta, cookiebuddyLastScan: { analysis: { contacts: {} } } });
+  globalThis.chrome.storage.local.set = async (values) => {
+    storedDelta = values.cookiebuddyLastDelta || storedDelta;
+  };
+
+  await import(`../src/details.js?test=${Date.now()}-visual-evidence`);
+  await flush();
+
+  const output = element(document, "detailsOutput");
+  assert.match(output.innerHTML, /Visual evidence/);
+  assert.match(output.innerHTML, /data:image\/png;base64,AAAA/);
+  const removeButton = output.querySelectorAll("[data-visual-evidence-remove]")[0];
+  assert.ok(removeButton);
+  removeButton.click();
+  await flush();
+
+  assert.doesNotMatch(output.innerHTML, /data:image\/png;base64,AAAA/);
+  assert.match(output.innerHTML, /Screenshot removed before export/);
+  assert.equal(storedDelta.visualEvidence.items[0].status, "removed");
+});
+
 function buildDeltaFixture() {
   return {
     checkedAt: "2026-05-31T10:00:00Z",
@@ -305,6 +347,13 @@ class FakeElement {
       button.textContent = match[2].replace(/[<>]/g, "").trim();
       this._childrenButtons.push(button);
     }
+
+    for (const match of this._html.matchAll(/<button[^>]*data-visual-evidence-remove="([^"]+)"[^>]*>([\s\S]*?)<\/button>/g)) {
+      const button = new FakeElement("visual-evidence-remove");
+      button.dataset.visualEvidenceRemove = match[1];
+      button.textContent = match[2].replace(/[<>]/g, "").trim();
+      this._childrenButtons.push(button);
+    }
   }
 
   get innerHTML() {
@@ -314,6 +363,9 @@ class FakeElement {
   querySelectorAll(selector) {
     if (selector === "button[data-mail-target]") {
       return this._childrenButtons.filter((button) => button.dataset.mailTarget);
+    }
+    if (selector === "[data-visual-evidence-remove]") {
+      return this._childrenButtons.filter((button) => button.dataset.visualEvidenceRemove);
     }
     return [];
   }

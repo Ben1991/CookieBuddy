@@ -61,7 +61,7 @@ The source of truth for product acceptance behavior is [`features/cookiebuddy.fe
 | UC-17 | Produce a conservative verdict: looks correct, review recommended, likely incorrect, or audit incomplete. |
 | UC-18 | Build an evidence-grade report with timeline, coverage, observed facts, interpretation, and machine-readable export. |
 | UC-19 | Minimize sensitive URL data at capture time; exclude query values and fragments by default. |
-| UC-20 | Optionally capture user-controlled visual evidence with preview/removal before export. |
+| UC-20 | Optionally capture user-controlled visual evidence with preview/removal before export. Screenshots are off by default, limited to the tested active tab, linked to audit steps, and recorded as unavailable when browser permissions prevent capture. |
 | UC-21 | Prepare a factual complaint/escalation draft using only evidence actually present in the audit. |
 | UC-22 | Present the one-click verdict before technical metrics and expose evidence progressively. |
 | UC-23 | Support multilingual/accessibility-aware consent controls safely without broad-text false clicks. Consent vocabulary is local, explicit, and extended through locale data; accessible names and roles are used for icon-only controls, while unsupported language stays unresolved. |
@@ -126,6 +126,7 @@ Observed evidence may include:
 - cookie metadata without cookie values
 - supported browser-storage metadata
 - request host/path/type/timestamp with sensitive URL values removed by default
+- optional before/after screenshots of the tested tab, with minimized URL metadata and explicit local review/removal
 - service/rule mapping and confidence
 - explicit unsupported or incomplete checks
 
@@ -143,6 +144,7 @@ CookieBuddy is designed to stay local.
 - No automatic scan upload
 - No cookie values stored/exported by default
 - Sensitive URL query/fragment values should be removed before evidence is persisted
+- Optional screenshots remain local, are off by default, and may contain page content or personal information; review and remove them before export.
 
 CookieBuddy may inspect the page, cookies, supported browser storage, consent APIs, and browser requests only to perform the user's local audit. Local audit data must have documented retention/deletion behavior.
 

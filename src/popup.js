@@ -1,5 +1,6 @@
 import { applyI18n, getLanguage, initI18n, setLanguage, t } from "./i18n.js";
 import { buildDelta, capitalize, deriveAuditVerdict, getBaseDomain, isEssentialCookie, isEssentialHost, normalizeTraffic, serviceForCookie } from "./core.js";
+import { canCaptureVisibleTab, createAuditTimelineEvent, createVisualEvidenceItem, createVisualEvidenceState } from "./visual-evidence.mjs";
 
 const state = {
   tab: null,
@@ -30,6 +31,7 @@ const elements = {
   detailsLink: document.querySelector("#detailsLink"),
   refreshButton: document.querySelector("#refreshButton"),
   deltaButton: document.querySelector("#deltaButton"),
+  visualEvidenceToggle: document.querySelector("#visualEvidenceToggle"),
   auditSteps: document.querySelector("#auditSteps"),
   auditProgressBar: document.querySelector("#auditProgressBar"),
   languageSelect: document.querySelector("#languageSelect"),
@@ -112,28 +114,45 @@ async function runDeltaCheck() {
   elements.deltaResult.innerHTML = `<p class="muted">${escapeHtml(t("deltaCheckingDescription"))}</p>`;
   const auditStartedAt = Date.now();
   let auditMaxDurationMs = DEFAULT_AUDIT_MAX_DURATION_MS;
+  const visualEvidenceEnabled = elements.visualEvidenceToggle?.checked === true;
+  const auditTimeline = [];
+  const visualEvidenceItems = [];
+  const recordAuditEvent = (step, evidenceIds = []) => {
+    auditTimeline.push(createAuditTimelineEvent(step, new Date().toISOString(), evidenceIds));
+  };
 
   try {
     const auditStartResponse = await chrome.runtime.sendMessage({ target: "cookiebuddy-background", type: "START_AUDIT", tabId: state.tab.id });
     auditMaxDurationMs = auditStartResponse?.maxDurationMs || DEFAULT_AUDIT_MAX_DURATION_MS;
+    recordAuditEvent("prepare");
     assertAuditBudget(auditStartedAt, auditMaxDurationMs);
     const before = await snapshot(t("snapshotCurrentState"));
     assertAuditBudget(auditStartedAt, auditMaxDurationMs);
+    const beforeVisualEvidence = await captureVisualEvidence("before", "baseline", visualEvidenceEnabled, auditStartedAt, auditMaxDurationMs);
+    visualEvidenceItems.push(beforeVisualEvidence);
+    recordAuditEvent("baseline", [beforeVisualEvidence.id]);
     setAuditStep("prepare", "complete");
     setAuditStep("consent", "complete");
     setAuditStep("baseline", "complete");
     setAuditStep("reject", "active");
     const denyResult = await sendToTab(state.tab.id, { target: "cookiebuddy-content", type: "TRY_DENY_ALL" });
+    if (visualEvidenceItems[0]) visualEvidenceItems[0].rejectControlLabel = String(denyResult?.label || "").slice(0, 160);
+    recordAuditEvent("reject");
     setAuditStep("reject", denyResult?.found ? "complete" : "manual", denyResult?.found ? "" : t("auditManualAction"));
     setAuditStep("verify", denyResult?.clicked ? "complete" : "manual", denyResult?.clicked ? "" : t("auditManualAction"));
+    recordAuditEvent("verify");
     setAuditStep("observe", "active");
     await chrome.runtime.sendMessage({ target: "cookiebuddy-background", type: "CLEAR_TRAFFIC", tabId: state.tab.id });
     await wait(1800);
     assertAuditBudget(auditStartedAt, auditMaxDurationMs);
+    recordAuditEvent("observe");
     setAuditStep("observe", "complete");
     setAuditStep("capture", "active");
     const afterDeny = await snapshot(t("snapshotAfterDenyAll"));
     assertAuditBudget(auditStartedAt, auditMaxDurationMs);
+    const afterVisualEvidence = await captureVisualEvidence("after", "capture", visualEvidenceEnabled, auditStartedAt, auditMaxDurationMs, denyResult?.label);
+    visualEvidenceItems.push(afterVisualEvidence);
+    recordAuditEvent("capture", [afterVisualEvidence.id]);
     setAuditStep("capture", "complete");
     setAuditStep("analyze", "active");
     const delta = buildDelta({
@@ -153,18 +172,25 @@ async function runDeltaCheck() {
       },
       tabUrl: state.tab.url
     });
+    delta.visualEvidence = createVisualEvidenceState({
+      enabled: visualEvidenceEnabled,
+      items: visualEvidenceItems,
+      rejectControlLabel: denyResult?.label
+    });
+    recordAuditEvent("analyze");
+    delta.auditTimeline = auditTimeline;
     const verdict = deriveAuditVerdict(delta, { analysisComplete: Boolean(afterDeny.analysis) });
     delta.verdict = verdict;
-    state.delta = delta;
+    const persistedDelta = await persistAuditDelta(delta);
+    state.delta = persistedDelta;
     state.verdict = verdict;
     setAuditStep("analyze", "complete");
 
-    await chrome.storage.local.set({ cookiebuddyLastDelta: delta });
-    renderDelta(delta, verdict);
-    await openDeltaTab(delta);
-    await updateIconStatus(delta);
+    renderDelta(persistedDelta, verdict);
+    await openDeltaTab(persistedDelta);
+    await updateIconStatus(persistedDelta);
     setStatus(verdict.status === "negative" ? "statusDeltaFound" : verdict.status === "incomplete" ? "statusAuditIncomplete" : "statusChecked", verdict.status === "positive" ? "ok" : "warn");
-    renderAuditVerdict(delta, verdict);
+    renderAuditVerdict(persistedDelta, verdict);
   } catch (error) {
     const activeStep = [...document.querySelectorAll?.("#auditSteps [data-state=active]") || []][0];
     if (activeStep) setAuditStep(activeStep.dataset.step, "failed");
@@ -438,7 +464,7 @@ function renderContacts() {
   `;
 }
 
-function buildMailBody(kind) {
+function buildMailBody(kind, auditDelta = null) {
   const intro = t("mailGreeting");
   const company = state.analysis.host || state.tab?.url || "";
   const closing = t("mailClosing");
@@ -473,7 +499,12 @@ function buildMailBody(kind) {
     ]
   };
 
-  return templates[kind].filter(Boolean).join("\n");
+  const visualNote = auditDelta?.visualEvidence
+    ? t("visualEvidenceMailNote", (auditDelta.visualEvidence.items || []).filter((item) => item.status === "captured").length
+      ? t("visualEvidenceCaptured")
+      : auditDelta.visualEvidence.enabled ? t("visualEvidenceUnavailable") : t("visualEvidenceDisabled"))
+    : "";
+  return [...templates[kind], visualNote].filter(Boolean).join("\n");
 }
 
 function renderDelta(delta, verdict = delta.verdict || deriveAuditVerdict(delta)) {
@@ -503,7 +534,7 @@ function renderAuditVerdict(delta, verdict) {
   const reasons = (verdict.reasons || []).map((reason) => `<li>${escapeHtml(reasonLabels[reason] || reason)}</li>`).join("");
   const cookieCount = (delta.remainingCookies?.length || 0) + (delta.newCookies?.length || 0);
   const dpoEmail = state.analysis?.contacts?.dpo?.email || "";
-  const complaintBody = dpoEmail ? buildMailBody("access") : "";
+  const complaintBody = dpoEmail ? buildMailBody("access", delta) : "";
   const complaintHref = dpoEmail ? `mailto:${encodeURIComponent(dpoEmail)}?subject=${encodeURIComponent(t("mailSubject", state.analysis.host))}&body=${encodeURIComponent(complaintBody)}` : "";
   const detailsHref = chrome.runtime.getURL("details.html?view=delta");
   const complaintAction = verdict.status === "negative" && complaintHref
@@ -533,6 +564,7 @@ function renderAuditVerdict(delta, verdict) {
         ${delta.thirdPartyHosts?.length ? `<h3>${escapeHtml(t("nonEssentialThirdPartyTrafficAfterOptOut"))}</h3>${delta.thirdPartyHosts.slice(0, 10).map((host) => `<p class="chip">${escapeHtml(host)}</p>`).join("")}` : ""}
         ${delta.essentialThirdPartyHosts?.length ? `<h3>${escapeHtml(t("essentialThirdPartyTrafficAllowed"))}</h3>${delta.essentialThirdPartyHosts.slice(0, 10).map((host) => `<p class="chip">${escapeHtml(host)}</p>`).join("")}` : ""}
         ${delta.serviceAudit?.length ? `<section class="service-audit"><h3>${escapeHtml(t("serviceAuditHeading"))}</h3><p class="muted">${escapeHtml(t("serviceAuditIntro"))}</p>${delta.serviceAudit.map(renderServiceAudit).join("")}</section>` : ""}
+        ${renderVisualEvidenceSummary(delta)}
       </details>
       <div class="audit-result-actions">
         <a class="ghost-button small" href="${escapeHtml(detailsHref)}" target="_blank" rel="noreferrer">${escapeHtml(t("auditOpenEvidence"))}</a>
@@ -544,6 +576,16 @@ function renderAuditVerdict(delta, verdict) {
   elements.deltaResult.innerHTML = html;
   if (elements.statusCardText) elements.statusCardText.textContent = `${meta.title}. ${meta.copy}`;
   return html;
+}
+
+function renderVisualEvidenceSummary(delta) {
+  const evidence = delta.visualEvidence;
+  if (!evidence) return "";
+  const captured = (evidence.items || []).filter((item) => item.status === "captured").length;
+  const status = captured
+    ? t("visualEvidenceCaptured")
+    : evidence.enabled ? t("visualEvidenceUnavailable") : t("visualEvidenceDisabled");
+  return `<p class="muted visual-evidence-summary">${escapeHtml(status)} · ${escapeHtml(t("visualEvidenceReviewHint"))}</p>`;
 }
 
 function renderCurrentPage() {
@@ -575,16 +617,64 @@ async function ensureContentScript(tabId) {
   } catch {
     await chrome.scripting.executeScript({
       target: { tabId },
-      files: ["src/contact-discovery-content.js", "src/content.js"]
+      files: ["src/contact-discovery-content.js", "src/consent-controls.js", "src/content.js"]
     });
   }
 }
 
+async function captureVisualEvidence(phase, auditStep, enabled, auditStartedAt, auditMaxDurationMs, rejectControlLabel = "") {
+  const base = {
+    phase,
+    auditStep,
+    tabUrl: state.tab?.url,
+    rejectControlLabel
+  };
+  if (!enabled) {
+    return createVisualEvidenceItem({ ...base, status: "disabled", reason: "not-enabled" });
+  }
+  assertAuditBudget(auditStartedAt, auditMaxDurationMs);
+
+  try {
+    const [activeTab] = await chrome.tabs.query({ active: true, windowId: state.tab?.windowId });
+    if (!canCaptureVisibleTab({
+      testedTab: state.tab,
+      activeTab,
+      captureAvailable: typeof chrome.tabs.captureVisibleTab === "function"
+    })) {
+      return createVisualEvidenceItem({ ...base, status: "unavailable", reason: "tested-tab-not-active-or-capture-unavailable" });
+    }
+    const dataUrl = await chrome.tabs.captureVisibleTab(state.tab.windowId, { format: "png" });
+    return createVisualEvidenceItem({ ...base, status: "captured", dataUrl });
+  } catch {
+    return createVisualEvidenceItem({ ...base, status: "unavailable", reason: "permission-or-browser-restriction" });
+  }
+}
+
 async function openDeltaTab(delta) {
-  await chrome.storage.local.set({ cookiebuddyLastDelta: delta });
   await chrome.tabs.create({
     url: chrome.runtime.getURL("details.html?view=delta")
   });
+}
+
+async function persistAuditDelta(delta) {
+  try {
+    await chrome.storage.local.set({ cookiebuddyLastDelta: delta });
+    return delta;
+  } catch {
+    const fallback = {
+      ...delta,
+      visualEvidence: delta.visualEvidence
+        ? {
+            ...delta.visualEvidence,
+            items: (delta.visualEvidence.items || []).map((item) => item.status === "captured"
+              ? { ...item, status: "unavailable", dataUrl: "", reason: "local-storage-limit" }
+              : item)
+          }
+        : delta.visualEvidence
+    };
+    await chrome.storage.local.set({ cookiebuddyLastDelta: fallback });
+    return fallback;
+  }
 }
 
 async function openBannerOverview() {
