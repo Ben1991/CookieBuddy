@@ -59,6 +59,11 @@ const fixtureDelta = {
     reason: "redirect-during-audit",
     events: [{ type: "navigation", kind: "redirect", url: "https://example.com/redirected" }]
   },
+  consentEvidence: {
+    before: { status: "observed", frameworks: ["iab-tcf", "google-consent-mode"], apiSupport: { tcf: "observed", googleConsentMode: "observed" }, signals: [{ framework: "iab-tcf", key: "purpose:3", value: "granted", source: "__tcfapi:getTCData" }], limitations: [] },
+    after: { status: "observed", frameworks: ["iab-tcf", "google-consent-mode"], apiSupport: { tcf: "observed", googleConsentMode: "observed" }, signals: [{ framework: "iab-tcf", key: "purpose:3", value: "granted", optional: true, source: "__tcfapi:getTCData" }, { framework: "google-consent-mode", key: "analytics_storage", value: "denied", optional: true, source: "dataLayer:update" }], limitations: [] }
+  },
+  consentContradictions: [{ framework: "iab-tcf", key: "purpose:3", value: "granted", source: "__tcfapi:getTCData", severity: "high", before: "granted", rationale: "Optional TCF purpose remained granted after verified rejection" }],
   report: { reportVersion: 1, payload: { audit: { hostname: "example.com", extension: { name: "CookieBuddy", version: "2.4.0" }, browser: { userAgent: "TestBrowser/1.0", platform: "test" } } }, integrity: { algorithm: "SHA-256", payloadHash: "b".repeat(64) } },
   browserStorage: {
     before: {
@@ -190,6 +195,8 @@ try {
   assert.ok(await details.getByText("Heuristic indicators (not confirmed evidence)", { exact: true }).isVisible(), "heuristics should be separated from confirmed evidence");
   assert.ok(await details.getByText("Audit lifecycle evidence", { exact: true }).isVisible(), "lifecycle evidence should be visible in the report");
   assert.ok(await details.getByText("Report context", { exact: true }).isVisible(), "report context should be visible in the evidence report");
+  assert.ok(await details.getByText("Consent-state evidence", { exact: true }).isVisible(), "consent state evidence should be visible in the report");
+  assert.ok(await details.locator("li").filter({ hasText: "iab-tcf:purpose:3" }).first().isVisible(), "TCF purpose evidence should be visible in the report");
   assert.ok(await details.getByText("Report integrity", { exact: true }).isVisible(), "report integrity should be visible in the evidence report");
   assert.ok(await details.getByText("Navigation interrupted the audit", { exact: false }).count() > 0, "navigation interruptions should be explained");
   assert.ok(await details.getByText("Stored locally", { exact: true }).isVisible(), "local-only status should be visible in the redesigned details header");

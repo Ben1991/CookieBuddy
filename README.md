@@ -47,8 +47,8 @@ The source of truth for product acceptance behavior is [`features/cookiebuddy.fe
 | UC-03 | Fall back to a clearly labeled DPO contact in the site's imprint when appropriate. |
 | UC-04 | Run a controlled before/after rejection audit with explicit observation windows and reload. |
 | UC-05 | Verify that reject-all actually changed consent; a successful DOM click alone is insufficient, and the report records the selected control plus verification evidence. |
-| UC-06 | Detect supported CMP APIs in the page main world and inspect IAB TCF / Google Consent Mode where available. |
-| UC-07 | Flag consent signals that contradict the rejected UI state as high-confidence technical findings. |
+| UC-06 | Detect supported CMP APIs in the page main world and inspect IAB TCF / Google Consent Mode where available, recording timestamped interpreted values and TC-string metadata without the raw string. |
+| UC-07 | Flag consent signals that contradict the rejected UI state as high-confidence technical findings; unavailable or unreadable consent APIs keep the audit incomplete. |
 | UC-08 | Preserve concurrent network evidence without request-loss race conditions. |
 | UC-09 | Capture relevant first-party, subdomain, and observed third-party cookie metadata without dumping unrelated cookies or values; unavailable hosts remain an explicit coverage limitation. |
 | UC-10 | Include localStorage/sessionStorage plus supported IndexedDB, Cache Storage, and service-worker metadata; show unsupported inspection explicitly and never export stored values or response bodies. |
@@ -163,6 +163,8 @@ CookieBuddy uses the following capabilities only for the local audit flow:
 | HTTP(S) host access | Retained for HTTP(S) third-party cookie metadata and subresource requests; it is not used for idle collection. |
 
 Browser persistence coverage is metadata-only: IndexedDB database names/versions, Cache Storage names and minimized request keys, and service-worker scope/script metadata. CookieBuddy does not read IndexedDB records, cache response bodies, or service-worker payloads. If a browser API cannot be inspected, the report marks it as **not inspected** and the audit cannot produce a positive result from that incomplete coverage.
+
+Consent-state coverage is also local and metadata-only. CookieBuddy reads IAB TCF v2 state through `__tcfapi` and observable Google Consent Mode signals (`analytics_storage`, `ad_storage`, `ad_user_data`, and `ad_personalization`) in the page's main world when available. It records source, timestamp, interpreted granted/denied/unknown values, and TC-string metadata such as presence, length, CMP status, and event status; the raw TC string is not stored. If a supported API is unavailable or unreadable, the audit remains incomplete rather than producing a positive result.
 
 The `tabs` permission and persistent all-page content-script registration are not requested. The details page is opened as an extension page and does not need broad web-accessible resources. HTTP(S) host access remains a deliberate trade-off for reliable third-party cookie and request coverage; removing it would silently reduce the evidence promised by UC-09 and UC-25.
 

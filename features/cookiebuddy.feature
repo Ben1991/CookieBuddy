@@ -60,6 +60,7 @@ Feature: One-click consent and tracking audit
     Then CookieBuddy can detect supported CMP globals despite content-script isolation
     And reads relevant IAB TCF or Google Consent Mode state where available
     And records the source, timestamp, interpreted values, and inspection limitations
+    And TC strings are represented by metadata only, without storing the raw string
 
   @UC-07 @issue-44 @p1
   Scenario: Flag consent signals that contradict the rejected UI state
@@ -68,6 +69,7 @@ Feature: One-click consent and tracking audit
     When advertising or analytics consent remains granted after rejection
     Then CookieBuddy records the contradictory signal as concrete evidence
     And classifies the result as a high-confidence technical finding
+    And an unavailable or unreadable consent API keeps the audit incomplete rather than positive
 
   @UC-08 @issue-41 @p1
   Scenario: Preserve concurrent network evidence without lost updates

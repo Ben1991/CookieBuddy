@@ -629,6 +629,57 @@
   "reportVersionLabel": {
     "message": "Version des strukturierten Berichts: $1"
   },
+  "consentStateEvidenceHeading": {
+    "message": "Evidenz zum Einwilligungsstatus"
+  },
+  "consentStateEvidenceIntro": {
+    "message": "Diese lokal beobachteten CMP-/API-Signale werden vor und nach der Ablehnung verglichen. Unbekannte oder nicht verfügbare Zustände gelten nicht als Einwilligung."
+  },
+  "consentFrameworksLabel": {
+    "message": "Frameworks"
+  },
+  "consentApiSupportLabel": {
+    "message": "API-Unterstützung"
+  },
+  "consentSignalsLabel": {
+    "message": "Signale"
+  },
+  "consentLimitationsLabel": {
+    "message": "Prüfeinschränkungen"
+  },
+  "consentNoSignals": {
+    "message": "Es konnte kein unterstütztes Einwilligungssignal gelesen werden."
+  },
+  "consentSignalRow": {
+    "message": "$1: $2 → $3 · Quelle: $4"
+  },
+  "consentApiSupportRow": {
+    "message": "$1: $2"
+  },
+  "consentStatusObserved": {
+    "message": "beobachtet"
+  },
+  "consentStatusUnclear": {
+    "message": "unklar"
+  },
+  "consentStatusUnavailable": {
+    "message": "nicht verfügbar"
+  },
+  "consentContradictionLabel": {
+    "message": "Widerspruch mit hoher Konfidenz nach bestätigter Ablehnung"
+  },
+  "auditReasonConsentContradiction": {
+    "message": "Optionale Einwilligung blieb nach der Ablehnung erteilt"
+  },
+  "auditCoverageConsentApi": {
+    "message": "Keine unterstützte Einwilligungs-API war lesbar"
+  },
+  "auditCoverageTcf": {
+    "message": "Der IAB-TCF-Status war vor und nach der Ablehnung nicht lesbar"
+  },
+  "auditCoverageGoogleConsentMode": {
+    "message": "Der Google-Consent-Mode-Status war vor und nach der Ablehnung nicht lesbar"
+  },
   "reviewRecommended": {
     "message": "Prüfung empfohlen"
   },

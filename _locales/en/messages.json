@@ -629,6 +629,57 @@
   "reportVersionLabel": {
     "message": "Structured report version: $1"
   },
+  "consentStateEvidenceHeading": {
+    "message": "Consent-state evidence"
+  },
+  "consentStateEvidenceIntro": {
+    "message": "These locally observed CMP/API signals are compared before and after rejection. Unknown or unavailable state is not treated as consent."
+  },
+  "consentFrameworksLabel": {
+    "message": "Frameworks"
+  },
+  "consentApiSupportLabel": {
+    "message": "API support"
+  },
+  "consentSignalsLabel": {
+    "message": "Signals"
+  },
+  "consentLimitationsLabel": {
+    "message": "Inspection limits"
+  },
+  "consentNoSignals": {
+    "message": "No supported consent signal was readable."
+  },
+  "consentSignalRow": {
+    "message": "$1: $2 → $3 · source: $4"
+  },
+  "consentApiSupportRow": {
+    "message": "$1: $2"
+  },
+  "consentStatusObserved": {
+    "message": "observed"
+  },
+  "consentStatusUnclear": {
+    "message": "unclear"
+  },
+  "consentStatusUnavailable": {
+    "message": "unavailable"
+  },
+  "consentContradictionLabel": {
+    "message": "High-confidence contradiction after verified rejection"
+  },
+  "auditReasonConsentContradiction": {
+    "message": "Optional consent remained granted after rejection"
+  },
+  "auditCoverageConsentApi": {
+    "message": "No supported consent API was readable"
+  },
+  "auditCoverageTcf": {
+    "message": "IAB TCF state was not readable before and after rejection"
+  },
+  "auditCoverageGoogleConsentMode": {
+    "message": "Google Consent Mode state was not readable before and after rejection"
+  },
   "reviewRecommended": {
     "message": "Review recommended"
   },

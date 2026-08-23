@@ -5,6 +5,7 @@ import { canCaptureVisibleTab, createAuditTimelineEvent, createVisualEvidenceIte
 import { createCookieCoverage, getObservedCookieHosts } from "./cookie-evidence.mjs";
 import { LOCAL_AUDIT_STORAGE_KEYS } from "./audit-storage.mjs";
 import { createAuditReport } from "./audit-report.mjs";
+import { collectMainWorldConsentState, mergeConsentStates } from "./consent-state.mjs";
 
 const state = {
   tab: null,
@@ -94,10 +95,12 @@ async function scanCurrentTab() {
     const lifecyclePromise = getAuditLifecycleState(tab.id);
     await ensureContentScript(tab.id);
 
-    const [analysis, trafficResponse] = await Promise.all([
+    const [analysis, trafficResponse, mainWorldConsent] = await Promise.all([
       sendToTab(tab.id, { target: "cookiebuddy-content", type: "ANALYZE_PAGE" }),
-      chrome.runtime.sendMessage({ target: "cookiebuddy-background", type: "GET_TRAFFIC", tabId: tab.id })
+      chrome.runtime.sendMessage({ target: "cookiebuddy-background", type: "GET_TRAFFIC", tabId: tab.id }),
+      readMainWorldConsentState(tab.id)
     ]);
+    if (mainWorldConsent) analysis.consentState = mergeConsentStates(analysis.consentState, mainWorldConsent);
     const cookieSnapshot = await getCookiesForTab(tab, trafficResponse?.traffic || [], analysis.resources || []);
 
     state.analysis = analysis;
@@ -398,10 +401,12 @@ async function attachAuditReport(delta) {
 }
 
 async function snapshot(label) {
-  const [analysis, trafficResponse] = await Promise.all([
+  const [analysis, trafficResponse, mainWorldConsent] = await Promise.all([
     sendToTab(state.tab.id, { target: "cookiebuddy-content", type: "ANALYZE_PAGE" }),
-    chrome.runtime.sendMessage({ target: "cookiebuddy-background", type: "GET_TRAFFIC", tabId: state.tab.id })
+    chrome.runtime.sendMessage({ target: "cookiebuddy-background", type: "GET_TRAFFIC", tabId: state.tab.id }),
+    readMainWorldConsentState(state.tab.id)
   ]);
+  if (mainWorldConsent) analysis.consentState = mergeConsentStates(analysis.consentState, mainWorldConsent);
   const cookieSnapshot = await getCookiesForTab(state.tab, trafficResponse?.traffic || [], analysis.resources || []);
   const normalizedTraffic = normalizeTraffic([...(trafficResponse?.traffic || []), ...(analysis.resources || [])], analysis.host);
 
@@ -413,6 +418,30 @@ async function snapshot(label) {
     thirdPartyTraffic: normalizedTraffic,
     blockedRequests: normalizedTraffic.filter((item) => item.blocked)
   };
+}
+
+async function readMainWorldConsentState(tabId) {
+  if (!chrome.scripting?.executeScript) {
+    return {
+      status: "unavailable",
+      apiSupport: { tcf: "unavailable", googleConsentMode: "unavailable" },
+      limitations: ["main-world-api-unavailable"]
+    };
+  }
+  try {
+    const results = await chrome.scripting.executeScript({
+      target: { tabId, frameIds: [0] },
+      world: "MAIN",
+      func: collectMainWorldConsentState
+    });
+    return results?.[0]?.result || null;
+  } catch {
+    return {
+      status: "unavailable",
+      apiSupport: { tcf: "unavailable", googleConsentMode: "unavailable" },
+      limitations: ["main-world-api-unavailable"]
+    };
+  }
 }
 
 function render() {
@@ -743,10 +772,14 @@ function renderAuditVerdict(delta, verdict) {
     "non-essential-storage": t("auditReasonStorage"),
     "active-service": t("auditReasonActiveService"),
     "unclear-service": t("auditReasonUnclearService"),
+    "consent-signal-contradiction": t("auditReasonConsentContradiction"),
     "heuristic-signal": t("auditReasonHeuristic"),
     "rejection-verification": t("auditCoverageReject"),
     "consent-surface": t("auditCoverageConsent"),
     "consent-surface-inaccessible": t("auditCoverageConsentInaccessible"),
+    "consent-api-support": t("auditCoverageConsentApi"),
+    "iab-tcf-state": t("auditCoverageTcf"),
+    "google-consent-mode-state": t("auditCoverageGoogleConsentMode"),
     "audit-integrity": t("auditCoverageIntegrity"),
     "cookie-coverage": t("auditCoverageCookies"),
     "storage-coverage": t("auditCoverageStorage"),
